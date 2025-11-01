@@ -1,0 +1,60 @@
+# Workflow GitHub Actions pour automatiser la génération de changelog,
+# le versionnage sémantique, la construction d'une APK Flutter en mode release,
+# et la création d'une release GitHub avec l'APK attachée.
+# Version Flutter : 3.35.7.
+name: Flutter Release
+
+on:
+  push:
+    branches:
+      - main
+      - release/*
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.35.7"
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Génération automatique du changelog et version bump
+      - name: Generate changelog and tag
+        id: changelog
+        uses: TriPSs/conventional-changelog-action@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          output-file: CHANGELOG.md
+          tag-prefix: "v"
+          release-count: 0
+          skip-commit: false   # crée un commit "chore(release): vX.Y.Z"
+          skip-tag: false      # crée un tag
+          preset: "angular"    # correspond à Conventional Commits
+          version-file: "pubspec.yaml"
+          version-path: "version"
+
+      # Build APK Release
+      - name: Build release APK
+        run: flutter build apk --release
+
+      # Créer la release GitHub avec changelog + APK
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.changelog.outputs.tag }}
+          name: Release ${{ steps.changelog.outputs.tag }}
+          body_path: CHANGELOG.md
+          files: build/app/outputs/flutter-apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
