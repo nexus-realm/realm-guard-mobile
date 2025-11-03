@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'core/routes/app_router.dart';
 import 'core/theme/app_theme.dart';
 
 void main() {
@@ -14,13 +15,12 @@ class RealmGuard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Realm Guard',
       themeMode: ThemeMode.dark,
       darkTheme: AppTheme.darkTheme,
-      home: const Scaffold(
-        body: Center(child: Text('Welcome to Realm Guard!')),
-      ),
+      routerConfig: appRouter,
+      debugShowCheckedModeBanner: false,
     );
   }
 }
