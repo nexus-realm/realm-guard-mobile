@@ -1,13 +1,49 @@
 # GitHub Actions workflow pour les PR sur develop et main.
-# Version Flutter : 3.35.7.
+# Version Flutter : 3.38.9.
 name: Flutter CI
 
 on:
   pull_request:
-    branches: [ "develop", "main" ]
+    types: [opened, edited, synchronize]
 
 jobs:
-  build:
+  check-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Branch Workflow
+        run: |
+          SOURCE_BRANCH="${{ github.head_ref }}"
+          TARGET_BRANCH="${{ github.base_ref }}"
+          
+          echo "Vérification : $SOURCE_BRANCH -> $TARGET_BRANCH"
+          
+          # Condition 1: develop -> main
+          if [[ "$SOURCE_BRANCH" == "develop" && "$TARGET_BRANCH" == "main" ]]; then
+            echo "✅ Validation : Workflow de release autorisé."
+            exit 0
+          fi
+          
+          # Condition 2: hotfix/rg-* (uniquement des chiffres à la fin) -> main
+          if [[ "$SOURCE_BRANCH" =~ ^hotfix/rg-[0-9]+$ && "$TARGET_BRANCH" == "main" ]]; then
+            echo "✅ Validation : Hotfix autorisé vers main."
+            exit 0
+          fi
+          
+          # Condition 3: feature|fix|chore/rg-* (uniquement des chiffres à la fin) -> develop
+          if [[ "$SOURCE_BRANCH" =~ ^(feature|fix|chore)/rg-[0-9]+$ && "$TARGET_BRANCH" == "develop" ]]; then
+            echo "✅ Validation : Développement autorisé vers develop."
+            exit 0
+          fi
+          
+          # Si aucune condition n'est remplie
+          echo "❌ ERREUR : Le nommage de la branche source ou le choix de la branche cible est invalide."
+          echo "Règles autorisées :"
+          echo "- develop -> main"
+          echo "- hotfix/rg-[numéro] -> main"
+          echo "- (feature|fix|chore)/rg-[numéro] -> develop"
+          exit 1
+  build-and-test:
+    needs: check-branches
     runs-on: ubuntu-latest
 
     steps:
@@ -15,7 +51,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.35.7"
+          flutter-version: "3.38.9"
 
       - name: Install dependencies
         run: flutter pub get
