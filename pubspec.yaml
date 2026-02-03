@@ -7,6 +7,9 @@ environment:
   sdk: ^3.10.8
 
 dependencies:
+  biometric_storage: ^5.0.1
+  cryptography: ^2.9.0
+  dargon2_flutter: ^3.3.0
   flutter:
     sdk: flutter
   flutter_secure_storage: ^10.0.0
