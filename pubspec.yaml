@@ -7,15 +7,21 @@ environment:
   sdk: ^3.10.8
 
 dependencies:
+  biometric_storage: ^5.0.1
+  cryptography: ^2.9.0
+  dargon2_flutter: ^3.3.0
   flutter:
     sdk: flutter
+  flutter_secure_storage: ^10.0.0
   go_router: ^16.3.0
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   flutter_lints: ^6.0.0
+  build_runner: ^2.10.5
 
 flutter:
   uses-material-design: true

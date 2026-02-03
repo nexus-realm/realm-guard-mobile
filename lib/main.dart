@@ -7,6 +7,7 @@ import 'core/theme/app_theme.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
   runApp(const RealmGuard());
 }
 
