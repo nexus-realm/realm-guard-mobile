@@ -26,7 +26,7 @@ abstract class KeyDerivator {
       );
     }
 
-    final result = await argon2.hashPasswordBytes(
+    final DArgon2Result result = await argon2.hashPasswordBytes(
       utf8.encode(password),
       salt: Salt(salt),
       iterations: _iterations,
