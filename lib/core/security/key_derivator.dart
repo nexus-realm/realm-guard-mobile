@@ -1,19 +1,18 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
-import 'package:dargon2_flutter/dargon2_flutter.dart';
 
 abstract class KeyDerivator {
   KeyDerivator._();
 
   static const int _iterations = 3;
   static const int _memory = 65536; // in KB
-  static const int _parallelism = 2;
-  static const int _keyLength = 32; // 32 bytes = 256 bits
+  static const int _parallelism = 1;
+  static const int _hashLength = 32; // 32 bytes = 256 bits
 
   /// Transforms the User's Password (e.g. "Monkey123") into a
-  /// cryptographically secure 32-byte key.
+  /// cryptographically secure 32-byte key using Argon2id.
+  /// Throws [ArgumentError] if the password is empty or blank.
   static Future<SecretKey> deriveKeyFromPassword(
     String password,
     Uint8List salt,
@@ -26,16 +25,16 @@ abstract class KeyDerivator {
       );
     }
 
-    final DArgon2Result result = await argon2.hashPasswordBytes(
-      utf8.encode(password),
-      salt: Salt(salt),
+    final Argon2id algorithm = Argon2id(
       iterations: _iterations,
       memory: _memory,
       parallelism: _parallelism,
-      length: _keyLength,
-      type: Argon2Type.id,
+      hashLength: _hashLength,
     );
 
-    return SecretKey(result.rawBytes);
+    return await algorithm.deriveKeyFromPassword(
+      password: password,
+      nonce: salt,
+    );
   }
 }
