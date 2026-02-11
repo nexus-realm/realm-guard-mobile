@@ -11,11 +11,13 @@ import 'package:realm_guard_mobile/core/security/salt_manager.dart';
 class MockPathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin
     implements PathProviderPlatform {
+  final String tempDirPath;
+
+  MockPathProviderPlatform(this.tempDirPath);
+
   @override
   Future<String?> getApplicationSupportPath() async {
-    return Directory
-        .systemTemp
-        .path; // Utilise le dossier temp de l'OS pour les tests
+    return tempDirPath;
   }
 }
 
@@ -26,14 +28,19 @@ void main() {
   late File saltFile;
 
   setUp(() async {
-    // Initialise le mock de path_provider
-    PathProviderPlatform.instance = MockPathProviderPlatform();
-
-    // Nettoyage avant chaque test
-    tempDir = Directory(Directory.systemTemp.path);
+    // Crée un répertoire temporaire unique pour chaque test
+    tempDir = await Directory.systemTemp.createTemp('salt_manager_test_');
+    
+    // Initialise le mock de path_provider avec le répertoire unique
+    PathProviderPlatform.instance = MockPathProviderPlatform(tempDir.path);
+    
     saltFile = File('${tempDir.path}/realmguard_security_metadata.salt');
-    if (await saltFile.exists()) {
-      await saltFile.delete();
+  });
+
+  tearDown(() async {
+    // Nettoyage du répertoire temporaire après chaque test
+    if (await tempDir.exists()) {
+      await tempDir.delete(recursive: true);
     }
   });
 
