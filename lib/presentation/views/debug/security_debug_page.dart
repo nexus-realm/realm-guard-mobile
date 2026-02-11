@@ -81,6 +81,13 @@ class _SecurityDebugPageState extends State<SecurityDebugPage> {
   }
 
   @override
+  void dispose() {
+    _passwordController.clear();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Security Lab 🧪")),
