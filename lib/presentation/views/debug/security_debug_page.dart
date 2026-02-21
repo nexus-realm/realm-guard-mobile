@@ -25,6 +25,8 @@ class _SecurityDebugPageState extends State<SecurityDebugPage> {
   final _passwordController = TextEditingController(text: "TestPassword123!");
 
   void _log(String message) {
+    if (!mounted) return;
+
     setState(() {
       _logs += "${DateTime.now().second}s: $message\n";
     });
@@ -42,7 +44,9 @@ class _SecurityDebugPageState extends State<SecurityDebugPage> {
     } catch (e) {
       _log("ERREUR SALT: $e");
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -76,7 +80,9 @@ class _SecurityDebugPageState extends State<SecurityDebugPage> {
     } catch (e) {
       _log("ERREUR ARGON2: $e");
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
