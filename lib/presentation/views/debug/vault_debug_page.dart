@@ -54,7 +54,6 @@ class _VaultDebugPageState extends State<VaultDebugPage> {
         _isUnlocked = false;
         _statusMessage = "Erreur : Mot de passe incorrect ou erreur DB.\nDétails: $e";
       });
-      print("Erreur lors du déverrouillage du coffre-fort : $e");
     } finally {
       setState(() {
         _isLoading = false;

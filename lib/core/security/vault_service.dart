@@ -21,9 +21,6 @@ class VaultService {
       _database = AppDatabase(keyBytes);
 
       await _database!.customSelect('SELECT 1').get();
-
-      print("Coffre-fort déverrouillé avec succès !");
-
     } catch (e) {
       _database?.close();
       _database = null;
