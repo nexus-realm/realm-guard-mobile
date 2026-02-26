@@ -3,5 +3,7 @@ class AppRoutes {
 
   static const String debug = '/debug';
 
-  static const String securityDebug = '/security';
+  static const String securityDebug = '/security-debug';
+
+  static const String vaultDebug = '/vault-debug';
 }
