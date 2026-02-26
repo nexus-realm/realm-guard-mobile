@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../presentation/views/debug/security_debug_page.dart';
+import '../../presentation/views/debug/vault_debug_page.dart';
 import '../../presentation/views/home/home_page.dart';
 import '../../presentation/views/main/main_page.dart';
 import 'app_routes.dart';
@@ -29,6 +30,11 @@ final GoRouter appRouter = GoRouter(
           path: AppRoutes.securityDebug,
           name: 'securityDebug',
           builder: (context, state) => const SecurityDebugPage(),
+        ),
+        GoRoute(
+          path: AppRoutes.vaultDebug,
+          name: 'vaultDebug',
+          builder: (context, state) => const VaultDebugPage(),
         ),
       ],
     ),
