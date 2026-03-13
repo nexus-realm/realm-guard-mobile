@@ -1,4 +1,4 @@
-# GitHub Actions workflow pour les PR sur develop et main.
+# GitHub Actions workflow pour les PR sur develop et home.
 # Version Flutter : 3.38.9.
 name: Flutter CI
 

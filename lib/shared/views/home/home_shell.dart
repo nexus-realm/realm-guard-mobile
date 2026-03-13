@@ -4,16 +4,16 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 
-class MainPage extends StatefulWidget {
+class HomeShell extends StatefulWidget {
   final Widget child;
 
-  const MainPage({super.key, required this.child});
+  const HomeShell({super.key, required this.child});
 
   @override
-  State<MainPage> createState() => _MainPageState();
+  State<HomeShell> createState() => _HomeShellState();
 }
 
-class _MainPageState extends State<MainPage> {
+class _HomeShellState extends State<HomeShell> {
   int _currentIndex = 0;
 
   final tabs = [AppRoutes.home, AppRoutes.home];
