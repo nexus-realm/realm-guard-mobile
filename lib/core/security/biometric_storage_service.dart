@@ -9,6 +9,16 @@ class BiometricStorageService {
 
   static const String _keyDerivedVaultKey = 'derived_vault_key';
 
+  Future<bool> isBiometricAvailable() async {
+    try {
+      final canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;
+      final isSupported = await _auth.isDeviceSupported();
+      return canAuthenticateWithBiometrics && isSupported;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Sauvegarde la clé après une connexion réussie par mot de passe
   Future<void> saveDerivedKey(List<int> keyBytes) async {
     await _secureStorage.write(key: _keyDerivedVaultKey,
@@ -24,13 +34,11 @@ class BiometricStorageService {
   Future<List<int>?> getDerivedKeyWithBiometrics(String reason) async {
     final bool hasKey = await _secureStorage
         .containsKey(key: _keyDerivedVaultKey);
-    if (!hasKey) return null; // L'utilisateur doit utiliser son mot de passe
+    if (!hasKey) return null;
 
-    final bool canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;
-    final bool isSupported = await _auth.isDeviceSupported();
-
-    if (!canAuthenticateWithBiometrics || !isSupported) {
-      return null; // Appareil non compatible ou biométrie non configurée
+    final isAvailable = await isBiometricAvailable();
+    if (!isAvailable) {
+      return null;
     }
 
     try {

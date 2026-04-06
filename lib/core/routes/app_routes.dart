@@ -1,4 +1,7 @@
 class AppRoutes {
+  static const String startup = '/startup';
+  static const String onboarding = '/onboarding';
+
   static const String home = '/home';
 
   static const String debug = '/debug';
