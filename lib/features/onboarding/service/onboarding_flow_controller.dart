@@ -15,6 +15,7 @@ class OnboardingFlowController extends ChangeNotifier {
   bool _isLoading = true;
   bool _isSubmitting = false;
   String? _errorMessage;
+  bool _isBiometricStepAvailable = true;
 
   OnboardingFlowController({
     required OnboardingStorageService onboardingStorageService,
@@ -27,16 +28,36 @@ class OnboardingFlowController extends ChangeNotifier {
 
   bool get isLoading => _isLoading;
   bool get isSubmitting => _isSubmitting;
-  bool get isCompleted => _progress.isCompleted;
+  bool get isCompleted => _progress.isCompletedFor(_effectiveSteps);
   OnboardingProgress get progress => _progress;
-  OnboardingStep? get currentStep => _progress.nextMissingStep;
+  OnboardingStep? get currentStep => _progress.nextMissingStepFor(_effectiveSteps);
   String? get errorMessage => _errorMessage;
+  int get totalStepCount => _effectiveSteps.length;
+
+  int get currentStepIndex {
+    final step = currentStep;
+    if (step == null) {
+      return totalStepCount;
+    }
+    return _effectiveSteps.indexOf(step) + 1;
+  }
+
+  List<OnboardingStep> get _effectiveSteps {
+    if (_isBiometricStepAvailable) {
+      return OnboardingStep.values;
+    }
+
+    return OnboardingStep.values
+        .where((step) => step != OnboardingStep.biometricChoice)
+        .toList(growable: false);
+  }
 
   Future<void> initialize() async {
     _isLoading = true;
     notifyListeners();
 
     _progress = await _onboardingStorageService.loadProgress();
+    _isBiometricStepAvailable = await _biometricStorageService.isBiometricAvailable();
     _errorMessage = null;
     _isLoading = false;
     notifyListeners();
@@ -93,6 +114,10 @@ class OnboardingFlowController extends ChangeNotifier {
   }
 
   Future<void> completeBiometricStep(bool enabled) async {
+    if (!_isBiometricStepAvailable) {
+      return;
+    }
+
     _isSubmitting = true;
     _errorMessage = null;
     notifyListeners();
@@ -128,4 +153,3 @@ class OnboardingFlowController extends ChangeNotifier {
     notifyListeners();
   }
 }
-

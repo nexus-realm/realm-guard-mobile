@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:realm_guard_mobile/core/security/biometric_storage_service.dart';
 import 'package:realm_guard_mobile/features/onboarding/service/onboarding_progress.dart';
 import 'package:realm_guard_mobile/features/onboarding/data/onboarding_step.dart';
 import 'package:realm_guard_mobile/features/onboarding/service/onboarding_storage_service.dart';
@@ -25,6 +26,15 @@ class InMemoryOnboardingStorageService extends OnboardingStorageService {
   }
 }
 
+class FakeBiometricStorageService extends BiometricStorageService {
+  bool isAvailable = true;
+
+  @override
+  Future<bool> isBiometricAvailable() async {
+    return isAvailable;
+  }
+}
+
 void main() {
   group('StartupGateViewModel', () {
     test('targets onboarding when flow is not completed', () async {
@@ -32,6 +42,7 @@ void main() {
         onboardingStorageService: InMemoryOnboardingStorageService(
           OnboardingProgress.initial(),
         ),
+        biometricStorageService: FakeBiometricStorageService(),
       );
 
       await viewModel.initialize();
@@ -53,6 +64,27 @@ void main() {
         onboardingStorageService: InMemoryOnboardingStorageService(
           completedProgress,
         ),
+        biometricStorageService: FakeBiometricStorageService(),
+      );
+
+      await viewModel.initialize();
+
+      expect(viewModel.targetRoute, StartupRouteTarget.home);
+      expect(viewModel.isLoading, isFalse);
+    });
+
+    test('targets home without biometric completion when biometrics are unavailable',
+        () async {
+      final progressWithoutBiometric = OnboardingProgress.initial()
+          .markStepCompleted(OnboardingStep.welcome)
+          .markStepCompleted(OnboardingStep.masterPassword);
+      final biometrics = FakeBiometricStorageService()..isAvailable = false;
+
+      final viewModel = StartupGateViewModel(
+        onboardingStorageService: InMemoryOnboardingStorageService(
+          progressWithoutBiometric,
+        ),
+        biometricStorageService: biometrics,
       );
 
       await viewModel.initialize();

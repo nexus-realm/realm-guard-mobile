@@ -46,6 +46,12 @@ class FakeVaultService extends VaultService {
 
 class FakeBiometricStorageService extends BiometricStorageService {
   bool clearWasCalled = false;
+  bool isAvailable = true;
+
+  @override
+  Future<bool> isBiometricAvailable() async {
+    return isAvailable;
+  }
 
   @override
   Future<void> clearDerivedKey() async {
@@ -66,6 +72,7 @@ void main() {
       final controller = OnboardingFlowController(
         onboardingStorageService: storage,
         vaultService: FakeVaultService(),
+        biometricStorageService: FakeBiometricStorageService(),
       );
 
       await controller.initialize();
@@ -84,6 +91,7 @@ void main() {
       final controller = OnboardingFlowController(
         onboardingStorageService: storage,
         vaultService: vault,
+        biometricStorageService: FakeBiometricStorageService(),
       );
 
       await controller.initialize();
@@ -106,7 +114,7 @@ void main() {
     test('clears biometric key when user refuses biometrics', () async {
       final storage = InMemoryOnboardingStorageService();
       final vault = FakeVaultService();
-      final biometrics = FakeBiometricStorageService();
+      final biometrics = FakeBiometricStorageService()..isAvailable = true;
 
       final controller = OnboardingFlowController(
         onboardingStorageService: storage,
@@ -126,7 +134,33 @@ void main() {
       expect(controller.isCompleted, isTrue);
       expect(controller.progress.biometricEnabled, isFalse);
     });
+
+    test('skips biometric step when feature is unavailable', () async {
+      final storage = InMemoryOnboardingStorageService();
+      final vault = FakeVaultService();
+      final biometrics = FakeBiometricStorageService()..isAvailable = false;
+
+      final controller = OnboardingFlowController(
+        onboardingStorageService: storage,
+        vaultService: vault,
+        biometricStorageService: biometrics,
+      );
+
+      await controller.initialize();
+      await controller.completeWelcomeStep();
+      await controller.completeMasterPasswordStep(
+        'motdepasse-solide',
+        'motdepasse-solide',
+      );
+
+      expect(controller.currentStep, isNull);
+      expect(controller.totalStepCount, 2);
+      expect(controller.isCompleted, isTrue);
+      expect(
+        controller.progress.completedSteps.contains(OnboardingStep.biometricChoice),
+        isFalse,
+      );
+    });
   });
 }
-
 

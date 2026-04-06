@@ -28,7 +28,7 @@ void main() {
     });
 
     test('serializes and deserializes completed steps', () {
-      final progress = OnboardingProgress(
+      final progress = const OnboardingProgress(
         completedSteps: {
           OnboardingStep.welcome,
           OnboardingStep.masterPassword,
@@ -42,6 +42,19 @@ void main() {
       expect(decoded.biometricEnabled, isFalse);
       expect(decoded.nextMissingStep, OnboardingStep.biometricChoice);
     });
+
+    test('computes completion on a reduced set of active steps', () {
+      final progress = OnboardingProgress.initial()
+          .markStepCompleted(OnboardingStep.welcome)
+          .markStepCompleted(OnboardingStep.masterPassword);
+      final activeSteps = OnboardingStep.values
+          .where((step) => step != OnboardingStep.biometricChoice)
+          .toList(growable: false);
+
+      expect(progress.isCompletedFor(activeSteps), isTrue);
+      expect(progress.nextMissingStepFor(activeSteps), isNull);
+      expect(progress.isCompleted, isFalse);
+      expect(progress.nextMissingStep, OnboardingStep.biometricChoice);
+    });
   });
 }
-

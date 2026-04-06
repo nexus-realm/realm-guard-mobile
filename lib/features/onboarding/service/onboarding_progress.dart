@@ -13,10 +13,21 @@ class OnboardingProgress {
     return const OnboardingProgress(completedSteps: <OnboardingStep>{});
   }
 
-  bool get isCompleted => completedSteps.length == OnboardingStep.values.length;
+  bool get isCompleted => isCompletedFor(OnboardingStep.values);
 
-  OnboardingStep? get nextMissingStep {
-    for (final step in OnboardingStep.values) {
+  OnboardingStep? get nextMissingStep => nextMissingStepFor(OnboardingStep.values);
+
+  bool isCompletedFor(Iterable<OnboardingStep> activeSteps) {
+    for (final step in activeSteps) {
+      if (!completedSteps.contains(step)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  OnboardingStep? nextMissingStepFor(Iterable<OnboardingStep> activeSteps) {
+    for (final step in activeSteps) {
       if (!completedSteps.contains(step)) {
         return step;
       }
@@ -64,4 +75,3 @@ class OnboardingProgress {
     );
   }
 }
-

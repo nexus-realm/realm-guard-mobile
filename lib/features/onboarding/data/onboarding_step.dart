@@ -23,4 +23,3 @@ enum OnboardingStep {
     return null;
   }
 }
-
