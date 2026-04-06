@@ -1,6 +1,6 @@
 class PasswordValidationRule {
   final String label;
-  bool Function(String password) validate;
+  final bool Function(String password) validate;
 
   PasswordValidationRule({
     required this.label,

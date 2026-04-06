@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/routes/app_routes.dart';
+import '../../../core/security/vault_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/view_title.dart';
 import '../data/onboarding_step.dart';
 import '../data/password_validation_rule.dart';
 import '../service/onboarding_storage_service.dart';
-import '../../../../core/routes/app_routes.dart';
-import '../../../../core/security/vault_service.dart';
 import '../viewmodels/onboarding_view_model.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -135,6 +135,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
     );
 
     if (!success) {
+      final errorMessage = _viewModel.errorMessage;
+
+      if (mounted && errorMessage != null && errorMessage.isNotEmpty) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(content: Text(errorMessage)),
+          );
+      }
       return;
     }
 
@@ -229,8 +238,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
           spacing: 24,
           children: [
             Text(
-              'Un coffre-fort offline first pour chiffré vos données sensibles.'
-              'Nous allons affiner votre expérience entre lançant la configuration en 3 étapes.',
+              'Un coffre-fort offline first pour chiffré vos données sensibles. '
+              'Nous allons affiner votre expérience dans les prochaines étapes.',
               style: Theme.of(context).textTheme.labelLarge,
             ),
             Text(

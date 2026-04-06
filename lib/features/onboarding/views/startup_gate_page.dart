@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/routes/app_routes.dart';
 import '../service/onboarding_storage_service.dart';
-import '../../../../core/routes/app_routes.dart';
 import '../viewmodels/startup_gate_view_model.dart';
 
 class StartupGatePage extends StatefulWidget {

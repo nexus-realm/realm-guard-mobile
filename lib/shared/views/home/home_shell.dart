@@ -7,8 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import '../../../../core/routes/app_routes.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../../core/routes/app_routes.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../widgets/neon_box_decoration.dart';
 
 class HomeShell extends StatefulWidget {

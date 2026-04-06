@@ -98,12 +98,12 @@ void main() {
       await controller.completeWelcomeStep();
 
       final success = await controller.completeMasterPasswordStep(
-        'motdepasse-solide',
-        'motdepasse-solide',
+        'Motdepasse1!',
+        'Motdepasse1!',
       );
 
       expect(success, isTrue);
-      expect(vault.lastPassword, 'motdepasse-solide');
+      expect(vault.lastPassword, 'Motdepasse1!');
       expect(vault.isLocked, isTrue);
       expect(
         controller.progress.completedSteps.contains(OnboardingStep.masterPassword),
@@ -125,8 +125,8 @@ void main() {
       await controller.initialize();
       await controller.completeWelcomeStep();
       await controller.completeMasterPasswordStep(
-        'motdepasse-solide',
-        'motdepasse-solide',
+        'Motdepasse1!',
+        'Motdepasse1!',
       );
       await controller.completeBiometricStep(false);
 
@@ -149,8 +149,8 @@ void main() {
       await controller.initialize();
       await controller.completeWelcomeStep();
       await controller.completeMasterPasswordStep(
-        'motdepasse-solide',
-        'motdepasse-solide',
+        'Motdepasse1!',
+        'Motdepasse1!',
       );
 
       expect(controller.currentStep, isNull);

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/security/vault_service.dart';
+import '../data/onboarding_step.dart';
 import '../data/password_validation_rule.dart';
 import '../service/onboarding_flow_controller.dart';
-import '../data/onboarding_step.dart';
 import '../service/onboarding_storage_service.dart';
-import '../../../../core/security/vault_service.dart';
 
 class OnboardingViewModel extends ChangeNotifier {
   late final OnboardingFlowController _flowController;

@@ -80,9 +80,9 @@ class OnboardingFlowController extends ChangeNotifier {
       return false;
     }
 
-    if (normalizedPassword.length < 8) {
+    if (normalizedPassword.length < 12) {
       _errorMessage =
-          'Le mot de passe maitre doit contenir au moins 8 caracteres.';
+          'Le mot de passe maitre doit contenir au moins 12 caracteres.';
       notifyListeners();
       return false;
     }

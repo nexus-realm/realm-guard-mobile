@@ -57,8 +57,8 @@ void main() {
       await viewModel.completeWelcomeStep();
 
       final success = await viewModel.completeMasterPasswordStep(
-        'motdepasse-solide',
-        'motdepasse-solide',
+        'Motdepasse1!',
+        'Motdepasse1!',
       );
       await viewModel.completeBiometricStep(true);
 
