@@ -25,7 +25,7 @@ class UnlockViewModel extends ChangeNotifier {
 
   Future<void> initialize() async {
     _strategy = await _unlockService.determineUnlockStrategy();
-    _updateRemainingLockout();
+    await _updateRemainingLockout();
     notifyListeners();
   }
 
@@ -69,7 +69,9 @@ class UnlockViewModel extends ChangeNotifier {
       } else {
         _errorMessage = _getErrorMessage(result);
         if (isNowLocked) {
-          _updateRemainingLockout();
+          notifyListeners(); // Afficher l'erreur immédiatement
+          _errorMessage = null; // Effacer pour éviter les répétitions
+          await _updateRemainingLockout();
           _startLockoutTimer();
         }
       }
@@ -87,15 +89,15 @@ class UnlockViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _updateRemainingLockout() async {
+  Future<void> _updateRemainingLockout() async {
     _remainingLockout = await _unlockService.getRemainingLockout();
-    notifyListeners();
   }
 
   void _startLockoutTimer() {
     _lockoutTimer?.cancel();
-    _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _updateRemainingLockout();
+    _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+      await _updateRemainingLockout();
+      notifyListeners();
       if (_remainingLockout == null || _remainingLockout!.inSeconds <= 0) {
         _lockoutTimer?.cancel();
       }

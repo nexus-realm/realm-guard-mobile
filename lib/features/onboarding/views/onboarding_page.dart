@@ -3,10 +3,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/vault_service.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/password_form.dart';
 import '../../../shared/widgets/view_title.dart';
 import '../data/onboarding_step.dart';
 import '../data/password_validation_rule.dart';
+import '../data/password_validation_rules.dart';
 import '../service/onboarding_storage_service.dart';
 import '../viewmodels/onboarding_view_model.dart';
 
@@ -26,12 +27,8 @@ class OnboardingPage extends StatefulWidget {
 
 class _OnboardingPageState extends State<OnboardingPage> {
   late final OnboardingViewModel _viewModel;
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _passwordConfirmationController =
-      TextEditingController();
-
-  bool _isPasswordObscured = true;
-  bool _isPasswordConfirmationObscured = true;
+  String _passwordValue = '';
+  String _passwordConfirmationValue = '';
 
   final _formKey = GlobalKey<FormState>();
   AutovalidateMode _autoValidateMode = AutovalidateMode.disabled;
@@ -51,13 +48,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
   void dispose() {
     _viewModel.removeListener(_onViewModelUpdated);
     _viewModel.dispose();
-    _passwordController.dispose();
-    _passwordConfirmationController.dispose();
     super.dispose();
   }
 
   List<PasswordValidationRule> _passwordRules(String password) {
-    return _viewModel.getPasswordValidationRules(password);
+    return PasswordValidationRules.getPasswordValidationRules(password);
   }
 
   bool _isPasswordValid(String password) {
@@ -68,44 +63,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   bool get _canSubmitMasterPassword {
-    final password = _passwordController.text;
-    final confirmation = _passwordConfirmationController.text;
     return !_viewModel.isSubmitting &&
-        _isPasswordValid(password) &&
-        confirmation.trim().isNotEmpty &&
-        password.trim() == confirmation.trim();
-  }
-
-  String? _passwordValidator(String? value) {
-    final password = (value ?? '').trim();
-
-    if (password.isEmpty) {
-      return 'Veuillez saisir un mot de passe.';
-    }
-
-    final rules = _passwordRules(password);
-    final allValid = rules.every((rule) => rule.validate(password));
-
-    if (!allValid) {
-      return 'Le mot de passe ne respecte pas toutes les conditions.';
-    }
-
-    return null;
-  }
-
-  String? _passwordConfirmationValidator(String? value) {
-    final confirmation = (value ?? '').trim();
-    final password = _passwordController.text.trim();
-
-    if (confirmation.isEmpty) {
-      return 'Veuillez confirmer le mot de passe.';
-    }
-
-    if (confirmation != password) {
-      return 'Les mots de passe ne correspondent pas.';
-    }
-
-    return null;
+        _isPasswordValid(_passwordValue) &&
+        _passwordConfirmationValue.trim().isNotEmpty &&
+        _passwordValue.trim() == _passwordConfirmationValue.trim();
   }
 
   void _onViewModelUpdated() {
@@ -135,8 +96,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
 
     final success = await _viewModel.completeMasterPasswordStep(
-      _passwordController.text,
-      _passwordConfirmationController.text,
+      _passwordValue,
+      _passwordConfirmationValue,
     );
 
     if (!success) {
@@ -149,9 +110,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
       }
       return;
     }
-
-    _passwordController.clear();
-    _passwordConfirmationController.clear();
   }
 
   @override
@@ -240,32 +198,32 @@ class _OnboardingPageState extends State<OnboardingPage> {
   Widget _buildWelcomeStep() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const ViewTitle(
-          topTitle: 'Présentation',
-          title: 'Bienvenue sur Realm Guard_',
-        ),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 24,
+        const Column(
           children: [
+            ViewTitle(
+              topTitle: 'Présentation',
+              title: 'Bienvenue sur Realm Guard_',
+            ),
+            SizedBox(height: 16),
             Text(
               'Un coffre-fort offline first pour chiffré vos données sensibles. '
               'Nous allons affiner votre expérience dans les prochaines étapes.',
-              style: Theme.of(context).textTheme.labelLarge,
+              style: TextStyle(fontSize: 16),
             ),
+            SizedBox(height: 24),
             Text(
               'Vous pourrez toujours modifier vos choix plus tard dans les paramètres.',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            ElevatedButton(
-              onPressed: _viewModel.isSubmitting
-                  ? null
-                  : _viewModel.completeWelcomeStep,
-              child: const Text('Commencer'),
+              style: TextStyle(fontSize: 16),
             ),
           ],
+        ),
+        ElevatedButton(
+          onPressed: _viewModel.isSubmitting
+              ? null
+              : _viewModel.completeWelcomeStep,
+          child: const Text('Commencer'),
         ),
       ],
     );
@@ -287,66 +245,17 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
           ],
         ),
-        Form(
-          key: _formKey,
-          autovalidateMode: _autoValidateMode,
-          child: Column(
-            spacing: 12,
-            children: [
-              TextFormField(
-                controller: _passwordController,
-                obscureText: _isPasswordObscured,
-                enabled: !_viewModel.isSubmitting,
-                validator: _passwordValidator,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  labelText: 'Mot de passe maitre',
-                  suffixIcon: IconButton(
-                    tooltip: _isPasswordObscured
-                        ? 'Afficher le mot de passe'
-                        : 'Masquer le mot de passe',
-                    onPressed: () {
-                      setState(() {
-                        _isPasswordObscured = !_isPasswordObscured;
-                      });
-                    },
-                    icon: Icon(
-                      _isPasswordObscured
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                    ),
-                  ),
-                ),
-              ),
-              TextFormField(
-                controller: _passwordConfirmationController,
-                obscureText: _isPasswordConfirmationObscured,
-                enabled: !_viewModel.isSubmitting,
-                validator: _passwordConfirmationValidator,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  labelText: 'Confirmation du mot de passe',
-                  suffixIcon: IconButton(
-                    tooltip: _isPasswordConfirmationObscured
-                        ? 'Afficher la confirmation'
-                        : 'Masquer la confirmation',
-                    onPressed: () {
-                      setState(() {
-                        _isPasswordConfirmationObscured =
-                            !_isPasswordConfirmationObscured;
-                      });
-                    },
-                    icon: Icon(
-                      _isPasswordConfirmationObscured
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                    ),
-                  ),
-                ),
-              ),
-              _buildPasswordValidationRules(),
-            ],
-          ),
+        PasswordForm(
+          formKey: _formKey,
+          newPassword: true,
+          autoValidateMode: _autoValidateMode,
+          enabled: !_viewModel.isSubmitting,
+          onPasswordChanged: (value) {
+            setState(() => _passwordValue = value);
+          },
+          onConfirmPasswordChanged: (value) {
+            setState(() => _passwordConfirmationValue = value);
+          },
         ),
         ElevatedButton(
           onPressed: _canSubmitMasterPassword ? _submitMasterPassword : null,
@@ -359,43 +268,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
               : const Text('Valider le mot de passe'),
         ),
       ],
-    );
-  }
-
-  Widget _buildPasswordValidationRules() {
-    final password = _passwordController.text;
-    final rules = _viewModel.getPasswordValidationRules(password);
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ...rules.map((rule) {
-            final isValid = rule.validate(password);
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Icon(
-                    isValid ? Icons.check_circle : Icons.radio_button_unchecked,
-                    size: 18,
-                    color: isValid ? AppColors.success : AppColors.grey2,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    rule.label,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isValid ? AppColors.success : AppColors.grey2,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
     );
   }
 

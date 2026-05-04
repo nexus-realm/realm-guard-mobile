@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/unlock_service.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/password_form.dart';
 import '../../../shared/widgets/view_title.dart';
 import '../viewmodels/unlock_view_model.dart';
 
@@ -17,7 +19,8 @@ class UnlockPage extends StatefulWidget {
 
 class _UnlockPageState extends State<UnlockPage> {
   late final UnlockViewModel _viewModel;
-  final _passwordController = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  String _passwordValue = '';
 
   @override
   void initState() {
@@ -31,7 +34,6 @@ class _UnlockPageState extends State<UnlockPage> {
   void dispose() {
     _viewModel.removeListener(_onViewModelUpdated);
     _viewModel.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
@@ -49,7 +51,7 @@ class _UnlockPageState extends State<UnlockPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_viewModel.errorMessage!),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.darkRed,
         ),
       );
     }
@@ -91,24 +93,13 @@ class _UnlockPageState extends State<UnlockPage> {
                           ),
                         ],
                       ),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Mot de passe maître',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.lock),
-                        ),
+                      PasswordForm(
+                        formKey: _formKey,
                         enabled: !_viewModel.isLoading,
-                        onSubmitted:
-                            _viewModel.isLoading ||
-                                (_viewModel.remainingLockout != null &&
-                                    _viewModel.remainingLockout!.inSeconds > 0)
-                            ? null
-                            : (value) {
-                                _viewModel.attemptPassword(value);
-                                _passwordController.clear();
-                              },
+                        autoValidateMode: AutovalidateMode.onUserInteraction,
+                        onPasswordChanged: (value) {
+                          setState(() => _passwordValue = value);
+                        },
                       ),
                       const SizedBox(height: 16),
                       if (_viewModel.remainingLockout != null &&
@@ -116,13 +107,13 @@ class _UnlockPageState extends State<UnlockPage> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.1),
-                            border: Border.all(color: Colors.red),
+                            color: AppColors.error.withValues(alpha: 0.1),
+                            border: Border.all(color: AppColors.error),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             'Trop de tentatives. Réessayez dans ${_viewModel.remainingLockout!.inSeconds}s',
-                            style: const TextStyle(color: Colors.red),
+                            style: const TextStyle(color: AppColors.error),
                             textAlign: TextAlign.center,
                           ),
                         ),
@@ -134,10 +125,7 @@ class _UnlockPageState extends State<UnlockPage> {
                                     _viewModel.remainingLockout!.inSeconds > 0)
                             ? null
                             : () {
-                                _viewModel.attemptPassword(
-                                  _passwordController.text,
-                                );
-                                _passwordController.clear();
+                                _viewModel.attemptPassword(_passwordValue);
                               },
                         icon: _viewModel.isLoading
                             ? const SizedBox(

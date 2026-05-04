@@ -1,22 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../features/onboarding/data/password_validation_rule.dart';
+import '../../features/onboarding/data/password_validation_rules.dart';
 
 class PasswordForm extends StatefulWidget {
   final bool newPassword;
   final GlobalKey<FormState> formKey;
   final AutovalidateMode autoValidateMode;
   final bool enabled;
-  final List<PasswordValidationRule> Function(String password)
-  getPasswordValidationRules;
   final void Function(String password)? onPasswordChanged;
   final void Function(String confirmation)? onConfirmPasswordChanged;
 
   const PasswordForm({
     super.key,
     required this.formKey,
-    required this.getPasswordValidationRules,
     this.autoValidateMode = AutovalidateMode.disabled,
     this.newPassword = false,
     this.enabled = true,
@@ -45,7 +42,7 @@ class _PasswordFormState extends State<PasswordForm> {
   bool _isPasswordValid(String password) {
     final trimmed = password.trim();
     if (trimmed.isEmpty) return false;
-    final rules = widget.getPasswordValidationRules(trimmed);
+    final rules = PasswordValidationRules.getPasswordValidationRules(trimmed);
     return rules.every((rule) => rule.validate(trimmed));
   }
 
@@ -80,7 +77,7 @@ class _PasswordFormState extends State<PasswordForm> {
 
   Widget _buildPasswordValidationRules() {
     final password = _passwordController.text;
-    final rules = widget.getPasswordValidationRules(password);
+    final rules = PasswordValidationRules.getPasswordValidationRules(password);
 
     return Container(
       padding: const EdgeInsets.all(12),
