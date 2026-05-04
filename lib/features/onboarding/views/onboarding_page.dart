@@ -14,7 +14,11 @@ class OnboardingPage extends StatefulWidget {
   final OnboardingStorageService onboardingStorageService;
   final VaultService vaultService;
 
-  const OnboardingPage({required this.onboardingStorageService, required this.vaultService, super.key});
+  const OnboardingPage({
+    required this.onboardingStorageService,
+    required this.vaultService,
+    super.key,
+  });
 
   @override
   State<OnboardingPage> createState() => _OnboardingPageState();
@@ -23,7 +27,8 @@ class OnboardingPage extends StatefulWidget {
 class _OnboardingPageState extends State<OnboardingPage> {
   late final OnboardingViewModel _viewModel;
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _passwordConfirmationController = TextEditingController();
+  final TextEditingController _passwordConfirmationController =
+      TextEditingController();
 
   bool _isPasswordObscured = true;
   bool _isPasswordConfirmationObscured = true;
@@ -140,9 +145,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       if (mounted && errorMessage != null && errorMessage.isNotEmpty) {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(content: Text(errorMessage)),
-          );
+          ..showSnackBar(SnackBar(content: Text(errorMessage)));
       }
       return;
     }
@@ -164,14 +167,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(elevation: 0, centerTitle: true, title: _buildProgress(currentStep)),
+      appBar: AppBar(
+        elevation: 0,
+        centerTitle: true,
+        title: _buildProgress(currentStep),
+      ),
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
             SliverFillRemaining(
               hasScrollBody: false,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 36,
+                ),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 280),
                   switchInCurve: Curves.easeOutCubic,
@@ -231,7 +241,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const ViewTitle(topTitle: 'Présentation', title: 'Bienvenue sur Realm Guard_'),
+        const ViewTitle(
+          topTitle: 'Présentation',
+          title: 'Bienvenue sur Realm Guard_',
+        ),
         Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -247,12 +260,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
               style: Theme.of(context).textTheme.labelLarge,
             ),
             ElevatedButton(
-              onPressed: _viewModel.isSubmitting ? null : _viewModel.completeWelcomeStep,
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : _viewModel.completeWelcomeStep,
               child: const Text('Commencer'),
             ),
           ],
         ),
-
       ],
     );
   }
@@ -337,7 +351,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
         ElevatedButton(
           onPressed: _canSubmitMasterPassword ? _submitMasterPassword : null,
           child: _viewModel.isSubmitting
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Text('Valider le mot de passe'),
         ),
       ],
@@ -367,7 +385,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   const SizedBox(width: 8),
                   Text(
                     rule.label,
-                    style: TextStyle(fontSize: 14, color: isValid ? AppColors.success : AppColors.grey2),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isValid ? AppColors.success : AppColors.grey2,
+                    ),
                   ),
                 ],
               ),
@@ -407,12 +428,16 @@ class _OnboardingPageState extends State<OnboardingPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ElevatedButton.icon(
-              onPressed: _viewModel.isSubmitting ? null : () => _viewModel.completeBiometricStep(true),
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : () => _viewModel.completeBiometricStep(true),
               icon: const Icon(Icons.fingerprint),
               label: const Text('Oui, activer la biometrie'),
             ),
             OutlinedButton(
-              onPressed: _viewModel.isSubmitting ? null : () => _viewModel.completeBiometricStep(false),
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : () => _viewModel.completeBiometricStep(false),
               child: const Text('Non, utiliser uniquement le mot de passe'),
             ),
           ],

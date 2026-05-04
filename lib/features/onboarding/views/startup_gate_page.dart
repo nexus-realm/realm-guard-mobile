@@ -8,10 +8,7 @@ import '../viewmodels/startup_gate_view_model.dart';
 class StartupGatePage extends StatefulWidget {
   final OnboardingStorageService onboardingStorageService;
 
-  const StartupGatePage({
-    required this.onboardingStorageService,
-    super.key,
-  });
+  const StartupGatePage({required this.onboardingStorageService, super.key});
 
   @override
   State<StartupGatePage> createState() => _StartupGatePageState();
@@ -47,19 +44,18 @@ class _StartupGatePageState extends State<StartupGatePage> {
       return;
     }
 
+    if (_viewModel.targetRoute == StartupRouteTarget.unlock) {
+      context.go(AppRoutes.unlock);
+      return;
+    }
+
     if (_viewModel.targetRoute == StartupRouteTarget.onboarding) {
-      context.goNamed('onboarding');
+      context.go(AppRoutes.onboarding);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
-
-
