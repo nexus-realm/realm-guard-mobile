@@ -27,8 +27,9 @@ class OnboardingPage extends StatefulWidget {
 
 class _OnboardingPageState extends State<OnboardingPage> {
   late final OnboardingViewModel _viewModel;
-  String _passwordValue = '';
-  String _passwordConfirmationValue = '';
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _passwordConfirmationController =
+      TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
   AutovalidateMode _autoValidateMode = AutovalidateMode.disabled;
@@ -63,10 +64,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   bool get _canSubmitMasterPassword {
+    final String passwordValue = _passwordController.text;
+    final String passwordConfirmationValue =
+        _passwordConfirmationController.text;
+
     return !_viewModel.isSubmitting &&
-        _isPasswordValid(_passwordValue) &&
-        _passwordConfirmationValue.trim().isNotEmpty &&
-        _passwordValue.trim() == _passwordConfirmationValue.trim();
+        _isPasswordValid(passwordValue) &&
+        passwordConfirmationValue.trim().isNotEmpty &&
+        passwordValue.trim() == passwordConfirmationValue.trim();
   }
 
   void _onViewModelUpdated() {
@@ -96,8 +101,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
 
     final success = await _viewModel.completeMasterPasswordStep(
-      _passwordValue,
-      _passwordConfirmationValue,
+      _passwordController.text,
+      _passwordConfirmationController.text,
     );
 
     if (!success) {
@@ -247,15 +252,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
         ),
         PasswordForm(
           formKey: _formKey,
-          newPassword: true,
+          passwordController: _passwordController,
+          passwordConfirmationController: _passwordConfirmationController,
           autoValidateMode: _autoValidateMode,
           enabled: !_viewModel.isSubmitting,
-          onPasswordChanged: (value) {
-            setState(() => _passwordValue = value);
-          },
-          onConfirmPasswordChanged: (value) {
-            setState(() => _passwordConfirmationValue = value);
-          },
+          onPasswordChanged: (_) => setState(() {}),
+          onConfirmPasswordChanged: (_) => setState(() {}),
         ),
         ElevatedButton(
           onPressed: _canSubmitMasterPassword ? _submitMasterPassword : null,
@@ -277,21 +279,26 @@ class _OnboardingPageState extends State<OnboardingPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 24,
       children: [
-        const ViewTitle(topTitle: 'Sécurisation', title: 'Biométrie_'),
-        Column(
-          spacing: 12,
+        const Column(
+          spacing: 24,
           children: [
-            Text(
-              'Voulez-vous utiliser la biométrie pour dévérrouiller rapidement votre coffre-fort ?',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            Text(
-              'Vous aurez toujours la possibilité d\'utiliser votre mot de passe maitre pour vous authentifier.',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            Text(
-              'Le mot de passe vous sera demandé de temps en temps pour renforcer la sécurité.',
-              style: Theme.of(context).textTheme.labelLarge,
+            ViewTitle(topTitle: 'Sécurisation', title: 'Biométrie_'),
+            Column(
+              spacing: 12,
+              children: [
+                Text(
+                  'Voulez-vous utiliser la biométrie pour dévérrouiller rapidement votre coffre-fort ?',
+                  style: TextStyle(fontSize: 16),
+                ),
+                Text(
+                  'Vous aurez toujours la possibilité d\'utiliser votre mot de passe maitre pour vous authentifier.',
+                  style: TextStyle(fontSize: 16),
+                ),
+                Text(
+                  'Le mot de passe vous sera demandé de temps en temps pour renforcer la sécurité.',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ],
             ),
           ],
         ),
@@ -304,7 +311,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   ? null
                   : () => _viewModel.completeBiometricStep(true),
               icon: const Icon(Icons.fingerprint),
-              label: const Text('Oui, activer la biometrie'),
+              label: const Text('Oui, activer la biométrie'),
             ),
             OutlinedButton(
               onPressed: _viewModel.isSubmitting

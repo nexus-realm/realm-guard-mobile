@@ -20,7 +20,7 @@ class UnlockPage extends StatefulWidget {
 class _UnlockPageState extends State<UnlockPage> {
   late final UnlockViewModel _viewModel;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  String _passwordValue = '';
+  final TextEditingController _passwordController = TextEditingController();
 
   @override
   void initState() {
@@ -45,8 +45,9 @@ class _UnlockPageState extends State<UnlockPage> {
       return;
     }
 
-    // Afficher messages d'erreur
-    if (_viewModel.errorMessage != null &&
+    // Afficher messages d'erreur seulement pour les erreurs de mot de passe
+    if (_viewModel.strategy == UnlockStrategy.password &&
+        _viewModel.errorMessage != null &&
         _viewModel.errorMessage!.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -76,67 +77,93 @@ class _UnlockPageState extends State<UnlockPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    spacing: 24,
                     children: [
-                      const Column(
+                      Column(
+                        spacing: 16,
                         children: [
-                          ViewTitle(
+                          const ViewTitle(
                             topTitle: 'Déverrouillage',
                             title: 'Ouvrez l\'application',
                           ),
-                          SizedBox(height: 16),
-                          Text(
+                          const Text(
                             'Ouvrez votre coffre-fort pour accéder à vos '
                             'secrets. Utilisez votre empreinte digitale ou '
                             'entrez votre mot de passe maître.',
                             style: TextStyle(fontSize: 16),
                           ),
+                          const SizedBox(height: 24),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            spacing: 16,
+                            children: [
+                              PasswordForm(
+                                formKey: _formKey,
+                                passwordController: _passwordController,
+                                enabled: !_viewModel.isLoading,
+                                autoValidateMode:
+                                    AutovalidateMode.onUserInteraction,
+                              ),
+                              if (_viewModel.remainingLockout != null &&
+                                  _viewModel.remainingLockout!.inSeconds > 0)
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.error.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                    border: Border.all(color: AppColors.error),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Trop de tentatives. Réessayez dans ${_viewModel.remainingLockout!.inSeconds}s',
+                                    style: const TextStyle(
+                                      color: AppColors.error,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                            ],
+                          ),
                         ],
                       ),
-                      PasswordForm(
-                        formKey: _formKey,
-                        enabled: !_viewModel.isLoading,
-                        autoValidateMode: AutovalidateMode.onUserInteraction,
-                        onPasswordChanged: (value) {
-                          setState(() => _passwordValue = value);
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      if (_viewModel.remainingLockout != null &&
-                          _viewModel.remainingLockout!.inSeconds > 0)
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.error.withValues(alpha: 0.1),
-                            border: Border.all(color: AppColors.error),
-                            borderRadius: BorderRadius.circular(8),
+                      Row(
+                        spacing: 12,
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed:
+                                  _viewModel.isLoading ||
+                                      (_viewModel.remainingLockout != null &&
+                                          _viewModel
+                                                  .remainingLockout!
+                                                  .inSeconds >
+                                              0)
+                                  ? null
+                                  : () {
+                                      _viewModel.attemptPassword(
+                                        _passwordController.text,
+                                      );
+                                    },
+                              icon: _viewModel.isLoading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.lock_open),
+                              label: const Text('Déverrouiller'),
+                            ),
                           ),
-                          child: Text(
-                            'Trop de tentatives. Réessayez dans ${_viewModel.remainingLockout!.inSeconds}s',
-                            style: const TextStyle(color: AppColors.error),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed:
-                            _viewModel.isLoading ||
-                                (_viewModel.remainingLockout != null &&
-                                    _viewModel.remainingLockout!.inSeconds > 0)
-                            ? null
-                            : () {
-                                _viewModel.attemptPassword(_passwordValue);
+                          if (_viewModel.strategy == UnlockStrategy.biometric)
+                            IconButton(
+                              onPressed: () {
+                                _viewModel.attemptBiometric();
                               },
-                        icon: _viewModel.isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.lock_open),
-                        label: const Text('Déverrouiller'),
+                              icon: const Icon(Icons.fingerprint),
+                            ),
+                        ],
                       ),
                     ],
                   ),

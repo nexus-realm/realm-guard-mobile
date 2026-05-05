@@ -13,6 +13,8 @@ class UnlockViewModel extends ChangeNotifier {
   bool _isUnlocked = false;
   Duration? _remainingLockout;
   Timer? _lockoutTimer;
+  int _biometricAttemptCount =
+      0; // Compteur de tentatives biométriques dans cette session
 
   UnlockViewModel({required UnlockService unlockService})
     : _unlockService = unlockService;
@@ -22,11 +24,21 @@ class UnlockViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isUnlocked => _isUnlocked;
   Duration? get remainingLockout => _remainingLockout;
+  int get biometricAttemptCount => _biometricAttemptCount;
 
   Future<void> initialize() async {
     _strategy = await _unlockService.determineUnlockStrategy();
     await _updateRemainingLockout();
+
+    if (_remainingLockout != null && _remainingLockout!.inSeconds > 0) {
+      _startLockoutTimer();
+    }
+
     notifyListeners();
+
+    if (_strategy == UnlockStrategy.biometric) {
+      await attemptBiometric();
+    }
   }
 
   Future<void> attemptBiometric() async {
@@ -40,14 +52,23 @@ class UnlockViewModel extends ChangeNotifier {
       if (success) {
         _isUnlocked = true;
       } else {
+        _biometricAttemptCount++;
         _errorMessage = _getErrorMessage(result);
-        if (result == UnlockAttemptResult.biometricFailed) {
-          // Passer au mot de passe après un certain nombre d'échecs
+
+        // Après plusieurs échecs biométriques, passer au mot de passe
+        if (_biometricAttemptCount >= 3) {
           _strategy = UnlockStrategy.password;
+          _errorMessage = null; // Effacer le message pour éviter la snackbar
         }
       }
     } catch (e) {
+      _biometricAttemptCount++;
       _errorMessage = 'Erreur: ${e.toString()}';
+
+      if (_biometricAttemptCount >= 3) {
+        _strategy = UnlockStrategy.password;
+        _errorMessage = null; // Effacer le message pour éviter la snackbar
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -85,6 +106,12 @@ class UnlockViewModel extends ChangeNotifier {
 
   void switchToPassword() {
     _strategy = UnlockStrategy.password;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void resetBiometricAttempts() {
+    _biometricAttemptCount = 0;
     _errorMessage = null;
     notifyListeners();
   }

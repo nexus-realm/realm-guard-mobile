@@ -4,8 +4,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../features/onboarding/data/password_validation_rules.dart';
 
 class PasswordForm extends StatefulWidget {
-  final bool newPassword;
   final GlobalKey<FormState> formKey;
+  final TextEditingController passwordController;
+  final TextEditingController? passwordConfirmationController;
   final AutovalidateMode autoValidateMode;
   final bool enabled;
   final void Function(String password)? onPasswordChanged;
@@ -14,8 +15,9 @@ class PasswordForm extends StatefulWidget {
   const PasswordForm({
     super.key,
     required this.formKey,
+    required this.passwordController,
+    this.passwordConfirmationController,
     this.autoValidateMode = AutovalidateMode.disabled,
-    this.newPassword = false,
     this.enabled = true,
     this.onPasswordChanged,
     this.onConfirmPasswordChanged,
@@ -26,16 +28,17 @@ class PasswordForm extends StatefulWidget {
 }
 
 class _PasswordFormState extends State<PasswordForm> {
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-
   bool _isPasswordObscured = true;
   bool _isPasswordConfirmationObscured = true;
 
   @override
   void dispose() {
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    widget.passwordController.clear();
+    widget.passwordController.dispose();
+    if (widget.passwordConfirmationController != null) {
+      widget.passwordConfirmationController?.clear();
+      widget.passwordConfirmationController?.dispose();
+    }
     super.dispose();
   }
 
@@ -53,7 +56,8 @@ class _PasswordFormState extends State<PasswordForm> {
       return 'Veuillez saisir un mot de passe.';
     }
 
-    if (widget.newPassword && !_isPasswordValid(password)) {
+    if (widget.passwordConfirmationController != null &&
+        !_isPasswordValid(password)) {
       return 'Le mot de passe ne respecte pas toutes les conditions.';
     }
 
@@ -62,7 +66,7 @@ class _PasswordFormState extends State<PasswordForm> {
 
   String? _passwordConfirmationValidator(String? value) {
     final confirmation = (value ?? '').trim();
-    final password = _passwordController.text.trim();
+    final password = widget.passwordController.text.trim();
 
     if (confirmation.isEmpty) {
       return 'Veuillez confirmer le mot de passe.';
@@ -76,7 +80,7 @@ class _PasswordFormState extends State<PasswordForm> {
   }
 
   Widget _buildPasswordValidationRules() {
-    final password = _passwordController.text;
+    final password = widget.passwordController.text;
     final rules = PasswordValidationRules.getPasswordValidationRules(password);
 
     return Container(
@@ -121,7 +125,7 @@ class _PasswordFormState extends State<PasswordForm> {
         spacing: 12,
         children: [
           TextFormField(
-            controller: _passwordController,
+            controller: widget.passwordController,
             obscureText: _isPasswordObscured,
             enabled: widget.enabled,
             validator: _passwordValidator,
@@ -146,9 +150,9 @@ class _PasswordFormState extends State<PasswordForm> {
               ),
             ),
           ),
-          if (widget.newPassword) ...[
+          if (widget.passwordConfirmationController != null) ...[
             TextFormField(
-              controller: _confirmPasswordController,
+              controller: widget.passwordConfirmationController,
               obscureText: _isPasswordConfirmationObscured,
               enabled: widget.enabled,
               validator: _passwordConfirmationValidator,
