@@ -54,23 +54,23 @@ class _HomeShellState extends State<HomeShell> {
                 spacing: 12,
                 children: [
                   Text(
-                    'Parametres',
+                    'Paramètres',
                     style: Theme.of(sheetContext).textTheme.titleLarge,
                   ),
                   _buildSettingsCategory(
                     context: sheetContext,
-                    title: 'General',
+                    title: 'Général',
                     children: const [
                       ListTile(
                         leading: Icon(Icons.language),
                         title: Text('Langue'),
-                        subtitle: Text('Configuration a venir'),
+                        subtitle: Text('Configuration à venir'),
                         enabled: false,
                       ),
                       ListTile(
                         leading: Icon(Icons.palette_outlined),
                         title: Text('Theme'),
-                        subtitle: Text('Configuration a venir'),
+                        subtitle: Text('Configuration à venir'),
                         enabled: false,
                       ),
                     ],
@@ -82,13 +82,13 @@ class _HomeShellState extends State<HomeShell> {
                       ListTile(
                         leading: Icon(Icons.lock_outline),
                         title: Text('Mot de passe maitre'),
-                        subtitle: Text('Configuration a venir'),
+                        subtitle: Text('Configuration à venir'),
                         enabled: false,
                       ),
                       ListTile(
                         leading: Icon(Icons.fingerprint),
                         title: Text('Biometrie'),
-                        subtitle: Text('Configuration a venir'),
+                        subtitle: Text('Configuration à venir'),
                         enabled: false,
                       ),
                     ],
@@ -102,7 +102,7 @@ class _HomeShellState extends State<HomeShell> {
                           leading: const Icon(Icons.restore),
                           title: const Text('Reset complet de l\'application'),
                           subtitle: const Text(
-                            'Supprime les parametres, l\'etat onboarding et le coffre local.',
+                            'Supprime les paramètres, l\'état onboarding et le coffre local.',
                           ),
                           textColor: Colors.red,
                           iconColor: Colors.red,
@@ -154,7 +154,7 @@ class _HomeShellState extends State<HomeShell> {
         return AlertDialog(
           title: const Text('Reset complet'),
           content: const Text(
-            'Cette action va supprimer tous les parametres locaux et les donnees du coffre. Continuer ?',
+            'Cette action va supprimer tous les paramètres locaux et les données du coffre. Continuer ?',
           ),
           actions: [
             TextButton(
@@ -198,7 +198,7 @@ class _HomeShellState extends State<HomeShell> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Application reinitialisee.')),
+        const SnackBar(content: Text('Application réinitialisée.')),
       );
       context.go(AppRoutes.startup);
     } catch (_) {
@@ -207,7 +207,9 @@ class _HomeShellState extends State<HomeShell> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Impossible de reinitialiser les donnees pour le moment.'),
+          content: Text(
+            'Impossible de réinitialiser les donnees pour le moment.',
+          ),
         ),
       );
     }
@@ -220,7 +222,7 @@ class _HomeShellState extends State<HomeShell> {
         title: const Text('Realm Guard'),
         actions: [
           IconButton(
-            tooltip: 'Parametres',
+            tooltip: 'Paramètres',
             onPressed: _openSettings,
             icon: const Icon(Icons.settings),
           ),
@@ -229,10 +231,7 @@ class _HomeShellState extends State<HomeShell> {
       body: Column(
         children: [
           Expanded(child: widget.child),
-          Container(
-            height: 1,
-            decoration: NeonBoxDecoration.neonBoxDecoration,
-          )
+          Container(height: 1, decoration: NeonBoxDecoration.neonBoxDecoration),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(

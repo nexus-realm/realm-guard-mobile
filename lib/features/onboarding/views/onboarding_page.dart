@@ -3,10 +3,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/vault_service.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/password_form.dart';
 import '../../../shared/widgets/view_title.dart';
 import '../data/onboarding_step.dart';
 import '../data/password_validation_rule.dart';
+import '../data/password_validation_rules.dart';
 import '../service/onboarding_storage_service.dart';
 import '../viewmodels/onboarding_view_model.dart';
 
@@ -14,7 +15,11 @@ class OnboardingPage extends StatefulWidget {
   final OnboardingStorageService onboardingStorageService;
   final VaultService vaultService;
 
-  const OnboardingPage({required this.onboardingStorageService, required this.vaultService, super.key});
+  const OnboardingPage({
+    required this.onboardingStorageService,
+    required this.vaultService,
+    super.key,
+  });
 
   @override
   State<OnboardingPage> createState() => _OnboardingPageState();
@@ -23,10 +28,8 @@ class OnboardingPage extends StatefulWidget {
 class _OnboardingPageState extends State<OnboardingPage> {
   late final OnboardingViewModel _viewModel;
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _passwordConfirmationController = TextEditingController();
-
-  bool _isPasswordObscured = true;
-  bool _isPasswordConfirmationObscured = true;
+  final TextEditingController _passwordConfirmationController =
+      TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
   AutovalidateMode _autoValidateMode = AutovalidateMode.disabled;
@@ -46,13 +49,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
   void dispose() {
     _viewModel.removeListener(_onViewModelUpdated);
     _viewModel.dispose();
-    _passwordController.dispose();
-    _passwordConfirmationController.dispose();
     super.dispose();
   }
 
   List<PasswordValidationRule> _passwordRules(String password) {
-    return _viewModel.getPasswordValidationRules(password);
+    return PasswordValidationRules.getPasswordValidationRules(password);
   }
 
   bool _isPasswordValid(String password) {
@@ -63,44 +64,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   bool get _canSubmitMasterPassword {
-    final password = _passwordController.text;
-    final confirmation = _passwordConfirmationController.text;
+    final String passwordValue = _passwordController.text;
+    final String passwordConfirmationValue =
+        _passwordConfirmationController.text;
+
     return !_viewModel.isSubmitting &&
-        _isPasswordValid(password) &&
-        confirmation.trim().isNotEmpty &&
-        password.trim() == confirmation.trim();
-  }
-
-  String? _passwordValidator(String? value) {
-    final password = (value ?? '').trim();
-
-    if (password.isEmpty) {
-      return 'Veuillez saisir un mot de passe.';
-    }
-
-    final rules = _passwordRules(password);
-    final allValid = rules.every((rule) => rule.validate(password));
-
-    if (!allValid) {
-      return 'Le mot de passe ne respecte pas toutes les conditions.';
-    }
-
-    return null;
-  }
-
-  String? _passwordConfirmationValidator(String? value) {
-    final confirmation = (value ?? '').trim();
-    final password = _passwordController.text.trim();
-
-    if (confirmation.isEmpty) {
-      return 'Veuillez confirmer le mot de passe.';
-    }
-
-    if (confirmation != password) {
-      return 'Les mots de passe ne correspondent pas.';
-    }
-
-    return null;
+        _isPasswordValid(passwordValue) &&
+        passwordConfirmationValue.trim().isNotEmpty &&
+        passwordValue.trim() == passwordConfirmationValue.trim();
   }
 
   void _onViewModelUpdated() {
@@ -140,15 +111,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
       if (mounted && errorMessage != null && errorMessage.isNotEmpty) {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(content: Text(errorMessage)),
-          );
+          ..showSnackBar(SnackBar(content: Text(errorMessage)));
       }
       return;
     }
-
-    _passwordController.clear();
-    _passwordConfirmationController.clear();
   }
 
   @override
@@ -164,14 +130,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(elevation: 0, centerTitle: true, title: _buildProgress(currentStep)),
+      appBar: AppBar(
+        elevation: 0,
+        centerTitle: true,
+        title: _buildProgress(currentStep),
+      ),
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
             SliverFillRemaining(
               hasScrollBody: false,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 36,
+                ),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 280),
                   switchInCurve: Curves.easeOutCubic,
@@ -230,29 +203,33 @@ class _OnboardingPageState extends State<OnboardingPage> {
   Widget _buildWelcomeStep() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const ViewTitle(topTitle: 'Présentation', title: 'Bienvenue sur Realm Guard_'),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 24,
+        const Column(
           children: [
+            ViewTitle(
+              topTitle: 'Présentation',
+              title: 'Bienvenue sur Realm Guard_',
+            ),
+            SizedBox(height: 16),
             Text(
               'Un coffre-fort offline first pour chiffré vos données sensibles. '
               'Nous allons affiner votre expérience dans les prochaines étapes.',
-              style: Theme.of(context).textTheme.labelLarge,
+              style: TextStyle(fontSize: 16),
             ),
+            SizedBox(height: 24),
             Text(
               'Vous pourrez toujours modifier vos choix plus tard dans les paramètres.',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            ElevatedButton(
-              onPressed: _viewModel.isSubmitting ? null : _viewModel.completeWelcomeStep,
-              child: const Text('Commencer'),
+              style: TextStyle(fontSize: 16),
             ),
           ],
         ),
-
+        ElevatedButton(
+          onPressed: _viewModel.isSubmitting
+              ? null
+              : _viewModel.completeWelcomeStep,
+          child: const Text('Commencer'),
+        ),
       ],
     );
   }
@@ -273,108 +250,26 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
           ],
         ),
-        Form(
-          key: _formKey,
-          autovalidateMode: _autoValidateMode,
-          child: Column(
-            spacing: 12,
-            children: [
-              TextFormField(
-                controller: _passwordController,
-                obscureText: _isPasswordObscured,
-                enabled: !_viewModel.isSubmitting,
-                validator: _passwordValidator,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  labelText: 'Mot de passe maitre',
-                  suffixIcon: IconButton(
-                    tooltip: _isPasswordObscured
-                        ? 'Afficher le mot de passe'
-                        : 'Masquer le mot de passe',
-                    onPressed: () {
-                      setState(() {
-                        _isPasswordObscured = !_isPasswordObscured;
-                      });
-                    },
-                    icon: Icon(
-                      _isPasswordObscured
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                    ),
-                  ),
-                ),
-              ),
-              TextFormField(
-                controller: _passwordConfirmationController,
-                obscureText: _isPasswordConfirmationObscured,
-                enabled: !_viewModel.isSubmitting,
-                validator: _passwordConfirmationValidator,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  labelText: 'Confirmation du mot de passe',
-                  suffixIcon: IconButton(
-                    tooltip: _isPasswordConfirmationObscured
-                        ? 'Afficher la confirmation'
-                        : 'Masquer la confirmation',
-                    onPressed: () {
-                      setState(() {
-                        _isPasswordConfirmationObscured =
-                            !_isPasswordConfirmationObscured;
-                      });
-                    },
-                    icon: Icon(
-                      _isPasswordConfirmationObscured
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                    ),
-                  ),
-                ),
-              ),
-              _buildPasswordValidationRules(),
-            ],
-          ),
+        PasswordForm(
+          formKey: _formKey,
+          passwordController: _passwordController,
+          passwordConfirmationController: _passwordConfirmationController,
+          autoValidateMode: _autoValidateMode,
+          enabled: !_viewModel.isSubmitting,
+          onPasswordChanged: (_) => setState(() {}),
+          onConfirmPasswordChanged: (_) => setState(() {}),
         ),
         ElevatedButton(
           onPressed: _canSubmitMasterPassword ? _submitMasterPassword : null,
           child: _viewModel.isSubmitting
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Text('Valider le mot de passe'),
         ),
       ],
-    );
-  }
-
-  Widget _buildPasswordValidationRules() {
-    final password = _passwordController.text;
-    final rules = _viewModel.getPasswordValidationRules(password);
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ...rules.map((rule) {
-            final isValid = rule.validate(password);
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Icon(
-                    isValid ? Icons.check_circle : Icons.radio_button_unchecked,
-                    size: 18,
-                    color: isValid ? AppColors.success : AppColors.grey2,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    rule.label,
-                    style: TextStyle(fontSize: 14, color: isValid ? AppColors.success : AppColors.grey2),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
     );
   }
 
@@ -384,21 +279,26 @@ class _OnboardingPageState extends State<OnboardingPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 24,
       children: [
-        const ViewTitle(topTitle: 'Sécurisation', title: 'Biométrie_'),
-        Column(
-          spacing: 12,
+        const Column(
+          spacing: 24,
           children: [
-            Text(
-              'Voulez-vous utiliser la biométrie pour dévérrouiller rapidement votre coffre-fort ?',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            Text(
-              'Vous aurez toujours la possibilité d\'utiliser votre mot de passe maitre pour vous authentifier.',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            Text(
-              'Le mot de passe vous sera demandé de temps en temps pour renforcer la sécurité.',
-              style: Theme.of(context).textTheme.labelLarge,
+            ViewTitle(topTitle: 'Sécurisation', title: 'Biométrie_'),
+            Column(
+              spacing: 12,
+              children: [
+                Text(
+                  'Voulez-vous utiliser la biométrie pour dévérrouiller rapidement votre coffre-fort ?',
+                  style: TextStyle(fontSize: 16),
+                ),
+                Text(
+                  'Vous aurez toujours la possibilité d\'utiliser votre mot de passe maitre pour vous authentifier.',
+                  style: TextStyle(fontSize: 16),
+                ),
+                Text(
+                  'Le mot de passe vous sera demandé de temps en temps pour renforcer la sécurité.',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ],
             ),
           ],
         ),
@@ -407,12 +307,16 @@ class _OnboardingPageState extends State<OnboardingPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ElevatedButton.icon(
-              onPressed: _viewModel.isSubmitting ? null : () => _viewModel.completeBiometricStep(true),
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : () => _viewModel.completeBiometricStep(true),
               icon: const Icon(Icons.fingerprint),
-              label: const Text('Oui, activer la biometrie'),
+              label: const Text('Oui, activer la biométrie'),
             ),
             OutlinedButton(
-              onPressed: _viewModel.isSubmitting ? null : () => _viewModel.completeBiometricStep(false),
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : () => _viewModel.completeBiometricStep(false),
               child: const Text('Non, utiliser uniquement le mot de passe'),
             ),
           ],

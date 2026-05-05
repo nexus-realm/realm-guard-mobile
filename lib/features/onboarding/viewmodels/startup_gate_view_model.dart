@@ -4,7 +4,7 @@ import '../../../core/security/biometric_storage_service.dart';
 import '../data/onboarding_step.dart';
 import '../service/onboarding_storage_service.dart';
 
-enum StartupRouteTarget { onboarding, home }
+enum StartupRouteTarget { onboarding, unlock, home }
 
 class StartupGateViewModel extends ChangeNotifier {
   final OnboardingStorageService _onboardingStorageService;
@@ -21,6 +21,7 @@ class StartupGateViewModel extends ChangeNotifier {
            biometricStorageService ?? BiometricStorageService();
 
   bool get isLoading => _isLoading;
+
   StartupRouteTarget? get targetRoute => _targetRoute;
 
   Future<void> initialize() async {
@@ -28,16 +29,17 @@ class StartupGateViewModel extends ChangeNotifier {
     notifyListeners();
 
     final progress = await _onboardingStorageService.loadProgress();
-    final isBiometricAvailable = await _biometricStorageService.isBiometricAvailable();
+    final isBiometricAvailable = await _biometricStorageService
+        .isBiometricAvailable();
 
     final activeSteps = isBiometricAvailable
         ? OnboardingStep.values
         : OnboardingStep.values
-            .where((step) => step != OnboardingStep.biometricChoice)
-            .toList(growable: false);
+              .where((step) => step != OnboardingStep.biometricChoice)
+              .toList(growable: false);
 
     _targetRoute = progress.isCompletedFor(activeSteps)
-        ? StartupRouteTarget.home
+        ? StartupRouteTarget.unlock
         : StartupRouteTarget.onboarding;
 
     _isLoading = false;
