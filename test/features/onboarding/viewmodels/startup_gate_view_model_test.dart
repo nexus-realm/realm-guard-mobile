@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:realm_guard_mobile/core/security/biometric_storage_service.dart';
-import 'package:realm_guard_mobile/features/onboarding/service/onboarding_progress.dart';
 import 'package:realm_guard_mobile/features/onboarding/data/onboarding_step.dart';
+import 'package:realm_guard_mobile/features/onboarding/service/onboarding_progress.dart';
 import 'package:realm_guard_mobile/features/onboarding/service/onboarding_storage_service.dart';
 import 'package:realm_guard_mobile/features/onboarding/viewmodels/startup_gate_view_model.dart';
 
@@ -51,7 +51,7 @@ void main() {
       expect(viewModel.isLoading, isFalse);
     });
 
-    test('targets home when flow is completed', () async {
+    test('targets unlock when flow is completed', () async {
       final completedProgress = OnboardingProgress.initial()
           .markStepCompleted(OnboardingStep.welcome)
           .markStepCompleted(OnboardingStep.masterPassword)
@@ -69,28 +69,30 @@ void main() {
 
       await viewModel.initialize();
 
-      expect(viewModel.targetRoute, StartupRouteTarget.home);
+      expect(viewModel.targetRoute, StartupRouteTarget.unlock);
       expect(viewModel.isLoading, isFalse);
     });
 
-    test('targets home without biometric completion when biometrics are unavailable',
-        () async {
-      final progressWithoutBiometric = OnboardingProgress.initial()
-          .markStepCompleted(OnboardingStep.welcome)
-          .markStepCompleted(OnboardingStep.masterPassword);
-      final biometrics = FakeBiometricStorageService()..isAvailable = false;
+    test(
+      'targets unlock without biometric completion when biometrics are unavailable',
+      () async {
+        final progressWithoutBiometric = OnboardingProgress.initial()
+            .markStepCompleted(OnboardingStep.welcome)
+            .markStepCompleted(OnboardingStep.masterPassword);
+        final biometrics = FakeBiometricStorageService()..isAvailable = false;
 
-      final viewModel = StartupGateViewModel(
-        onboardingStorageService: InMemoryOnboardingStorageService(
-          progressWithoutBiometric,
-        ),
-        biometricStorageService: biometrics,
-      );
+        final viewModel = StartupGateViewModel(
+          onboardingStorageService: InMemoryOnboardingStorageService(
+            progressWithoutBiometric,
+          ),
+          biometricStorageService: biometrics,
+        );
 
-      await viewModel.initialize();
+        await viewModel.initialize();
 
-      expect(viewModel.targetRoute, StartupRouteTarget.home);
-      expect(viewModel.isLoading, isFalse);
-    });
+        expect(viewModel.targetRoute, StartupRouteTarget.unlock);
+        expect(viewModel.isLoading, isFalse);
+      },
+    );
   });
 }
