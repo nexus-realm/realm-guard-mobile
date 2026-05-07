@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/debug/views/security_debug_page.dart';
 import '../../features/debug/views/vault_debug_page.dart';
-import '../../features/home/views/first_page.dart';
+import '../../features/home/views/home_tab.dart';
 import '../../features/onboarding/service/onboarding_storage_service.dart';
 import '../../features/onboarding/views/onboarding_page.dart';
 import '../../features/onboarding/views/startup_gate_page.dart';
@@ -47,7 +47,7 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: AppRoutes.home,
           name: 'home',
-          builder: (context, state) => const FirstPage(),
+          builder: (context, state) => HomeTab(vaultService: _vaultService),
         ),
       ],
     ),

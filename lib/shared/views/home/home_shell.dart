@@ -9,7 +9,12 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../widgets/neon_box_decoration.dart';
+import '../../notifiers/fab_notifier.dart';
+import '../../notifiers/fab_notifier_scope.dart';
+import '../../notifiers/search_notifier.dart';
+import '../../notifiers/search_notifier_scope.dart';
+
+enum CategoryFilter { all, profiles, credentials }
 
 class HomeShell extends StatefulWidget {
   final Widget child;
@@ -21,9 +26,21 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
+  final SearchNotifier _searchNotifier = SearchNotifier();
+  final FabNotifier _fabNotifier = FabNotifier();
+  final TextEditingController _searchController = TextEditingController();
   int _currentIndex = 0;
 
-  final tabs = [AppRoutes.home, AppRoutes.home];
+  final List<String> tabs = [AppRoutes.home, AppRoutes.home];
+  late final List<dynamic> actions = [
+    [
+      IconButton(
+        tooltip: 'Paramètres',
+        onPressed: _openSettings,
+        icon: const Icon(Icons.settings),
+      ),
+    ],
+  ];
 
   bool get _isDeveloperCategoryEnabled {
     return kDebugMode ||
@@ -216,34 +233,60 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   @override
+  void dispose() {
+    _fabNotifier.dispose();
+    _searchNotifier.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Realm Guard'),
-        actions: [
-          IconButton(
-            tooltip: 'Paramètres',
-            onPressed: _openSettings,
-            icon: const Icon(Icons.settings),
+    return SearchNotifierScope(
+      notifier: _searchNotifier,
+      child: FabNotifierScope(
+        notifier: _fabNotifier,
+        child: Scaffold(
+          appBar: AppBar(
+            title: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                hintText: 'Rechercher...',
+                border: InputBorder.none,
+                prefixIcon: Icon(Icons.search),
+              ),
+              onChanged: _searchNotifier.updateQuery,
+            ),
+            actionsPadding: const EdgeInsets.only(right: 8),
+            actions: actions[_currentIndex],
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(child: widget.child),
-          Container(height: 1, decoration: NeonBoxDecoration.neonBoxDecoration),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: _onItemTapped,
-        backgroundColor: AppColors.secondaryBackground,
-        selectedItemColor: AppColors.mainColor,
-        unselectedItemColor: AppColors.secondaryText,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil2'),
-        ],
+          body: widget.child,
+          floatingActionButton: ListenableBuilder(
+            listenable: _fabNotifier,
+            builder: (context, _) {
+              if (!_fabNotifier.visible) return const SizedBox.shrink();
+
+              return FloatingActionButton.extended(
+                onPressed: _fabNotifier.call,
+                icon: Icon(_fabNotifier.icon),
+                label: Text(_fabNotifier.label ?? ''),
+              );
+            },
+          ),
+          bottomNavigationBar: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: _onItemTapped,
+            backgroundColor: AppColors.secondaryBackground,
+            selectedItemColor: AppColors.mainColor,
+            unselectedItemColor: AppColors.secondaryText,
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Vault'),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.share),
+                label: 'Partage',
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

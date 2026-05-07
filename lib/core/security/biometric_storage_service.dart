@@ -21,8 +21,10 @@ class BiometricStorageService {
 
   /// Sauvegarde la clé après une connexion réussie par mot de passe
   Future<void> saveDerivedKey(List<int> keyBytes) async {
-    await _secureStorage.write(key: _keyDerivedVaultKey,
-        value: base64Encode(keyBytes));
+    await _secureStorage.write(
+      key: _keyDerivedVaultKey,
+      value: base64Encode(keyBytes),
+    );
   }
 
   /// Supprime la clé (ex: déconnexion manuelle ou révocation)
@@ -32,8 +34,9 @@ class BiometricStorageService {
 
   /// Tente de récupérer la clé après validation biométrique
   Future<List<int>?> getDerivedKeyWithBiometrics(String reason) async {
-    final bool hasKey = await _secureStorage
-        .containsKey(key: _keyDerivedVaultKey);
+    final bool hasKey = await _secureStorage.containsKey(
+      key: _keyDerivedVaultKey,
+    );
     if (!hasKey) return null;
 
     final isAvailable = await isBiometricAvailable();
@@ -43,6 +46,7 @@ class BiometricStorageService {
 
     try {
       final bool authenticated = await _auth.authenticate(
+        sensitiveTransaction: true,
         localizedReason: reason,
         biometricOnly: true,
         persistAcrossBackgrounding: true,

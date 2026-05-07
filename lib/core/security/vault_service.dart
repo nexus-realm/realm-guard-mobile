@@ -27,7 +27,9 @@ class VaultService {
     } catch (e) {
       _database?.close();
       _database = null;
-      throw Exception("Mot de passe incorrect ou base de données corrompue : $e");
+      throw Exception(
+        "Mot de passe incorrect ou base de données corrompue : $e",
+      );
     }
   }
 
@@ -46,7 +48,7 @@ class VaultService {
     } catch (e) {
       _database?.close();
       _database = null;
-      return false; // Forcera l'utilisateur à entrer le mot de passe
+      return false; // Demande le mot de passe à l'utilisateur
     }
   }
 
