@@ -63,7 +63,6 @@ class _UnlockPageState extends State<UnlockPage> {
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) => Scaffold(
-        appBar: AppBar(elevation: 0),
         body: SafeArea(
           child: CustomScrollView(
             slivers: [

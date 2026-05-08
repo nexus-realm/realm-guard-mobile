@@ -30,8 +30,7 @@ class _HomeTabState extends State<HomeTab> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FabNotifierScope.of(context).register(
         icon: Icons.add,
-        label: 'Ajouter',
-        onPressed: () => _viewModel?.onFabPressed(),
+        onPressed: () => _viewModel?.openAddBottomSheet(context),
       );
     });
   }
@@ -57,107 +56,41 @@ class _HomeTabState extends State<HomeTab> {
         final results = _viewModel!.results;
         return results.isEmpty
             ? const Center(child: Text('Aucun élément trouvé'))
-            : ListView.builder(
-                itemCount: results.length,
-                itemBuilder: (context, index) {
-                  final item = results[index];
-                  if (item is Profile) {
-                    return ListTile(
-                      title: Text(item.name),
-                      subtitle: Text('Profil'),
-                      onTap: () {
-                        // TODO: View profile details
-                      },
-                    );
-                  } else if (item is CredentialWithProfile) {
-                    return ListTile(
-                      title: Text(item.credential.title),
-                      subtitle: Text(item.profile?.name ?? 'Sans profil'),
-                      onTap: () {
-                        // TODO: View credential details
-                      },
-                    );
-                  }
-                  return const SizedBox();
-                },
-              );
+            : Stack(
+              children:[
+                ListView.builder(
+                  itemCount: results.length,
+                  itemBuilder: (context, index) {
+                    final item = results[index];
+                    if (item is Profile) {
+                      return ListTile(
+                        title: Text(item.name),
+                        subtitle: Text('Profil'),
+                        onTap: () {
+                          // TODO: View profile details
+                        },
+                      );
+                    } else if (item is CredentialWithProfile) {
+                      return ListTile(
+                        title: Text(item.credential.title),
+                        subtitle: Text(item.profile?.name ?? 'Sans profil'),
+                        onTap: () {
+                          // TODO: View credential details
+                        },
+                      );
+                    }
+                    return const SizedBox();
+                  },
+                ),
+                if (_viewModel!.isBottomSheetOpen)
+                  GestureDetector(
+                    onTap: () => _viewModel?.closeBottomSheet(),
+                    behavior: HitTestBehavior.translucent,
+                    child: Container(color: Colors.transparent),
+                  ),
+              ],
+            );
       },
-      child: Scaffold(
-        floatingActionButton: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            //   FloatingActionButton(
-            //     heroTag: 'add_profile',
-            //     onPressed: _addProfile,
-            //     child: const Icon(Icons.person_add),
-            //   ),
-            //   const SizedBox(height: 16),
-            //   FloatingActionButton(
-            //     heroTag: 'add_credential',
-            //     onPressed: _addCredential,
-            //     child: const Icon(Icons.add),
-            //   ),
-          ],
-        ),
-      ),
     );
   }
-
-  // void _addProfile() {
-  //   // TODO: Show dialog to add profile
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       title: const Text('Ajouter un profil'),
-  //       content: Column(
-  //         mainAxisSize: MainAxisSize.min,
-  //         children: [
-  //           TextField(
-  //             decoration: const InputDecoration(labelText: 'Nom du profil'),
-  //             onSubmitted: (name) async {
-  //               if (name.isNotEmpty) {
-  //                 await _repository.addProfile(name, []);
-  //                 await _loadData();
-  //                 if (context.mounted) {
-  //                   Navigator.of(context).pop();
-  //                 }
-  //               }
-  //             },
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
-  //
-  // void _addCredential() {
-  //   // TODO: Show dialog to add credential
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       title: const Text('Ajouter un identifiant'),
-  //       content: Column(
-  //         mainAxisSize: MainAxisSize.min,
-  //         children: [
-  //           TextField(
-  //             decoration: const InputDecoration(labelText: 'Titre'),
-  //             onSubmitted: (title) async {
-  //               if (title.isNotEmpty) {
-  //                 await _repository.addCredential(
-  //                   title,
-  //                   'encrypted data placeholder',
-  //                   null,
-  //                 );
-  //                 await _loadData();
-  //                 if (context.mounted) {
-  //                   Navigator.of(context).pop();
-  //                 }
-  //               }
-  //             },
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
 }

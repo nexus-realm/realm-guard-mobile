@@ -265,10 +265,17 @@ class _HomeShellState extends State<HomeShell> {
             builder: (context, _) {
               if (!_fabNotifier.visible) return const SizedBox.shrink();
 
+              if (_fabNotifier.label == null) {
+                return FloatingActionButton(
+                  onPressed: _fabNotifier.call,
+                  child: Icon(_fabNotifier.icon),
+                );
+              }
+
               return FloatingActionButton.extended(
                 onPressed: _fabNotifier.call,
                 icon: Icon(_fabNotifier.icon),
-                label: Text(_fabNotifier.label ?? ''),
+                label: Text(_fabNotifier.label!),
               );
             },
           ),
