@@ -10,6 +10,7 @@ import '../../features/onboarding/views/onboarding_page.dart';
 import '../../features/onboarding/views/startup_gate_page.dart';
 import '../../features/unlock/views/unlock_page.dart';
 import '../../shared/views/home/home_shell.dart';
+import '../security/app_lock_controller.dart';
 import '../security/unlock_service.dart';
 import '../security/vault_service.dart';
 import 'app_routes.dart';
@@ -18,6 +19,9 @@ final OnboardingStorageService _onboardingStorageService =
     OnboardingStorageService();
 final VaultService _vaultService = VaultService();
 final UnlockService _unlockService = UnlockService(vaultService: _vaultService);
+final AppLockController appLockController = AppLockController(
+  vaultService: _vaultService,
+);
 
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.startup,

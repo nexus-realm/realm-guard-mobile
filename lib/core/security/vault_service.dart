@@ -83,6 +83,9 @@ class VaultService {
     _database = null;
   }
 
+  /// Indique si le coffre est actuellement déverrouillé (DB ouverte en mémoire).
+  bool get isUnlocked => _database != null;
+
   AppDatabase get db {
     if (_database == null) throw Exception("Vault is locked!");
     return _database!;
