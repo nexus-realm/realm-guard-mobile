@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/unlock_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../../../shared/widgets/password_form.dart';
 import '../../../shared/widgets/view_title.dart';
 import '../viewmodels/unlock_view_model.dart';
@@ -129,7 +130,7 @@ class _UnlockPageState extends State<UnlockPage> {
                         spacing: 12,
                         children: [
                           Expanded(
-                            child: ElevatedButton.icon(
+                            child: GradientElevatedButton.icon(
                               onPressed:
                                   _viewModel.isLoading ||
                                       (_viewModel.remainingLockout != null &&

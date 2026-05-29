@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
-
-class GradientFilledButton extends StatelessWidget {
+class GradientElevatedButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget child;
   final Widget? _icon;
   final BorderRadius _borderRadius;
 
-  const GradientFilledButton({
+  const GradientElevatedButton({
     required this.onPressed,
     required this.child,
     super.key,
@@ -16,7 +14,7 @@ class GradientFilledButton extends StatelessWidget {
   })  : _icon = null,
         _borderRadius = borderRadius;
 
-  const GradientFilledButton.icon({
+  const GradientElevatedButton.icon({
     required this.onPressed,
     required Widget icon,
     required Widget label,
@@ -30,8 +28,6 @@ class GradientFilledButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isEnabled = onPressed != null;
-    final foregroundColor =
-        isEnabled ? AppColors.buttonText : AppColors.buttonText.withValues(alpha: 0.55);
 
     final gradient = isEnabled
         ? LinearGradient(colors: [colorScheme.primary, colorScheme.secondary])
@@ -53,15 +49,11 @@ class GradientFilledButton extends StatelessWidget {
             ],
           );
 
-    return FilledButton(
+    return ElevatedButton(
       onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        foregroundColor: foregroundColor,
-        disabledForegroundColor: foregroundColor,
+      style: ElevatedButton.styleFrom(
         backgroundColor: Colors.transparent,
         disabledBackgroundColor: Colors.transparent,
-        shadowColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: _borderRadius),
         padding: EdgeInsets.zero,
       ),
       child: Ink(
@@ -71,16 +63,7 @@ class GradientFilledButton extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: IconTheme(
-            data: IconThemeData(color: foregroundColor),
-            child: DefaultTextStyle.merge(
-              style: TextStyle(
-                color: foregroundColor,
-                fontWeight: FontWeight.bold,
-              ),
-              child: Center(child: content),
-            ),
-          ),
+          child: Center(child: content),
         ),
       ),
     );

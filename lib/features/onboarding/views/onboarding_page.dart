@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/vault_service.dart';
+import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../../../shared/widgets/password_form.dart';
 import '../../../shared/widgets/view_title.dart';
 import '../data/onboarding_step.dart';
@@ -224,7 +225,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
           ],
         ),
-        ElevatedButton(
+        GradientElevatedButton(
           onPressed: _viewModel.isSubmitting
               ? null
               : _viewModel.completeWelcomeStep,
@@ -242,7 +243,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       children: [
         const Column(
           children: [
-            ViewTitle(topTitle: 'Sécurisation', title: 'Mot de passe_'),
+            ViewTitle(topTitle: 'Sécurité', title: 'Mot de passe_'),
             SizedBox(height: 16),
             Text(
               'Ce mot de passe sert a générer la clé de chiffrement de votre coffre.',
@@ -259,14 +260,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
           onPasswordChanged: (_) => setState(() {}),
           onConfirmPasswordChanged: (_) => setState(() {}),
         ),
-        ElevatedButton(
+        GradientElevatedButton(
           onPressed: _canSubmitMasterPassword ? _submitMasterPassword : null,
           child: _viewModel.isSubmitting
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
               : const Text('Valider le mot de passe'),
         ),
       ],
@@ -282,12 +279,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
         const Column(
           spacing: 24,
           children: [
-            ViewTitle(topTitle: 'Sécurisation', title: 'Biométrie_'),
+            ViewTitle(topTitle: 'Sécurité', title: 'Biométrie_'),
             Column(
               spacing: 12,
               children: [
                 Text(
-                  'Voulez-vous utiliser la biométrie pour dévérrouiller rapidement votre coffre-fort ?',
+                  'Voulez-vous utiliser la biométrie pour déverrouiller rapidement votre coffre-fort ?',
                   style: TextStyle(fontSize: 16),
                 ),
                 Text(
@@ -306,7 +303,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           spacing: 12,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ElevatedButton.icon(
+            GradientElevatedButton.icon(
               onPressed: _viewModel.isSubmitting
                   ? null
                   : () => _viewModel.completeBiometricStep(true),
