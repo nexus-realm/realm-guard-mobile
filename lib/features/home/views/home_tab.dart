@@ -65,7 +65,7 @@ class _HomeTabState extends State<HomeTab> {
                     if (item is Profile) {
                       return ListTile(
                         title: Text(item.name),
-                        subtitle: Text('Profil'),
+                        subtitle: const Text('Profil'),
                         onTap: () {
                           // TODO: View profile details
                         },
