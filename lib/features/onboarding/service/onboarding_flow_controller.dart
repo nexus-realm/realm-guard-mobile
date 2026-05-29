@@ -123,6 +123,7 @@ class OnboardingFlowController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      await _biometricStorageService.setBiometricEnabled(enabled);
       if (!enabled) {
         await _biometricStorageService.clearDerivedKey();
       }

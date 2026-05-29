@@ -47,10 +47,16 @@ class FakeVaultService extends VaultService {
 class FakeBiometricStorageService extends BiometricStorageService {
   bool clearWasCalled = false;
   bool isAvailable = true;
+  bool? biometricEnabledValue;
 
   @override
   Future<bool> isBiometricAvailable() async {
     return isAvailable;
+  }
+
+  @override
+  Future<void> setBiometricEnabled(bool enabled) async {
+    biometricEnabledValue = enabled;
   }
 
   @override
@@ -131,6 +137,7 @@ void main() {
       await controller.completeBiometricStep(false);
 
       expect(biometrics.clearWasCalled, isTrue);
+      expect(biometrics.biometricEnabledValue, isFalse);
       expect(controller.isCompleted, isTrue);
       expect(controller.progress.biometricEnabled, isFalse);
     });

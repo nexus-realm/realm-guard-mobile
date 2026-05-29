@@ -46,11 +46,14 @@ class UnlockService {
     final shouldPromptBiometric = _shouldPromptBiometric(lastBiometricPrompt);
 
     final isBiometricAvailable = await _biometricService.isBiometricAvailable();
+    final isBiometricEnabled = await _biometricService.isBiometricEnabled();
     final biometricFailures = await _getBiometricFailures();
 
-    // Stratégie : essayer biométrie si clé valide et pas d'échecs récents
+    // Stratégie : essayer la biométrie si l'utilisateur l'a activée, que la clé
+    // est valide et qu'il n'y a pas d'échecs récents
     if (!isKeyExpired &&
         isBiometricAvailable &&
+        isBiometricEnabled &&
         biometricFailures < _maxFailedAttempts &&
         !shouldPromptBiometric) {
       return UnlockStrategy.biometric;
