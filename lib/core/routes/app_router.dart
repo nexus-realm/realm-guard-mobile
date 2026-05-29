@@ -14,6 +14,7 @@ import '../security/app_lock_controller.dart';
 import '../security/unlock_service.dart';
 import '../security/vault_service.dart';
 import 'app_routes.dart';
+import 'route_guard.dart';
 
 final OnboardingStorageService _onboardingStorageService =
     OnboardingStorageService();
@@ -25,6 +26,10 @@ final AppLockController appLockController = AppLockController(
 
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.startup,
+  redirect: (context, state) => vaultRouteGuard(
+    location: state.matchedLocation,
+    isUnlocked: _vaultService.isUnlocked,
+  ),
   routes: [
     GoRoute(
       path: AppRoutes.startup,
