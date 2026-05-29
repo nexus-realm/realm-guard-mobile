@@ -52,6 +52,7 @@ class FakeSecureStoragePlatform extends FlutterSecureStoragePlatform
 
 class FakeVaultService extends VaultService {
   bool shouldSucceed = true;
+  BiometricUnlockStatus biometricStatus = BiometricUnlockStatus.failed;
 
   @override
   Future<void> unlockWithMasterPassword(String masterPassword) async {
@@ -59,6 +60,9 @@ class FakeVaultService extends VaultService {
       throw Exception('mot de passe invalide');
     }
   }
+
+  @override
+  Future<BiometricUnlockStatus> unlockWithBiometrics() async => biometricStatus;
 }
 
 class FakeBiometricStorageService extends BiometricStorageService {
@@ -149,6 +153,54 @@ void main() {
       expect(result, UnlockAttemptResult.invalidPassword);
       expect(isNowLocked, isFalse, reason: 'le compteur doit être reparti de zéro');
       expect(storage.store[_countKey], '1');
+    });
+  });
+
+  group('UnlockService - échecs biométriques (S7)', () {
+    test('un échec biométrique réel n\'alimente pas le lockout mot de passe', () async {
+      final service = buildService(
+        FakeVaultService()..biometricStatus = BiometricUnlockStatus.failed,
+      );
+
+      for (var i = 0; i < 6; i++) {
+        final (result, locked) = await service.attemptBiometricUnlock();
+        expect(result, UnlockAttemptResult.biometricFailed);
+        expect(locked, isFalse);
+      }
+
+      // Le compteur biométrique monte, mais le lockout mot de passe est intact.
+      expect(storage.store[_bioFailKey], '6');
+      expect(storage.store.containsKey(_countKey), isFalse);
+      expect(storage.store.containsKey(_lockoutKey), isFalse);
+    });
+
+    test('une annulation biométrique n\'est pas comptée', () async {
+      final service = buildService(
+        FakeVaultService()..biometricStatus = BiometricUnlockStatus.canceled,
+      );
+
+      final (result, locked) = await service.attemptBiometricUnlock();
+
+      expect(result, UnlockAttemptResult.biometricFailed);
+      expect(locked, isFalse);
+      expect(storage.store.containsKey(_bioFailKey), isFalse);
+      expect(storage.store.containsKey(_countKey), isFalse);
+      expect(storage.store.containsKey(_lockoutKey), isFalse);
+    });
+
+    test('un succès biométrique réinitialise tout le suivi', () async {
+      storage.store[_countKey] = '2';
+      storage.store[_bioFailKey] = '1';
+      final service = buildService(
+        FakeVaultService()..biometricStatus = BiometricUnlockStatus.success,
+      );
+
+      final (result, ok) = await service.attemptBiometricUnlock();
+
+      expect(result, UnlockAttemptResult.success);
+      expect(ok, isTrue);
+      expect(storage.store.containsKey(_countKey), isFalse);
+      expect(storage.store.containsKey(_bioFailKey), isFalse);
     });
   });
 }

@@ -47,20 +47,21 @@ class VaultService {
     }
   }
 
-  /// Ouverture rapide via biométrie
-  Future<bool> unlockWithBiometrics() async {
+  /// Ouverture rapide via biométrie. Retourne l'issue précise pour que
+  /// l'appelant distingue un échec réel d'une annulation / indisponibilité.
+  Future<BiometricUnlockStatus> unlockWithBiometrics() async {
+    final (status, keyBytes) = await _biometricService
+        .getDerivedKeyWithBiometrics("Déverrouillez Realm Guard");
+
+    if (status != BiometricUnlockStatus.success || keyBytes == null) {
+      return status;
+    }
+
     try {
-      final keyBytes = await _biometricService.getDerivedKeyWithBiometrics(
-        "Déverrouillez Realm Guard",
-      );
-
-      if (keyBytes == null) return false;
-
       await openDatabaseWithKey(keyBytes);
-
-      return true;
-    } catch (e) {
-      return false; // Demande le mot de passe à l'utilisateur
+      return BiometricUnlockStatus.success;
+    } catch (_) {
+      return BiometricUnlockStatus.failed; // Demande le mot de passe
     }
   }
 

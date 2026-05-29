@@ -90,18 +90,23 @@ class UnlockService {
     try {
       await _checkAttemptCooldown();
 
-      final success = await _vaultService.unlockWithBiometrics();
+      final status = await _vaultService.unlockWithBiometrics();
 
-      if (success) {
-        // Succès : réinitialiser les compteurs
-        await _clearFailureTracking();
-        await _updateLastBiometricPrompt();
-        return (UnlockAttemptResult.success, true);
-      } else {
-        // Échec biométrique
-        await _incrementBiometricFailures();
-        await _recordFailedAttempt();
-        return (UnlockAttemptResult.biometricFailed, false);
+      switch (status) {
+        case BiometricUnlockStatus.success:
+          // Succès : réinitialiser les compteurs
+          await _clearFailureTracking();
+          await _updateLastBiometricPrompt();
+          return (UnlockAttemptResult.success, true);
+        case BiometricUnlockStatus.failed:
+          // Échec biométrique réel : ne pénalise QUE le compteur biométrique,
+          // jamais le verrouillage par mot de passe.
+          await _incrementBiometricFailures();
+          return (UnlockAttemptResult.biometricFailed, false);
+        case BiometricUnlockStatus.canceled:
+        case BiometricUnlockStatus.unavailable:
+          // Annulation / indisponibilité : aucun compteur n'est touché.
+          return (UnlockAttemptResult.biometricFailed, false);
       }
     } catch (e) {
       return (UnlockAttemptResult.biometricFailed, false);

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/security/biometric_storage_service.dart';
 import '../../../core/security/vault_service.dart';
 
 class VaultDebugPage extends StatefulWidget {
@@ -69,9 +70,9 @@ class _VaultDebugPageState extends State<VaultDebugPage> {
     });
 
     try {
-      final success = await _vaultService.unlockWithBiometrics();
+      final status = await _vaultService.unlockWithBiometrics();
 
-      if (success) {
+      if (status == BiometricUnlockStatus.success) {
         await _refreshEntryCount();
         setState(() {
           _isUnlocked = true;

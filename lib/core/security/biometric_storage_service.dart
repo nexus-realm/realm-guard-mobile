@@ -6,6 +6,23 @@ import 'package:local_auth/local_auth.dart';
 
 import 'keystore_key_guard.dart';
 
+/// Issue d'une tentative de déverrouillage biométrique.
+enum BiometricUnlockStatus {
+  /// Authentifié et clé déchiffrée avec succès.
+  success,
+
+  /// Échec réel (déchiffrement impossible après authentification) :
+  /// pénalise uniquement le compteur biométrique.
+  failed,
+
+  /// L'utilisateur a annulé / abandonné le prompt : n'est pas compté.
+  canceled,
+
+  /// Biométrie indisponible, aucune clé stockée, ou clé invalidée :
+  /// n'est pas compté.
+  unavailable,
+}
+
 class BiometricStorageService {
   BiometricStorageService({
     FlutterSecureStorage? secureStorage,
@@ -64,15 +81,20 @@ class BiometricStorageService {
   }
 
   /// Authentifie l'utilisateur puis déchiffre (unwrap) la clé dérivée via le
-  /// Keystore. Retourne `null` (l'appelant bascule sur le mot de passe) en cas
-  /// d'échec.
-  Future<List<int>?> getDerivedKeyWithBiometrics(String reason) async {
+  /// Keystore.
+  ///
+  /// Retourne l'issue ([BiometricUnlockStatus]) et, en cas de succès, les octets
+  /// de la clé. L'issue distingue l'annulation et l'indisponibilité (à ne pas
+  /// pénaliser) d'un échec réel.
+  Future<(BiometricUnlockStatus, List<int>?)> getDerivedKeyWithBiometrics(
+    String reason,
+  ) async {
     final stored = await _secureStorage.read(key: _keyDerivedVaultKey);
-    if (stored == null) return null;
+    if (stored == null) return (BiometricUnlockStatus.unavailable, null);
 
     final isAvailable = await isBiometricAvailable();
     if (!isAvailable) {
-      return null;
+      return (BiometricUnlockStatus.unavailable, null);
     }
 
     final Uint8List wrapped;
@@ -82,29 +104,39 @@ class BiometricStorageService {
       // Format inconnu/hérité : on le supprime pour qu'un prochain
       // déverrouillage par mot de passe le ré-enregistre au bon format.
       await clearDerivedKey();
-      return null;
+      return (BiometricUnlockStatus.unavailable, null);
     }
 
+    final bool authenticated;
     try {
-      final bool authenticated = await _auth.authenticate(
+      authenticated = await _auth.authenticate(
         sensitiveTransaction: true,
         localizedReason: reason,
         biometricOnly: true,
         persistAcrossBackgrounding: true,
       );
+    } catch (_) {
+      // Erreur OS (biométrie indisponible, lockout système, ...) :
+      // ne pénalise pas le compteur.
+      return (BiometricUnlockStatus.unavailable, null);
+    }
 
-      if (!authenticated) return null;
+    if (!authenticated) {
+      // Annulation / abandon par l'utilisateur : n'est pas compté.
+      return (BiometricUnlockStatus.canceled, null);
+    }
 
-      return await _keyGuard.unwrap(wrapped);
+    try {
+      final keyBytes = await _keyGuard.unwrap(wrapped);
+      return (BiometricUnlockStatus.success, keyBytes);
     } on KeyInvalidatedException {
       // Biométrie ré-enrôlée : on force un déverrouillage par mot de passe.
       await clearDerivedKey();
-      return null;
+      return (BiometricUnlockStatus.unavailable, null);
     } on UserNotAuthenticatedException {
-      return null;
-    } catch (e) {
-      // Gérer l'erreur (ex: trop de tentatives biométriques échouées)
-      return null;
+      return (BiometricUnlockStatus.failed, null);
+    } catch (_) {
+      return (BiometricUnlockStatus.failed, null);
     }
   }
 }
