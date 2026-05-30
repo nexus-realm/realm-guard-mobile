@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
 abstract class AppTheme {
   AppTheme._();
+
+  // Polices embarquées (assets/fonts), déclarées dans pubspec `fonts:`.
+  // Résolution native par Flutter : aucun téléchargement réseau (offline-first).
+  static const String _fontBody = 'Plus Jakarta Sans';
+  static const String _fontTitle = 'Space Grotesk';
 
   static ThemeData get darkTheme {
     return ThemeData(
@@ -17,42 +21,56 @@ abstract class AppTheme {
         error: AppColors.error,
         surface: AppColors.secondaryBackground,
       ),
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.mainBackground,
         surfaceTintColor: AppColors.mainBackground,
         elevation: 0,
-        titleTextStyle: GoogleFonts.plusJakartaSans(
-          textStyle: const TextStyle(color: AppColors.secondaryText, fontSize: 20, fontWeight: FontWeight.bold),
+        titleTextStyle: TextStyle(
+          fontFamily: _fontBody,
+          color: AppColors.secondaryText,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
         ),
-        iconTheme: const IconThemeData(color: AppColors.mainText),
+        iconTheme: IconThemeData(color: AppColors.mainText),
       ),
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.mainBackground,
         selectedItemColor: AppColors.mainColor,
         unselectedItemColor: AppColors.secondaryText,
-        selectedLabelStyle: GoogleFonts.plusJakartaSans(textStyle: const TextStyle(color: AppColors.mainColor)),
-        unselectedLabelStyle: GoogleFonts.plusJakartaSans(textStyle: const TextStyle(color: AppColors.secondaryText)),
-      ),
-      textTheme: TextTheme(
-        bodyLarge: GoogleFonts.plusJakartaSans(textStyle: const TextStyle(color: AppColors.mainText)),
-        bodyMedium: GoogleFonts.plusJakartaSans(textStyle: const TextStyle(color: AppColors.secondaryText)),
-        bodySmall: GoogleFonts.plusJakartaSans(textStyle: const TextStyle(color: AppColors.mainText)),
-        labelLarge: GoogleFonts.plusJakartaSans(textStyle: const TextStyle(color: AppColors.mainText, fontSize: 16)),
-        titleLarge: GoogleFonts.spaceGrotesk(
-          textStyle: const TextStyle(
-            color: AppColors.mainText,
-            fontWeight: FontWeight.bold,
-            height: 1.25,
-            fontSize: 42,
-          ),
+        selectedLabelStyle: TextStyle(
+          fontFamily: _fontBody,
+          color: AppColors.mainColor,
         ),
-        titleSmall: GoogleFonts.spaceGrotesk(
-          textStyle: const TextStyle(
-            color: AppColors.mainColor,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            height: 1.25,
-          ),
+        unselectedLabelStyle: TextStyle(
+          fontFamily: _fontBody,
+          color: AppColors.secondaryText,
+        ),
+      ),
+      textTheme: const TextTheme(
+        bodyLarge: TextStyle(fontFamily: _fontBody, color: AppColors.mainText),
+        bodyMedium: TextStyle(
+          fontFamily: _fontBody,
+          color: AppColors.secondaryText,
+        ),
+        bodySmall: TextStyle(fontFamily: _fontBody, color: AppColors.mainText),
+        labelLarge: TextStyle(
+          fontFamily: _fontBody,
+          color: AppColors.mainText,
+          fontSize: 16,
+        ),
+        titleLarge: TextStyle(
+          fontFamily: _fontTitle,
+          color: AppColors.mainText,
+          fontWeight: FontWeight.bold,
+          height: 1.25,
+          fontSize: 42,
+        ),
+        titleSmall: TextStyle(
+          fontFamily: _fontTitle,
+          color: AppColors.mainColor,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          height: 1.25,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -60,8 +78,13 @@ abstract class AppTheme {
           backgroundColor: AppColors.mainColor,
           foregroundColor: AppColors.buttonText,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-          textStyle: GoogleFonts.plusJakartaSans(textStyle: const TextStyle(fontWeight: FontWeight.bold)),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: _fontBody,
+            fontWeight: FontWeight.bold,
+          ),
           shadowColor: AppColors.secondaryColor,
           elevation: 3,
         ),
@@ -71,16 +94,17 @@ abstract class AppTheme {
           backgroundColor: AppColors.mainBackground,
           foregroundColor: AppColors.mainText,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
           side: const BorderSide(color: AppColors.mainColor),
-          textStyle: GoogleFonts.plusJakartaSans(textStyle: const TextStyle(fontWeight: FontWeight.bold)),
+          textStyle: const TextStyle(
+            fontFamily: _fontBody,
+            fontWeight: FontWeight.bold,
+          ),
           shadowColor: AppColors.secondaryColor,
           elevation: 3,
         ),
-      ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.mainColor,
-        foregroundColor: AppColors.black,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

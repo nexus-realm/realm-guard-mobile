@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sqlcipher_flutter_libs/sqlcipher_flutter_libs.dart';
@@ -13,11 +14,28 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
+  _registerFontLicenses();
+
   if (Platform.isAndroid) {
     open.overrideFor(OperatingSystem.android, openCipherOnAndroid);
   }
 
   runApp(const RealmGuard());
+}
+
+/// Enregistre les licences OFL des polices embarquées (visibles dans la page
+/// "Licences" de l'application).
+void _registerFontLicenses() {
+  LicenseRegistry.addLicense(() async* {
+    yield LicenseEntryWithLineBreaks(
+      const ['Plus Jakarta Sans'],
+      await rootBundle.loadString('assets/fonts/OFL-PlusJakartaSans.txt'),
+    );
+    yield LicenseEntryWithLineBreaks(
+      const ['Space Grotesk'],
+      await rootBundle.loadString('assets/fonts/OFL-SpaceGrotesk.txt'),
+    );
+  });
 }
 
 class RealmGuard extends StatefulWidget {

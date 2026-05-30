@@ -18,7 +18,6 @@ dependencies:
   sqlite3: ^2.9.4
   local_auth: ^3.0.1
   flutter_secure_storage: ^10.0.0
-  google_fonts: ^8.0.2
 
 dev_dependencies:
   flutter_test:
@@ -35,3 +34,19 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/fonts/OFL-PlusJakartaSans.txt
+    - assets/fonts/OFL-SpaceGrotesk.txt
+
+  fonts:
+    - family: Plus Jakarta Sans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700
+    - family: Space Grotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk-Regular.ttf
+        - asset: assets/fonts/SpaceGrotesk-Bold.ttf
+          weight: 700
