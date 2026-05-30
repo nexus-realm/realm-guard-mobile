@@ -16,6 +16,33 @@ import '../../notifiers/search_notifier_scope.dart';
 
 enum CategoryFilter { all, profiles, credentials }
 
+/// Placeholder affiché pour l'onglet "Partage" tant que la fonctionnalité
+/// n'est pas implémentée.
+class _ComingSoonView extends StatelessWidget {
+  const _ComingSoonView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.share_outlined,
+            size: 48,
+            color: AppColors.secondaryText,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Le partage arrive bientôt',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class HomeShell extends StatefulWidget {
   final Widget child;
 
@@ -32,7 +59,9 @@ class _HomeShellState extends State<HomeShell> {
   int _currentIndex = 0;
 
   final List<String> tabs = [AppRoutes.home, AppRoutes.home];
-  late final List<dynamic> actions = [
+
+  // Une entrée d'actions par onglet (même longueur que la barre de navigation).
+  late final List<List<Widget>> actions = [
     [
       IconButton(
         tooltip: 'Paramètres',
@@ -40,6 +69,7 @@ class _HomeShellState extends State<HomeShell> {
         icon: const Icon(Icons.settings),
       ),
     ],
+    const <Widget>[], // Onglet "Partage" (non implémenté) : aucune action.
   ];
 
   bool get _isDeveloperCategoryEnabled {
@@ -257,9 +287,15 @@ class _HomeShellState extends State<HomeShell> {
               onChanged: _searchNotifier.updateQuery,
             ),
             actionsPadding: const EdgeInsets.only(right: 8),
-            actions: actions[_currentIndex],
+            // Accès borné : évite tout RangeError si un onglet n'a pas d'action.
+            actions: _currentIndex < actions.length
+                ? actions[_currentIndex]
+                : const <Widget>[],
           ),
-          body: widget.child,
+          // L'onglet "Partage" n'est pas encore implémenté : on affiche un
+          // placeholder au lieu du contenu du coffre (les deux onglets pointent
+          // vers /home).
+          body: _currentIndex == 0 ? widget.child : const _ComingSoonView(),
           floatingActionButton: ListenableBuilder(
             listenable: _fabNotifier,
             builder: (context, _) {
