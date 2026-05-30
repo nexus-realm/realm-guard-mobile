@@ -16,6 +16,10 @@ class UnlockViewModel extends ChangeNotifier {
   int _biometricAttemptCount =
       0; // Compteur de tentatives biométriques dans cette session
 
+  // Message générique : on n'expose jamais les détails internes d'une erreur.
+  static const String _genericErrorMessage =
+      'Une erreur inattendue est survenue. Veuillez réessayer.';
+
   UnlockViewModel({required UnlockService unlockService})
     : _unlockService = unlockService;
 
@@ -56,16 +60,16 @@ class UnlockViewModel extends ChangeNotifier {
         _errorMessage = _getErrorMessage(result);
 
         // Après plusieurs échecs biométriques, passer au mot de passe
-        if (_biometricAttemptCount >= 3) {
+        if (_biometricAttemptCount >= UnlockService.maxBiometricAttempts) {
           _strategy = UnlockStrategy.password;
           _errorMessage = null; // Effacer le message pour éviter la snackbar
         }
       }
-    } catch (e) {
+    } catch (_) {
       _biometricAttemptCount++;
-      _errorMessage = 'Erreur: ${e.toString()}';
+      _errorMessage = _genericErrorMessage;
 
-      if (_biometricAttemptCount >= 3) {
+      if (_biometricAttemptCount >= UnlockService.maxBiometricAttempts) {
         _strategy = UnlockStrategy.password;
         _errorMessage = null; // Effacer le message pour éviter la snackbar
       }
@@ -96,8 +100,8 @@ class UnlockViewModel extends ChangeNotifier {
           _startLockoutTimer();
         }
       }
-    } catch (e) {
-      _errorMessage = 'Erreur: ${e.toString()}';
+    } catch (_) {
+      _errorMessage = _genericErrorMessage;
     } finally {
       _isLoading = false;
       notifyListeners();

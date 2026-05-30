@@ -66,11 +66,16 @@ class FakeVaultService extends VaultService {
 }
 
 class FakeBiometricStorageService extends BiometricStorageService {
-  @override
-  Future<bool> isBiometricAvailable() async => false;
+  FakeBiometricStorageService({this.available = false, this.enabled = false});
+
+  bool available;
+  bool enabled;
 
   @override
-  Future<bool> isBiometricEnabled() async => false;
+  Future<bool> isBiometricAvailable() async => available;
+
+  @override
+  Future<bool> isBiometricEnabled() async => enabled;
 }
 
 // Clés internes (miroir de UnlockService) pour seed/assertions.
@@ -78,6 +83,8 @@ const String _countKey = 'failed_attempts_count_v1';
 const String _lockoutKey = 'lockout_timestamp_v1';
 const String _bioFailKey = 'biometric_failures_count_v1';
 const String _lastAttemptKey = 'last_failed_attempt_v1';
+const String _lastKeyTimestampKey = 'last_key_timestamp_v1';
+const String _lastBiometricPromptKey = 'last_biometric_prompt_v1';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -89,8 +96,11 @@ void main() {
     FlutterSecureStoragePlatform.instance = storage;
   });
 
-  UnlockService buildService(FakeVaultService vault) => UnlockService(
-    biometricService: FakeBiometricStorageService(),
+  UnlockService buildService(
+    FakeVaultService vault, {
+    FakeBiometricStorageService? bio,
+  }) => UnlockService(
+    biometricService: bio ?? FakeBiometricStorageService(),
     vaultService: vault,
     attemptCooldown: Duration.zero,
   );
@@ -201,6 +211,36 @@ void main() {
       expect(ok, isTrue);
       expect(storage.store.containsKey(_countKey), isFalse);
       expect(storage.store.containsKey(_bioFailKey), isFalse);
+    });
+  });
+
+  group('UnlockService - stratégie & seuil biométrique (S10)', () {
+    test('repli sur mot de passe au seuil maxBiometricAttempts', () async {
+      final nowIso = DateTime.now().toIso8601String();
+      storage.store[_lastKeyTimestampKey] = nowIso;
+      storage.store[_lastBiometricPromptKey] = nowIso;
+      storage.store[_bioFailKey] = '${UnlockService.maxBiometricAttempts}';
+
+      final service = buildService(
+        FakeVaultService(),
+        bio: FakeBiometricStorageService(available: true, enabled: true),
+      );
+
+      expect(await service.determineUnlockStrategy(), UnlockStrategy.password);
+    });
+
+    test('biométrie en dessous du seuil', () async {
+      final nowIso = DateTime.now().toIso8601String();
+      storage.store[_lastKeyTimestampKey] = nowIso;
+      storage.store[_lastBiometricPromptKey] = nowIso;
+      storage.store[_bioFailKey] = '0';
+
+      final service = buildService(
+        FakeVaultService(),
+        bio: FakeBiometricStorageService(available: true, enabled: true),
+      );
+
+      expect(await service.determineUnlockStrategy(), UnlockStrategy.biometric);
     });
   });
 }

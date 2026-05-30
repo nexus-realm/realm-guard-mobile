@@ -1,6 +1,7 @@
 import 'package:cryptography/cryptography.dart';
 
 import '../database/app_database.dart';
+import '../exceptions/vault_unlock_exception.dart';
 import 'biometric_storage_service.dart';
 import 'key_derivator.dart';
 import 'salt_manager.dart';
@@ -26,9 +27,8 @@ class VaultService {
       // déverrouillage valide.
       await _persistKeyForBiometricsIfEnabled(keyBytes);
     } catch (e) {
-      throw Exception(
-        "Mot de passe incorrect ou base de données corrompue : $e",
-      );
+      if (e is VaultUnlockException) rethrow;
+      throw VaultUnlockException(e);
     }
   }
 
@@ -72,9 +72,7 @@ class VaultService {
     } catch (e) {
       _database?.close();
       _database = null;
-      throw Exception(
-        "Clé de déchiffrement incorrecte ou base de données corrompue : $e",
-      );
+      throw VaultUnlockException(e);
     }
   }
 

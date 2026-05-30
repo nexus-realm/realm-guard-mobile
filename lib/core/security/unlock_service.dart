@@ -29,6 +29,10 @@ class UnlockService {
   static const Duration _lockoutDuration = Duration(minutes: 5);
   static const int _maxFailedAttempts = 5;
 
+  /// Nombre d'échecs biométriques avant de basculer sur le mot de passe.
+  /// Seuil unique, partagé avec UnlockViewModel (cohérence — cf. S10).
+  static const int maxBiometricAttempts = 3;
+
   /// Durée sans tentative au bout de laquelle tout le suivi d'échecs (compteur,
   /// lockout, échecs biométriques) est réinitialisé. Doit rester strictement
   /// supérieure à [_lockoutDuration] pour préserver le re-lock immédiat tant que
@@ -68,7 +72,7 @@ class UnlockService {
     if (!isKeyExpired &&
         isBiometricAvailable &&
         isBiometricEnabled &&
-        biometricFailures < _maxFailedAttempts &&
+        biometricFailures < maxBiometricAttempts &&
         !shouldPromptBiometric) {
       return UnlockStrategy.biometric;
     }
