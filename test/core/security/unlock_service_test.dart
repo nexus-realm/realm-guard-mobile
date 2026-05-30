@@ -243,4 +243,39 @@ void main() {
       expect(await service.determineUnlockStrategy(), UnlockStrategy.biometric);
     });
   });
+
+  group('UnlockService - cooldown / throttle (S9)', () {
+    test('un déverrouillage réussi n\'est pas retardé par le cooldown', () async {
+      final service = UnlockService(
+        biometricService: FakeBiometricStorageService(),
+        vaultService: FakeVaultService()..shouldSucceed = true,
+        attemptCooldown: const Duration(seconds: 2),
+      );
+
+      final stopwatch = Stopwatch()..start();
+      final (result, _) = await service.attemptPasswordUnlock('good');
+      stopwatch.stop();
+
+      expect(result, UnlockAttemptResult.success);
+      expect(stopwatch.elapsed, lessThan(const Duration(seconds: 1)));
+    });
+
+    test('deux tentatives rapprochées sont espacées par le throttle', () async {
+      final service = UnlockService(
+        biometricService: FakeBiometricStorageService(),
+        vaultService: FakeVaultService()..shouldSucceed = false,
+        attemptCooldown: const Duration(milliseconds: 300),
+      );
+
+      await service.attemptPasswordUnlock('wrong'); // 1re : aucun délai
+      final stopwatch = Stopwatch()..start();
+      await service.attemptPasswordUnlock('wrong'); // 2e : throttlée
+      stopwatch.stop();
+
+      expect(
+        stopwatch.elapsed,
+        greaterThanOrEqualTo(const Duration(milliseconds: 200)),
+      );
+    });
+  });
 }

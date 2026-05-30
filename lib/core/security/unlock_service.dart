@@ -41,6 +41,9 @@ class UnlockService {
 
   final Duration _attemptCooldown;
 
+  /// Horodatage en mémoire de la dernière tentative, pour le throttle.
+  DateTime? _lastAttemptAt;
+
   UnlockService({
     FlutterSecureStorage? secureStorage,
     BiometricStorageService? biometricService,
@@ -174,9 +177,18 @@ class UnlockService {
     }
   }
 
+  /// Throttle : impose un intervalle minimal [_attemptCooldown] entre deux
+  /// tentatives. N'introduit aucun délai sur la première tentative ni sur une
+  /// tentative espacée — donc aucune latence sur une saisie correcte.
   Future<void> _checkAttemptCooldown() async {
-    // Implémentation simple : attendre entre tentatives si nécessaire
-    await Future.delayed(_attemptCooldown);
+    final last = _lastAttemptAt;
+    if (last != null) {
+      final remaining = _attemptCooldown - DateTime.now().difference(last);
+      if (remaining > Duration.zero) {
+        await Future.delayed(remaining);
+      }
+    }
+    _lastAttemptAt = DateTime.now();
   }
 
   Future<bool> _isLockedOut() async {
