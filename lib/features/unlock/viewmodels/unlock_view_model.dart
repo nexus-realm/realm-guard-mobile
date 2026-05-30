@@ -13,6 +13,8 @@ class UnlockViewModel extends ChangeNotifier {
   bool _isUnlocked = false;
   Duration? _remainingLockout;
   Timer? _lockoutTimer;
+  DateTime? _lockoutEndsAt;
+  final Duration _lockoutTick;
   int _biometricAttemptCount =
       0; // Compteur de tentatives biométriques dans cette session
 
@@ -20,8 +22,11 @@ class UnlockViewModel extends ChangeNotifier {
   static const String _genericErrorMessage =
       'Une erreur inattendue est survenue. Veuillez réessayer.';
 
-  UnlockViewModel({required UnlockService unlockService})
-    : _unlockService = unlockService;
+  UnlockViewModel({
+    required UnlockService unlockService,
+    Duration lockoutTick = const Duration(seconds: 1),
+  }) : _unlockService = unlockService,
+       _lockoutTick = lockoutTick;
 
   UnlockStrategy? get strategy => _strategy;
   bool get isLoading => _isLoading;
@@ -126,11 +131,23 @@ class UnlockViewModel extends ChangeNotifier {
 
   void _startLockoutTimer() {
     _lockoutTimer?.cancel();
-    _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
-      await _updateRemainingLockout();
+
+    final remaining = _remainingLockout;
+    if (remaining == null || remaining <= Duration.zero) {
+      return;
+    }
+
+    // On calcule l'instant de fin UNE fois, puis on décompte en mémoire : plus
+    // aucun accès au secure storage (platform channel) à chaque tick.
+    _lockoutEndsAt = DateTime.now().add(remaining);
+    _lockoutTimer = Timer.periodic(_lockoutTick, (_) {
+      final left = _lockoutEndsAt!.difference(DateTime.now());
+      _remainingLockout = left > Duration.zero ? left : Duration.zero;
       notifyListeners();
-      if (_remainingLockout == null || _remainingLockout!.inSeconds <= 0) {
+      if (_remainingLockout! <= Duration.zero) {
         _lockoutTimer?.cancel();
+        _lockoutTimer = null;
+        _lockoutEndsAt = null;
       }
     });
   }
