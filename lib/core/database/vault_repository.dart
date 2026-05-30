@@ -4,13 +4,23 @@ import 'package:drift/drift.dart';
 
 import 'app_database.dart';
 
-class VaultRepository {
+/// Lecture réactive dont la vue Home a besoin. Permet d'injecter un faux
+/// dépôt en test sans dépendre de sqlite3 natif.
+abstract interface class HomeRepository {
+  Stream<List<Profile>> watchAllProfiles();
+  Stream<List<CredentialWithProfile>> watchCredentialsWithProfiles();
+}
+
+class VaultRepository implements HomeRepository {
   final AppDatabase _db;
 
   VaultRepository(this._db);
 
   // Profiles
   Future<List<Profile>> getAllProfiles() => _db.profiles.select().get();
+
+  @override
+  Stream<List<Profile>> watchAllProfiles() => _db.profiles.select().watch();
 
   Future<int> addProfile(String name, List<String> emails) =>
       _db.profiles.insertOne(
@@ -82,6 +92,24 @@ class VaultRepository {
       final profile = row.readTableOrNull(_db.profiles);
       return CredentialWithProfile(credential, profile);
     }).toList();
+  }
+
+  @override
+  Stream<List<CredentialWithProfile>> watchCredentialsWithProfiles() {
+    final query = _db.credentials.select().join([
+      leftOuterJoin(
+        _db.profiles,
+        _db.profiles.id.equalsExp(_db.credentials.profileId),
+      ),
+    ]);
+
+    return query.watch().map(
+      (rows) => rows.map((row) {
+        final credential = row.readTable(_db.credentials);
+        final profile = row.readTableOrNull(_db.profiles);
+        return CredentialWithProfile(credential, profile);
+      }).toList(),
+    );
   }
 }
 

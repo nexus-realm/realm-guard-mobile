@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/database/app_database.dart';
@@ -6,9 +8,16 @@ import '../notifiers/search_notifier.dart';
 
 class HomeViewModel extends ChangeNotifier {
   final SearchNotifier _searchNotifier;
-  final VaultRepository _vaultRepository;
-  List<Credential> _credentials = [];
+  final HomeRepository _vaultRepository;
+  final Duration _searchDebounce;
+
   List<Profile> _profiles = [];
+  List<CredentialWithProfile> _credentials = [];
+  String _query = '';
+
+  Timer? _debounceTimer;
+  StreamSubscription<List<Profile>>? _profilesSub;
+  StreamSubscription<List<CredentialWithProfile>>? _credentialsSub;
 
   final List<dynamic> _results = [];
   List<dynamic> get results => _results;
@@ -16,34 +25,46 @@ class HomeViewModel extends ChangeNotifier {
   PersistentBottomSheetController? _controller;
   bool get isBottomSheetOpen => _controller != null;
 
-  HomeViewModel(this._searchNotifier, this._vaultRepository) {
+  HomeViewModel(
+    this._searchNotifier,
+    this._vaultRepository, {
+    Duration searchDebounce = const Duration(milliseconds: 250),
+  }) : _searchDebounce = searchDebounce {
+    _query = _searchNotifier.query.trim().toLowerCase();
     _searchNotifier.addListener(_onSearchChanged);
-    _fetch(_searchNotifier.query);
+
+    // Flux Drift réactifs : la liste se met à jour automatiquement après tout
+    // ajout / édition / suppression dans le coffre.
+    _profilesSub = _vaultRepository.watchAllProfiles().listen((profiles) {
+      _profiles = profiles;
+      _rebuildResults();
+    });
+    _credentialsSub = _vaultRepository.watchCredentialsWithProfiles().listen((
+      credentials,
+    ) {
+      _credentials = credentials;
+      _rebuildResults();
+    });
   }
 
-  void _onSearchChanged() => _fetch(_searchNotifier.query);
-
-  Future<void> _loadData() async {
-    _profiles = await _vaultRepository.getAllProfiles();
-    _credentials = await _vaultRepository.getAllCredentials();
+  void _onSearchChanged() {
+    // Debounce : on ne refiltre qu'après une courte pause de saisie.
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(_searchDebounce, () {
+      _query = _searchNotifier.query.trim().toLowerCase();
+      _rebuildResults();
+    });
   }
 
-  Future<void> _fetch(String searchQuery) async {
-    final String query = searchQuery.trim().toLowerCase();
-
-    if (query.isEmpty && results.isEmpty) {
-      await _loadData();
-    }
-
-    _results.clear();
-
-    _results.addAll(
-      _profiles.where((p) => p.name.toLowerCase().contains(query)),
-    );
-
-    _results.addAll(
-      _credentials.where((c) => c.title.toLowerCase().contains(query)),
-    );
+  void _rebuildResults() {
+    _results
+      ..clear()
+      ..addAll(_profiles.where((p) => p.name.toLowerCase().contains(_query)))
+      ..addAll(
+        _credentials.where(
+          (c) => c.credential.title.toLowerCase().contains(_query),
+        ),
+      );
     notifyListeners();
   }
 
@@ -108,6 +129,9 @@ class HomeViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _profilesSub?.cancel();
+    _credentialsSub?.cancel();
     _searchNotifier.removeListener(_onSearchChanged);
     super.dispose();
   }
