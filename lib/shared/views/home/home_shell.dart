@@ -14,8 +14,6 @@ import '../../notifiers/fab_notifier_scope.dart';
 import '../../notifiers/search_notifier.dart';
 import '../../notifiers/search_notifier_scope.dart';
 
-enum CategoryFilter { all, profiles, credentials }
-
 /// Placeholder affiché pour l'onglet "Partage" tant que la fonctionnalité
 /// n'est pas implémentée.
 class _ComingSoonView extends StatelessWidget {

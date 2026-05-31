@@ -7,8 +7,6 @@ import '../../../shared/notifiers/fab_notifier_scope.dart';
 import '../../../shared/notifiers/search_notifier_scope.dart';
 import '../../../shared/viewmodels/home_view_model.dart';
 
-enum CategoryFilter { all, profiles, credentials }
-
 class HomeTab extends StatefulWidget {
   final VaultService vaultService;
 

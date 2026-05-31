@@ -29,12 +29,14 @@ class GradientElevatedButton extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final isEnabled = onPressed != null;
 
+    // État désactivé : un gris suffisamment opaque pour rester lisible
+    // (l'alpha précédent 0.10–0.16 rendait le libellé quasi invisible).
     final gradient = isEnabled
         ? LinearGradient(colors: [colorScheme.primary, colorScheme.secondary])
         : LinearGradient(
             colors: [
-              colorScheme.onSurface.withValues(alpha: 0.16),
-              colorScheme.onSurface.withValues(alpha: 0.10),
+              colorScheme.onSurface.withValues(alpha: 0.38),
+              colorScheme.onSurface.withValues(alpha: 0.30),
             ],
           );
 
@@ -54,6 +56,7 @@ class GradientElevatedButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.transparent,
         disabledBackgroundColor: Colors.transparent,
+        disabledForegroundColor: colorScheme.onSurface.withValues(alpha: 0.7),
         padding: EdgeInsets.zero,
       ),
       child: Ink(

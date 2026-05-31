@@ -204,26 +204,27 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Widget _buildWelcomeStep() {
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Column(
+        Column(
           children: [
-            ViewTitle(
+            const ViewTitle(
               topTitle: 'Présentation',
               title: 'Bienvenue sur Realm Guard_',
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               'Un coffre-fort offline-first pour chiffrer vos données sensibles. '
               'Nous allons affiner votre expérience dans les prochaines étapes.',
-              style: TextStyle(fontSize: 16),
+              style: textTheme.bodyLarge,
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             Text(
               'Vous pourrez toujours modifier vos choix plus tard dans les paramètres.',
-              style: TextStyle(fontSize: 16),
+              style: textTheme.bodyLarge,
             ),
           ],
         ),
@@ -238,18 +239,19 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Widget _buildMasterPasswordStep() {
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 24,
       children: [
-        const Column(
+        Column(
           children: [
-            ViewTitle(topTitle: 'Sécurité', title: 'Mot de passe_'),
-            SizedBox(height: 16),
+            const ViewTitle(topTitle: 'Sécurité', title: 'Mot de passe_'),
+            const SizedBox(height: 16),
             Text(
               'Ce mot de passe sert à générer la clé de chiffrement de votre coffre.',
-              style: TextStyle(fontSize: 16),
+              style: textTheme.bodyLarge,
             ),
           ],
         ),
@@ -273,29 +275,30 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Widget _buildBiometricChoiceStep() {
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 24,
       children: [
-        const Column(
+        Column(
           spacing: 24,
           children: [
-            ViewTitle(topTitle: 'Sécurité', title: 'Biométrie_'),
+            const ViewTitle(topTitle: 'Sécurité', title: 'Biométrie_'),
             Column(
               spacing: 12,
               children: [
                 Text(
                   'Voulez-vous utiliser la biométrie pour déverrouiller rapidement votre coffre-fort ?',
-                  style: TextStyle(fontSize: 16),
+                  style: textTheme.bodyLarge,
                 ),
                 Text(
                   'Vous aurez toujours la possibilité d\'utiliser votre mot de passe maître pour vous authentifier.',
-                  style: TextStyle(fontSize: 16),
+                  style: textTheme.bodyLarge,
                 ),
                 Text(
                   'Le mot de passe vous sera demandé de temps en temps pour renforcer la sécurité.',
-                  style: TextStyle(fontSize: 16),
+                  style: textTheme.bodyLarge,
                 ),
               ],
             ),

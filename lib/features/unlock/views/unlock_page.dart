@@ -86,11 +86,11 @@ class _UnlockPageState extends State<UnlockPage> {
                             topTitle: 'Déverrouillage',
                             title: 'Ouvrez l\'application',
                           ),
-                          const Text(
+                          Text(
                             'Ouvrez votre coffre-fort pour accéder à vos '
                             'secrets. Utilisez votre empreinte digitale ou '
                             'entrez votre mot de passe maître.',
-                            style: TextStyle(fontSize: 16),
+                            style: Theme.of(context).textTheme.bodyLarge,
                           ),
                           const SizedBox(height: 24),
                           Column(

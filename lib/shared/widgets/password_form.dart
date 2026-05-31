@@ -97,8 +97,7 @@ class _PasswordFormState extends State<PasswordForm> {
                   const SizedBox(width: 8),
                   Text(
                     rule.label,
-                    style: TextStyle(
-                      fontSize: 14,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: isValid ? AppColors.success : AppColors.grey2,
                     ),
                   ),

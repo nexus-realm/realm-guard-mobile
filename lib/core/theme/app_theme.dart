@@ -47,7 +47,11 @@ abstract class AppTheme {
         ),
       ),
       textTheme: const TextTheme(
-        bodyLarge: TextStyle(fontFamily: _fontBody, color: AppColors.mainText),
+        bodyLarge: TextStyle(
+          fontFamily: _fontBody,
+          color: AppColors.mainText,
+          fontSize: 16,
+        ),
         bodyMedium: TextStyle(
           fontFamily: _fontBody,
           color: AppColors.secondaryText,
