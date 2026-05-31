@@ -31,16 +31,11 @@ class _PasswordFormState extends State<PasswordForm> {
   bool _isPasswordObscured = true;
   bool _isPasswordConfirmationObscured = true;
 
-  @override
-  void dispose() {
-    widget.passwordController.clear();
-    widget.passwordController.dispose();
-    if (widget.passwordConfirmationController != null) {
-      widget.passwordConfirmationController?.clear();
-      widget.passwordConfirmationController?.dispose();
-    }
-    super.dispose();
-  }
+  // NOTE: les TextEditingController sont fournis et POSSÉDÉS par le widget
+  // parent. Ce widget ne doit donc ni les vider ni les `dispose` : c'est au
+  // parent de le faire. Sinon, démonter ce formulaire (ex: changement d'étape
+  // d'onboarding via AnimatedSwitcher) détruirait des contrôleurs encore
+  // utilisés par la page → "used after dispose".
 
   bool _isPasswordValid(String password) {
     final trimmed = password.trim();

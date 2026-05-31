@@ -50,6 +50,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
   void dispose() {
     _viewModel.removeListener(_onViewModelUpdated);
     _viewModel.dispose();
+    _passwordController.dispose();
+    _passwordConfirmationController.dispose();
     super.dispose();
   }
 

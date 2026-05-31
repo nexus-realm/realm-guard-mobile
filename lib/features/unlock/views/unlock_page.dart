@@ -35,6 +35,7 @@ class _UnlockPageState extends State<UnlockPage> {
   void dispose() {
     _viewModel.removeListener(_onViewModelUpdated);
     _viewModel.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
