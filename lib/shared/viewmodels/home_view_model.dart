@@ -15,12 +15,24 @@ class HomeViewModel extends ChangeNotifier {
   List<CredentialWithProfile> _credentials = [];
   String _query = '';
 
+  // Le chargement est terminé quand les DEUX flux ont émis au moins une fois ;
+  // évite d'afficher l'état "vide" pendant le chargement initial.
+  bool _profilesLoaded = false;
+  bool _credentialsLoaded = false;
+
   Timer? _debounceTimer;
   StreamSubscription<List<Profile>>? _profilesSub;
   StreamSubscription<List<CredentialWithProfile>>? _credentialsSub;
 
   final List<dynamic> _results = [];
   List<dynamic> get results => _results;
+
+  /// Vrai tant que le premier chargement des données n'est pas terminé.
+  bool get isLoading => !(_profilesLoaded && _credentialsLoaded);
+
+  /// Vrai si une recherche est active (permet de distinguer "coffre vide" de
+  /// "aucun résultat de recherche").
+  bool get hasSearchQuery => _query.isNotEmpty;
 
   PersistentBottomSheetController? _controller;
   bool get isBottomSheetOpen => _controller != null;
@@ -37,12 +49,14 @@ class HomeViewModel extends ChangeNotifier {
     // ajout / édition / suppression dans le coffre.
     _profilesSub = _vaultRepository.watchAllProfiles().listen((profiles) {
       _profiles = profiles;
+      _profilesLoaded = true;
       _rebuildResults();
     });
     _credentialsSub = _vaultRepository.watchCredentialsWithProfiles().listen((
       credentials,
     ) {
       _credentials = credentials;
+      _credentialsLoaded = true;
       _rebuildResults();
     });
   }

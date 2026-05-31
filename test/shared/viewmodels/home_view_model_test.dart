@@ -33,6 +33,59 @@ Future<void> _settle() => Future<void>.delayed(Duration.zero);
 
 void main() {
   group('HomeViewModel', () {
+    test('isLoading reste vrai tant que les deux flux n\'ont pas émis', () async {
+      final repo = FakeHomeRepository();
+      final vm = HomeViewModel(SearchNotifier(), repo);
+      addTearDown(vm.dispose);
+
+      // Aucune émission : chargement en cours.
+      expect(vm.isLoading, isTrue);
+
+      // Un seul flux a émis : toujours en chargement.
+      repo.profiles.add([_profile(1, 'GitHub')]);
+      await _settle();
+      expect(vm.isLoading, isTrue);
+
+      // Les deux flux ont émis : chargement terminé.
+      repo.credentials.add(const []);
+      await _settle();
+      expect(vm.isLoading, isFalse);
+    });
+
+    test('isLoading se termine même pour un coffre vide', () async {
+      final repo = FakeHomeRepository();
+      final vm = HomeViewModel(SearchNotifier(), repo);
+      addTearDown(vm.dispose);
+
+      repo.profiles.add(const []);
+      repo.credentials.add(const []);
+      await _settle();
+
+      expect(vm.isLoading, isFalse);
+      expect(vm.results, isEmpty);
+      expect(vm.hasSearchQuery, isFalse);
+    });
+
+    test('hasSearchQuery reflète la requête de recherche', () async {
+      final repo = FakeHomeRepository();
+      final search = SearchNotifier();
+      final vm = HomeViewModel(
+        search,
+        repo,
+        searchDebounce: const Duration(milliseconds: 10),
+      );
+      addTearDown(vm.dispose);
+
+      repo.profiles.add(const []);
+      repo.credentials.add(const []);
+      await _settle();
+      expect(vm.hasSearchQuery, isFalse);
+
+      search.updateQuery('git');
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(vm.hasSearchQuery, isTrue);
+    });
+
     test('expose profils et credentials émis par les flux réactifs', () async {
       final repo = FakeHomeRepository();
       final search = SearchNotifier();

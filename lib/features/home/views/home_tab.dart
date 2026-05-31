@@ -53,44 +53,109 @@ class _HomeTabState extends State<HomeTab> {
     return ListenableBuilder(
       listenable: _viewModel!,
       builder: (context, _) {
-        final results = _viewModel!.results;
-        return results.isEmpty
-            ? const Center(child: Text('Aucun élément trouvé'))
-            : Stack(
-              children:[
-                ListView.builder(
-                  itemCount: results.length,
-                  itemBuilder: (context, index) {
-                    final item = results[index];
-                    if (item is Profile) {
-                      return ListTile(
-                        title: Text(item.name),
-                        subtitle: const Text('Profil'),
-                        onTap: () {
-                          // TODO: View profile details
-                        },
-                      );
-                    } else if (item is CredentialWithProfile) {
-                      return ListTile(
-                        title: Text(item.credential.title),
-                        subtitle: Text(item.profile?.name ?? 'Sans profil'),
-                        onTap: () {
-                          // TODO: View credential details
-                        },
-                      );
-                    }
-                    return const SizedBox();
-                  },
-                ),
-                if (_viewModel!.isBottomSheetOpen)
-                  GestureDetector(
-                    onTap: () => _viewModel?.closeBottomSheet(),
-                    behavior: HitTestBehavior.translucent,
-                    child: Container(color: Colors.transparent),
-                  ),
-              ],
-            );
+        return Stack(
+          children: [
+            _buildContent(),
+            if (_viewModel!.isBottomSheetOpen)
+              GestureDetector(
+                onTap: () => _viewModel?.closeBottomSheet(),
+                behavior: HitTestBehavior.translucent,
+                child: Container(color: Colors.transparent),
+              ),
+          ],
+        );
       },
+    );
+  }
+
+  Widget _buildContent() {
+    // 1) Chargement initial : on n'affiche pas l'état "vide" prématurément.
+    if (_viewModel!.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final results = _viewModel!.results;
+
+    // 2) Aucun élément : on distingue recherche sans résultat et coffre vide.
+    if (results.isEmpty) {
+      return _viewModel!.hasSearchQuery
+          ? const _EmptyState(
+              icon: Icons.search_off,
+              title: 'Aucun résultat',
+              message: 'Aucun élément ne correspond à votre recherche.',
+            )
+          : const _EmptyState(
+              icon: Icons.lock_outline,
+              title: 'Votre coffre est vide',
+              message: 'Appuyez sur + pour ajouter un profil ou un identifiant.',
+            );
+    }
+
+    // 3) Liste des éléments.
+    return ListView.builder(
+      itemCount: results.length,
+      itemBuilder: (context, index) {
+        final item = results[index];
+        if (item is Profile) {
+          return ListTile(
+            title: Text(item.name),
+            subtitle: const Text('Profil'),
+            onTap: () {
+              // TODO: View profile details
+            },
+          );
+        } else if (item is CredentialWithProfile) {
+          return ListTile(
+            title: Text(item.credential.title),
+            subtitle: Text(item.profile?.name ?? 'Sans profil'),
+            onTap: () {
+              // TODO: View credential details
+            },
+          );
+        }
+        return const SizedBox();
+      },
+    );
+  }
+}
+
+/// État vide générique (coffre vide ou recherche sans résultat).
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 48, color: textTheme.bodyMedium?.color),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              message,
+              style: textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
