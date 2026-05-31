@@ -11,17 +11,27 @@ abstract interface class HomeRepository {
   Stream<List<CredentialWithProfile>> watchCredentialsWithProfiles();
 }
 
-class VaultRepository implements HomeRepository {
+/// Opérations d'écriture/lecture nécessaires aux pages d'ajout. Permet
+/// d'injecter un faux dépôt en test sans dépendre de sqlite3 natif.
+abstract interface class VaultEditor {
+  Future<List<Profile>> getAllProfiles();
+  Future<int> addProfile(String name, List<String> emails);
+  Future<int> addCredential(String title, String encryptedData, int? profileId);
+}
+
+class VaultRepository implements HomeRepository, VaultEditor {
   final AppDatabase _db;
 
   VaultRepository(this._db);
 
   // Profiles
+  @override
   Future<List<Profile>> getAllProfiles() => _db.profiles.select().get();
 
   @override
   Stream<List<Profile>> watchAllProfiles() => _db.profiles.select().watch();
 
+  @override
   Future<int> addProfile(String name, List<String> emails) =>
       _db.profiles.insertOne(
         ProfilesCompanion(name: Value(name), emails: Value(jsonEncode(emails))),
@@ -48,6 +58,7 @@ class VaultRepository implements HomeRepository {
             ..where((tbl) => tbl.profileId.equals(profileId)))
           .get();
 
+  @override
   Future<int> addCredential(
     String title,
     String encryptedData,

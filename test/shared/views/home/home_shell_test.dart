@@ -21,29 +21,50 @@ Widget _harness() {
   return MaterialApp.router(routerConfig: router);
 }
 
+/// Le placeholder "Partage" est-il réellement visible (pas seulement présent
+/// dans l'arbre mais masqué par l'IndexedStack via Offstage) ?
+bool _comingSoonVisible(WidgetTester tester) {
+  final finder = find.text('Le partage arrive bientôt');
+  if (finder.evaluate().isEmpty) return false;
+  final offstage = find
+      .ancestor(of: finder, matching: find.byType(Offstage))
+      .evaluate()
+      .map((e) => e.widget as Offstage);
+  return offstage.every((o) => !o.offstage);
+}
+
 void main() {
   testWidgets(
-    'sélectionner l\'onglet Partage ne plante pas et affiche un placeholder',
+    'le va-et-vient entre onglets ne plante pas et bascule le placeholder',
     (tester) async {
       await tester.pumpWidget(_harness());
       await tester.pumpAndSettle();
 
-      // Onglet Vault par défaut : le contenu du coffre est affiché.
+      // Onglet Vault par défaut : le contenu du coffre est affiché, pas le
+      // placeholder.
       expect(find.text('VAULT_CHILD'), findsOneWidget);
+      expect(_comingSoonVisible(tester), isFalse);
 
-      // Sélection de l'onglet "Partage" (index 1) : auparavant -> RangeError.
+      // Sélection de l'onglet "Partage" : auparavant -> RangeError.
       await tester.tap(find.text('Partage'));
       await tester.pumpAndSettle();
-
       expect(tester.takeException(), isNull);
-      expect(find.text('VAULT_CHILD'), findsNothing);
-      expect(find.text('Le partage arrive bientôt'), findsOneWidget);
+      expect(_comingSoonVisible(tester), isTrue);
 
-      // Retour sur l'onglet "Vault" : le contenu du coffre revient.
+      // Retour "Vault" : auparavant -> "deactivated widget's ancestor" /
+      // PopScope / GlobalKey dupliquée.
       await tester.tap(find.text('Vault'));
       await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(_comingSoonVisible(tester), isFalse);
+
+      // Second aller-retour pour confirmer la stabilité.
+      await tester.tap(find.text('Partage'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Vault'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
       expect(find.text('VAULT_CHILD'), findsOneWidget);
-      expect(find.text('Le partage arrive bientôt'), findsNothing);
     },
   );
 }

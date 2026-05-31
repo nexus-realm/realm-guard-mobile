@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/database/app_database.dart';
 import '../../core/database/vault_repository.dart';
+import '../../core/routes/app_routes.dart';
 import '../notifiers/search_notifier.dart';
 
 class HomeViewModel extends ChangeNotifier {
@@ -33,9 +35,6 @@ class HomeViewModel extends ChangeNotifier {
   /// Vrai si une recherche est active (permet de distinguer "coffre vide" de
   /// "aucun résultat de recherche").
   bool get hasSearchQuery => _query.isNotEmpty;
-
-  PersistentBottomSheetController? _controller;
-  bool get isBottomSheetOpen => _controller != null;
 
   HomeViewModel(
     this._searchNotifier,
@@ -82,63 +81,42 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void openAddBottomSheet(BuildContext context) {
+  /// Ouvre le menu d'ajout dans une bottom sheet **modale** : elle pose une
+  /// barrière (le FAB n'est plus actionnable) et n'ajoute pas d'entrée
+  /// d'historique (pas de bouton retour parasite dans l'AppBar).
+  Future<void> openAddBottomSheet(BuildContext context) async {
     if (!context.mounted) return;
 
-    if (isBottomSheetOpen) {
-      closeBottomSheet();
-      return;
-    }
-
-    _controller = Scaffold.of(context).showBottomSheet(
-      (context) => Container(
-        padding: const EdgeInsets.all(16),
+    final action = await showModalBottomSheet<_AddAction>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.person_add),
               title: const Text('Ajouter un profil'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _addProfile(context);
-              },
+              onTap: () => Navigator.of(sheetContext).pop(_AddAction.profile),
             ),
-
             ListTile(
               leading: const Icon(Icons.vpn_key),
               title: const Text('Ajouter un identifiant'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _addCredential(context);
-              },
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_AddAction.credential),
             ),
           ],
         ),
       ),
     );
 
-    notifyListeners();
+    if (action == null || !context.mounted) return;
 
-    _controller!.closed.then((_) {
-      _controller = null;
-      notifyListeners();
-    });
-  }
-
-  void closeBottomSheet() {
-    _controller?.close();
-    _controller = null;
-
-    notifyListeners();
-  }
-
-  void _addProfile(BuildContext context) {
-
-  }
-
-  void _addCredential(BuildContext context) {
-
+    switch (action) {
+      case _AddAction.profile:
+        context.push(AppRoutes.addProfile);
+      case _AddAction.credential:
+        context.push(AppRoutes.addCredential);
+    }
   }
 
   @override
@@ -150,3 +128,6 @@ class HomeViewModel extends ChangeNotifier {
     super.dispose();
   }
 }
+
+/// Action choisie dans la bottom sheet d'ajout.
+enum _AddAction { profile, credential }

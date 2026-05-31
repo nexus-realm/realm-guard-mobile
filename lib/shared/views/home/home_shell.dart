@@ -290,14 +290,22 @@ class _HomeShellState extends State<HomeShell> {
                 ? actions[_currentIndex]
                 : const <Widget>[],
           ),
-          // L'onglet "Partage" n'est pas encore implémenté : on affiche un
-          // placeholder au lieu du contenu du coffre (les deux onglets pointent
-          // vers /home).
-          body: _currentIndex == 0 ? widget.child : const _ComingSoonView(),
+          // IndexedStack garde `widget.child` (le child du ShellRoute GoRouter)
+          // TOUJOURS monté : on évite ainsi de le retirer/réinsérer dans l'arbre
+          // (ce qui cassait GoRouter : PopScope / GlobalKey dupliquée). L'onglet
+          // "Partage" n'étant pas implémenté, on montre un placeholder.
+          body: IndexedStack(
+            index: _currentIndex,
+            children: [widget.child, const _ComingSoonView()],
+          ),
           floatingActionButton: ListenableBuilder(
             listenable: _fabNotifier,
             builder: (context, _) {
-              if (!_fabNotifier.visible) return const SizedBox.shrink();
+              // FAB réservé à l'onglet Vault (HomeTab reste monté sous l'onglet
+              // Partage à cause de l'IndexedStack).
+              if (_currentIndex != 0 || !_fabNotifier.visible) {
+                return const SizedBox.shrink();
+              }
 
               if (_fabNotifier.label == null) {
                 return FloatingActionButton(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
 import '../../../core/security/vault_service.dart';
+import '../../../shared/notifiers/fab_notifier.dart';
 import '../../../shared/notifiers/fab_notifier_scope.dart';
 import '../../../shared/notifiers/search_notifier_scope.dart';
 import '../../../shared/viewmodels/home_view_model.dart';
@@ -19,6 +20,9 @@ class HomeTab extends StatefulWidget {
 class _HomeTabState extends State<HomeTab> {
   late final VaultRepository _repository;
   HomeViewModel? _viewModel;
+  // Référence mise en cache : on ne peut pas faire de lookup d'InheritedWidget
+  // dans dispose() (le contexte y est désactivé).
+  FabNotifier? _fabNotifier;
 
   @override
   void initState() {
@@ -26,7 +30,8 @@ class _HomeTabState extends State<HomeTab> {
     _repository = VaultRepository(widget.vaultService.db);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      FabNotifierScope.of(context).register(
+      if (!mounted) return;
+      _fabNotifier?.register(
         icon: Icons.add,
         onPressed: () => _viewModel?.openAddBottomSheet(context),
       );
@@ -36,12 +41,13 @@ class _HomeTabState extends State<HomeTab> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _fabNotifier = FabNotifierScope.of(context);
     _viewModel ??= HomeViewModel(SearchNotifierScope.of(context), _repository);
   }
 
   @override
   void dispose() {
-    FabNotifierScope.of(context).unregister();
+    _fabNotifier?.unregister();
     _viewModel!.dispose();
     super.dispose();
   }
@@ -50,19 +56,7 @@ class _HomeTabState extends State<HomeTab> {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: _viewModel!,
-      builder: (context, _) {
-        return Stack(
-          children: [
-            _buildContent(),
-            if (_viewModel!.isBottomSheetOpen)
-              GestureDetector(
-                onTap: () => _viewModel?.closeBottomSheet(),
-                behavior: HitTestBehavior.translucent,
-                child: Container(color: Colors.transparent),
-              ),
-          ],
-        );
-      },
+      builder: (context, _) => _buildContent(),
     );
   }
 
