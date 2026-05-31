@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:flutter/material.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/security/biometric_storage_service.dart';
 import '../../../core/security/vault_service.dart';
 
 class VaultDebugPage extends StatefulWidget {
@@ -45,12 +46,14 @@ class _VaultDebugPageState extends State<VaultDebugPage> {
 
       setState(() {
         _isUnlocked = true;
-        _statusMessage = "Succès ! Coffre-fort déverrouillé par mot de passe.\nClé sauvegardée pour la biométrie.\nEntrées : $_entryCount";
+        _statusMessage =
+            "Succès ! Coffre-fort déverrouillé par mot de passe.\nClé sauvegardée pour la biométrie.\nEntrées : $_entryCount";
       });
     } catch (e) {
       setState(() {
         _isUnlocked = false;
-        _statusMessage = "Erreur : Mot de passe incorrect ou erreur DB.\nDétails: $e";
+        _statusMessage =
+            "Erreur : Mot de passe incorrect ou erreur DB.\nDétails: $e";
       });
     } finally {
       setState(() {
@@ -67,18 +70,20 @@ class _VaultDebugPageState extends State<VaultDebugPage> {
     });
 
     try {
-      final success = await _vaultService.unlockWithBiometrics();
+      final status = await _vaultService.unlockWithBiometrics();
 
-      if (success) {
+      if (status == BiometricUnlockStatus.success) {
         await _refreshEntryCount();
         setState(() {
           _isUnlocked = true;
-          _statusMessage = "Succès ! Coffre-fort déverrouillé via Biométrie.\nEntrées : $_entryCount";
+          _statusMessage =
+              "Succès ! Coffre-fort déverrouillé via Biométrie.\nEntrées : $_entryCount";
         });
       } else {
         setState(() {
           _isUnlocked = false;
-          _statusMessage = "Échec biométrique ou aucune clé sauvegardée.\nVeuillez utiliser le mot de passe maître.";
+          _statusMessage =
+              "Échec biométrique ou aucune clé sauvegardée.\nVeuillez utiliser le mot de passe maître.";
         });
       }
     } catch (e) {
@@ -108,16 +113,19 @@ class _VaultDebugPageState extends State<VaultDebugPage> {
     if (!_isUnlocked) return;
 
     try {
-      await _vaultService.db.into(_vaultService.db.vaultEntries).insert(
-        const VaultEntriesCompanion(
-          title: drift.Value("Test Entry"),
-          encryptedData: drift.Value("données_super_secrètes_ici"),
-        ),
-      );
+      await _vaultService.db
+          .into(_vaultService.db.credentials)
+          .insert(
+            const CredentialsCompanion(
+              title: drift.Value("Test Entry"),
+              encryptedData: drift.Value("données_super_secrètes_ici"),
+            ),
+          );
 
       await _refreshEntryCount();
       setState(() {
-        _statusMessage = "Entrée ajoutée avec succès !\nNouvelles entrées : $_entryCount";
+        _statusMessage =
+            "Entrée ajoutée avec succès !\nNouvelles entrées : $_entryCount";
       });
     } catch (e) {
       setState(() => _statusMessage = "Erreur lors de l'ajout : $e");
@@ -125,7 +133,7 @@ class _VaultDebugPageState extends State<VaultDebugPage> {
   }
 
   Future<void> _refreshEntryCount() async {
-    final count = await _vaultService.db.vaultEntries.count().getSingle();
+    final count = await _vaultService.db.credentials.count().getSingle();
     _entryCount = count;
   }
 
@@ -141,7 +149,7 @@ class _VaultDebugPageState extends State<VaultDebugPage> {
               icon: const Icon(Icons.lock_outline),
               tooltip: 'Verrouiller le coffre',
               onPressed: _lockVault,
-            )
+            ),
         ],
       ),
       body: Padding(

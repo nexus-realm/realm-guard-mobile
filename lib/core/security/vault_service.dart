@@ -1,6 +1,7 @@
 import 'package:cryptography/cryptography.dart';
 
 import '../database/app_database.dart';
+import '../exceptions/vault_unlock_exception.dart';
 import 'biometric_storage_service.dart';
 import 'key_derivator.dart';
 import 'salt_manager.dart';
@@ -19,34 +20,59 @@ class VaultService {
       );
       final List<int> keyBytes = await secretKey.extractBytes();
 
-      _database = AppDatabase(keyBytes);
-      await _database!.customSelect('SELECT 1').get();
+      await openDatabaseWithKey(keyBytes);
 
-      // Sauvegarde la clé pour la prochaine ouverture biométrique
-      await _biometricService.saveDerivedKey(keyBytes);
+      // Sauvegarde la clé pour la biométrie uniquement si l'utilisateur l'a
+      // activée. Best-effort : un échec ici ne doit jamais bloquer un
+      // déverrouillage valide.
+      await _persistKeyForBiometricsIfEnabled(keyBytes);
     } catch (e) {
-      _database?.close();
-      _database = null;
-      throw Exception("Mot de passe incorrect ou base de données corrompue : $e");
+      if (e is VaultUnlockException) rethrow;
+      throw VaultUnlockException(e);
     }
   }
 
-  /// Ouverture rapide via biométrie
-  Future<bool> unlockWithBiometrics() async {
+  /// Stocke (ou efface) la clé de déverrouillage rapide selon la préférence de
+  /// l'utilisateur. Non critique : toute erreur est ignorée pour ne pas
+  /// compromettre un déverrouillage par ailleurs réussi.
+  Future<void> _persistKeyForBiometricsIfEnabled(List<int> keyBytes) async {
     try {
-      final keyBytes = await _biometricService.getDerivedKeyWithBiometrics(
-        "Déverrouillez Realm Guard",
-      );
+      if (await _biometricService.isBiometricEnabled()) {
+        await _biometricService.saveDerivedKey(keyBytes);
+      } else {
+        await _biometricService.clearDerivedKey();
+      }
+    } catch (_) {
+      // Persistance biométrique non critique : on ignore les échecs.
+    }
+  }
 
-      if (keyBytes == null) return false;
+  /// Ouverture rapide via biométrie. Retourne l'issue précise pour que
+  /// l'appelant distingue un échec réel d'une annulation / indisponibilité.
+  Future<BiometricUnlockStatus> unlockWithBiometrics() async {
+    final (status, keyBytes) = await _biometricService
+        .getDerivedKeyWithBiometrics("Déverrouillez Realm Guard");
 
+    if (status != BiometricUnlockStatus.success || keyBytes == null) {
+      return status;
+    }
+
+    try {
+      await openDatabaseWithKey(keyBytes);
+      return BiometricUnlockStatus.success;
+    } catch (_) {
+      return BiometricUnlockStatus.failed; // Demande le mot de passe
+    }
+  }
+
+  Future<void> openDatabaseWithKey(List<int> keyBytes) async {
+    try {
       _database = AppDatabase(keyBytes);
       await _database!.customSelect('SELECT 1').get();
-      return true;
     } catch (e) {
       _database?.close();
       _database = null;
-      return false; // Forcera l'utilisateur à entrer le mot de passe
+      throw VaultUnlockException(e);
     }
   }
 
@@ -55,6 +81,9 @@ class VaultService {
     _database?.close();
     _database = null;
   }
+
+  /// Indique si le coffre est actuellement déverrouillé (DB ouverte en mémoire).
+  bool get isUnlocked => _database != null;
 
   AppDatabase get db {
     if (_database == null) throw Exception("Vault is locked!");

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/unlock_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../../../shared/widgets/password_form.dart';
 import '../../../shared/widgets/view_title.dart';
 import '../viewmodels/unlock_view_model.dart';
@@ -34,6 +35,7 @@ class _UnlockPageState extends State<UnlockPage> {
   void dispose() {
     _viewModel.removeListener(_onViewModelUpdated);
     _viewModel.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -63,7 +65,6 @@ class _UnlockPageState extends State<UnlockPage> {
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) => Scaffold(
-        appBar: AppBar(elevation: 0),
         body: SafeArea(
           child: CustomScrollView(
             slivers: [
@@ -85,11 +86,11 @@ class _UnlockPageState extends State<UnlockPage> {
                             topTitle: 'Déverrouillage',
                             title: 'Ouvrez l\'application',
                           ),
-                          const Text(
+                          Text(
                             'Ouvrez votre coffre-fort pour accéder à vos '
                             'secrets. Utilisez votre empreinte digitale ou '
                             'entrez votre mot de passe maître.',
-                            style: TextStyle(fontSize: 16),
+                            style: Theme.of(context).textTheme.bodyLarge,
                           ),
                           const SizedBox(height: 24),
                           Column(
@@ -115,7 +116,7 @@ class _UnlockPageState extends State<UnlockPage> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
-                                    'Trop de tentatives. Réessayez dans ${_viewModel.remainingLockout!.inSeconds}s',
+                                    'Trop de tentatives. Réessayez dans ${_viewModel.remainingLockoutLabel}',
                                     style: const TextStyle(
                                       color: AppColors.error,
                                     ),
@@ -130,7 +131,7 @@ class _UnlockPageState extends State<UnlockPage> {
                         spacing: 12,
                         children: [
                           Expanded(
-                            child: ElevatedButton.icon(
+                            child: GradientElevatedButton.icon(
                               onPressed:
                                   _viewModel.isLoading ||
                                       (_viewModel.remainingLockout != null &&

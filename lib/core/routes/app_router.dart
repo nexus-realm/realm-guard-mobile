@@ -4,23 +4,35 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/debug/views/security_debug_page.dart';
 import '../../features/debug/views/vault_debug_page.dart';
-import '../../features/home/views/first_page.dart';
+import '../../features/home/views/add_credential_page.dart';
+import '../../features/home/views/add_profile_page.dart';
+import '../../features/home/views/home_tab.dart';
 import '../../features/onboarding/service/onboarding_storage_service.dart';
 import '../../features/onboarding/views/onboarding_page.dart';
 import '../../features/onboarding/views/startup_gate_page.dart';
 import '../../features/unlock/views/unlock_page.dart';
 import '../../shared/views/home/home_shell.dart';
+import '../../core/database/vault_repository.dart';
+import '../security/app_lock_controller.dart';
 import '../security/unlock_service.dart';
 import '../security/vault_service.dart';
 import 'app_routes.dart';
+import 'route_guard.dart';
 
 final OnboardingStorageService _onboardingStorageService =
     OnboardingStorageService();
 final VaultService _vaultService = VaultService();
 final UnlockService _unlockService = UnlockService(vaultService: _vaultService);
+final AppLockController appLockController = AppLockController(
+  vaultService: _vaultService,
+);
 
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.startup,
+  redirect: (context, state) => vaultRouteGuard(
+    location: state.matchedLocation,
+    isUnlocked: _vaultService.isUnlocked,
+  ),
   routes: [
     GoRoute(
       path: AppRoutes.startup,
@@ -47,9 +59,21 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: AppRoutes.home,
           name: 'home',
-          builder: (context, state) => const FirstPage(),
+          builder: (context, state) => HomeTab(vaultService: _vaultService),
         ),
       ],
+    ),
+    GoRoute(
+      path: AppRoutes.addProfile,
+      name: 'addProfile',
+      builder: (context, state) =>
+          AddProfilePage(repository: VaultRepository(_vaultService.db)),
+    ),
+    GoRoute(
+      path: AppRoutes.addCredential,
+      name: 'addCredential',
+      builder: (context, state) =>
+          AddCredentialPage(repository: VaultRepository(_vaultService.db)),
     ),
     GoRoute(
       path: AppRoutes.debug,

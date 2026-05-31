@@ -1,3 +1,4 @@
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
@@ -12,6 +13,12 @@ abstract class KeyDerivator {
 
   /// Transforms the User's Password (e.g. "Monkey123") into a
   /// cryptographically secure 32-byte key using Argon2id.
+  ///
+  /// The CPU- and memory-intensive Argon2id computation runs on a background
+  /// isolate via [Isolate.run], so it never blocks the UI thread during unlock
+  /// or onboarding. The derived key bytes (sendable) are returned from the
+  /// isolate and re-wrapped into a [SecretKey] on the caller's isolate.
+  ///
   /// Throws [ArgumentError] if the password is empty or blank.
   static Future<SecretKey> deriveKeyFromPassword(
     String password,
@@ -25,6 +32,16 @@ abstract class KeyDerivator {
       );
     }
 
+    final keyBytes = await Isolate.run(() => _deriveKeyBytes(password, salt));
+    return SecretKey(keyBytes);
+  }
+
+  /// Runs on a background isolate: performs the Argon2id derivation and returns
+  /// the raw 32-byte key.
+  static Future<List<int>> _deriveKeyBytes(
+    String password,
+    Uint8List salt,
+  ) async {
     final Argon2id algorithm = Argon2id(
       iterations: _iterations,
       memory: _memory,
@@ -32,9 +49,11 @@ abstract class KeyDerivator {
       hashLength: _hashLength,
     );
 
-    return await algorithm.deriveKeyFromPassword(
+    final secretKey = await algorithm.deriveKeyFromPassword(
       password: password,
       nonce: salt,
     );
+
+    return secretKey.extractBytes();
   }
 }

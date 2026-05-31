@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/vault_service.dart';
+import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../../../shared/widgets/password_form.dart';
 import '../../../shared/widgets/view_title.dart';
 import '../data/onboarding_step.dart';
@@ -49,6 +50,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
   void dispose() {
     _viewModel.removeListener(_onViewModelUpdated);
     _viewModel.dispose();
+    _passwordController.dispose();
+    _passwordConfirmationController.dispose();
     super.dispose();
   }
 
@@ -201,30 +204,31 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Widget _buildWelcomeStep() {
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Column(
+        Column(
           children: [
-            ViewTitle(
+            const ViewTitle(
               topTitle: 'Présentation',
               title: 'Bienvenue sur Realm Guard_',
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
-              'Un coffre-fort offline first pour chiffré vos données sensibles. '
+              'Un coffre-fort offline-first pour chiffrer vos données sensibles. '
               'Nous allons affiner votre expérience dans les prochaines étapes.',
-              style: TextStyle(fontSize: 16),
+              style: textTheme.bodyLarge,
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             Text(
               'Vous pourrez toujours modifier vos choix plus tard dans les paramètres.',
-              style: TextStyle(fontSize: 16),
+              style: textTheme.bodyLarge,
             ),
           ],
         ),
-        ElevatedButton(
+        GradientElevatedButton(
           onPressed: _viewModel.isSubmitting
               ? null
               : _viewModel.completeWelcomeStep,
@@ -235,18 +239,19 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Widget _buildMasterPasswordStep() {
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 24,
       children: [
-        const Column(
+        Column(
           children: [
-            ViewTitle(topTitle: 'Sécurisation', title: 'Mot de passe_'),
-            SizedBox(height: 16),
+            const ViewTitle(topTitle: 'Sécurité', title: 'Mot de passe_'),
+            const SizedBox(height: 16),
             Text(
-              'Ce mot de passe sert a générer la clé de chiffrement de votre coffre.',
-              style: TextStyle(fontSize: 16),
+              'Ce mot de passe sert à générer la clé de chiffrement de votre coffre.',
+              style: textTheme.bodyLarge,
             ),
           ],
         ),
@@ -259,14 +264,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
           onPasswordChanged: (_) => setState(() {}),
           onConfirmPasswordChanged: (_) => setState(() {}),
         ),
-        ElevatedButton(
+        GradientElevatedButton(
           onPressed: _canSubmitMasterPassword ? _submitMasterPassword : null,
           child: _viewModel.isSubmitting
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
               : const Text('Valider le mot de passe'),
         ),
       ],
@@ -274,29 +275,30 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Widget _buildBiometricChoiceStep() {
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 24,
       children: [
-        const Column(
+        Column(
           spacing: 24,
           children: [
-            ViewTitle(topTitle: 'Sécurisation', title: 'Biométrie_'),
+            const ViewTitle(topTitle: 'Sécurité', title: 'Biométrie_'),
             Column(
               spacing: 12,
               children: [
                 Text(
-                  'Voulez-vous utiliser la biométrie pour dévérrouiller rapidement votre coffre-fort ?',
-                  style: TextStyle(fontSize: 16),
+                  'Voulez-vous utiliser la biométrie pour déverrouiller rapidement votre coffre-fort ?',
+                  style: textTheme.bodyLarge,
                 ),
                 Text(
-                  'Vous aurez toujours la possibilité d\'utiliser votre mot de passe maitre pour vous authentifier.',
-                  style: TextStyle(fontSize: 16),
+                  'Vous aurez toujours la possibilité d\'utiliser votre mot de passe maître pour vous authentifier.',
+                  style: textTheme.bodyLarge,
                 ),
                 Text(
                   'Le mot de passe vous sera demandé de temps en temps pour renforcer la sécurité.',
-                  style: TextStyle(fontSize: 16),
+                  style: textTheme.bodyLarge,
                 ),
               ],
             ),
@@ -306,7 +308,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           spacing: 12,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ElevatedButton.icon(
+            GradientElevatedButton.icon(
               onPressed: _viewModel.isSubmitting
                   ? null
                   : () => _viewModel.completeBiometricStep(true),

@@ -4,6 +4,8 @@ class AppRoutes {
   static const String unlock = '/unlock';
 
   static const String home = '/home';
+  static const String addProfile = '/add-profile';
+  static const String addCredential = '/add-credential';
 
   static const String debug = '/debug';
   static const String securityDebug = '/security-debug';

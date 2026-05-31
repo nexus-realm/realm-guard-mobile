@@ -19,7 +19,7 @@ abstract class SaltManager {
     final file = await _getSaltFile();
 
     if (await file.exists()) {
-      // 1. Existing user: Read the salt from disk
+      // Existing user: Read the salt from disk
       final bytes = await file.readAsBytes();
 
       if (bytes.length != _saltLength) {

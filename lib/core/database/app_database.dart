@@ -1,25 +1,33 @@
 import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
+import 'models/credentials.dart';
+import 'models/profiles.dart';
 
 part 'app_database.g.dart';
 
-class VaultEntries extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get title => text()();
-  TextColumn get encryptedData => text()();
-}
-
-@DriftDatabase(tables: [VaultEntries])
+@DriftDatabase(tables: [Profiles, Credentials])
 class AppDatabase extends _$AppDatabase {
-
   AppDatabase(List<int> encryptionKeyBytes)
-      : super(_openConnection(encryptionKeyBytes));
+    : super(_openConnection(encryptionKeyBytes));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (migrator, from, to) async {
+      if (from == 1) {
+        await migrator.renameTable(credentials, 'vault_entries');
+        await migrator.addColumn(credentials, credentials.profileId);
+        await migrator.createTable(profiles);
+      }
+    },
+  );
 }
 
 LazyDatabase _openConnection(List<int> encryptionKeyBytes) {
@@ -27,15 +35,18 @@ LazyDatabase _openConnection(List<int> encryptionKeyBytes) {
     final dbFolder = await getApplicationSupportDirectory();
     final file = File(p.join(dbFolder.path, 'realm_guard_vault.sqlite'));
 
-    // 1. Convertir les 32 octets de la clé en une chaîne hexadécimale de 64 caractères
+    // Conversion de la clé en hexadécimal pour l'utiliser dans la PRAGMA key
     final hexKey = encryptionKeyBytes
         .map((b) => b.toRadixString(16).padLeft(2, '0'))
         .join('');
 
-    return NativeDatabase(file, setup: (db) {
-      db.execute("PRAGMA key = \"x'$hexKey'\";");
-      db.execute("PRAGMA cipher_page_size = 4096;");
-      db.execute("SELECT count(*) FROM sqlite_master;");
-    });
+    return NativeDatabase(
+      file,
+      setup: (db) {
+        db.execute("PRAGMA key = \"x'$hexKey'\";");
+        db.execute("PRAGMA cipher_page_size = 4096;");
+        db.execute("SELECT count(*) FROM sqlite_master;");
+      },
+    );
   });
 }
