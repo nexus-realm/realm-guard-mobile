@@ -67,4 +67,36 @@ void main() {
       expect(service.getRemainingLockoutCalls, 1);
     });
   });
+
+  group('UnlockViewModel.formatLockout (U6)', () {
+    test('formate en mm:ss avec zéros de remplissage', () {
+      expect(UnlockViewModel.formatLockout(const Duration(minutes: 5)), '05:00');
+      expect(
+        UnlockViewModel.formatLockout(
+          const Duration(minutes: 4, seconds: 30),
+        ),
+        '04:30',
+      );
+      expect(UnlockViewModel.formatLockout(const Duration(seconds: 9)), '00:09');
+    });
+
+    test('arrondit les secondes au supérieur (pas de 00:00 prématuré)', () {
+      expect(
+        UnlockViewModel.formatLockout(const Duration(milliseconds: 4500)),
+        '00:05',
+      );
+      expect(
+        UnlockViewModel.formatLockout(const Duration(milliseconds: 1)),
+        '00:01',
+      );
+    });
+
+    test('retourne 00:00 pour une durée nulle ou négative', () {
+      expect(UnlockViewModel.formatLockout(Duration.zero), '00:00');
+      expect(
+        UnlockViewModel.formatLockout(const Duration(seconds: -5)),
+        '00:00',
+      );
+    });
+  });
 }

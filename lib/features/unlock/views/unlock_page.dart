@@ -116,7 +116,7 @@ class _UnlockPageState extends State<UnlockPage> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
-                                    'Trop de tentatives. Réessayez dans ${_viewModel.remainingLockout!.inSeconds}s',
+                                    'Trop de tentatives. Réessayez dans ${_viewModel.remainingLockoutLabel}',
                                     style: const TextStyle(
                                       color: AppColors.error,
                                     ),

@@ -35,6 +35,25 @@ class UnlockViewModel extends ChangeNotifier {
   Duration? get remainingLockout => _remainingLockout;
   int get biometricAttemptCount => _biometricAttemptCount;
 
+  /// Temps de lockout restant formaté en `mm:ss` (ex: `04:30`), ou `null`
+  /// si aucun lockout n'est actif.
+  String? get remainingLockoutLabel {
+    final remaining = _remainingLockout;
+    if (remaining == null || remaining <= Duration.zero) return null;
+    return formatLockout(remaining);
+  }
+
+  /// Formate une [Duration] en `mm:ss`. Les secondes sont arrondies au
+  /// supérieur pour ne pas afficher `00:00` tant qu'il reste du temps.
+  static String formatLockout(Duration duration) {
+    final totalSeconds = duration.inMilliseconds <= 0
+        ? 0
+        : (duration.inMilliseconds / 1000).ceil();
+    final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
+    final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
   Future<void> initialize() async {
     _strategy = await _unlockService.determineUnlockStrategy();
     await _updateRemainingLockout();
