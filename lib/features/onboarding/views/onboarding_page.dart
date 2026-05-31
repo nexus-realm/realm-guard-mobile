@@ -216,7 +216,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
             SizedBox(height: 16),
             Text(
-              'Un coffre-fort offline first pour chiffré vos données sensibles. '
+              'Un coffre-fort offline-first pour chiffrer vos données sensibles. '
               'Nous allons affiner votre expérience dans les prochaines étapes.',
               style: TextStyle(fontSize: 16),
             ),
@@ -248,7 +248,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ViewTitle(topTitle: 'Sécurité', title: 'Mot de passe_'),
             SizedBox(height: 16),
             Text(
-              'Ce mot de passe sert a générer la clé de chiffrement de votre coffre.',
+              'Ce mot de passe sert à générer la clé de chiffrement de votre coffre.',
               style: TextStyle(fontSize: 16),
             ),
           ],
@@ -290,7 +290,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   style: TextStyle(fontSize: 16),
                 ),
                 Text(
-                  'Vous aurez toujours la possibilité d\'utiliser votre mot de passe maitre pour vous authentifier.',
+                  'Vous aurez toujours la possibilité d\'utiliser votre mot de passe maître pour vous authentifier.',
                   style: TextStyle(fontSize: 16),
                 ),
                 Text(

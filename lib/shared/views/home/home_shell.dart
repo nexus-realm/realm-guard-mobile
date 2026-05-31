@@ -116,7 +116,7 @@ class _HomeShellState extends State<HomeShell> {
                       ),
                       ListTile(
                         leading: Icon(Icons.palette_outlined),
-                        title: Text('Theme'),
+                        title: Text('Thème'),
                         subtitle: Text('Configuration à venir'),
                         enabled: false,
                       ),
@@ -124,17 +124,17 @@ class _HomeShellState extends State<HomeShell> {
                   ),
                   _buildSettingsCategory(
                     context: sheetContext,
-                    title: 'Securite',
+                    title: 'Sécurité',
                     children: const [
                       ListTile(
                         leading: Icon(Icons.lock_outline),
-                        title: Text('Mot de passe maitre'),
+                        title: Text('Mot de passe maître'),
                         subtitle: Text('Configuration à venir'),
                         enabled: false,
                       ),
                       ListTile(
                         leading: Icon(Icons.fingerprint),
-                        title: Text('Biometrie'),
+                        title: Text('Biométrie'),
                         subtitle: Text('Configuration à venir'),
                         enabled: false,
                       ),
@@ -255,7 +255,7 @@ class _HomeShellState extends State<HomeShell> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Impossible de réinitialiser les donnees pour le moment.',
+            'Impossible de réinitialiser les données pour le moment.',
           ),
         ),
       );

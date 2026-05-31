@@ -82,7 +82,7 @@ class OnboardingFlowController extends ChangeNotifier {
 
     if (normalizedPassword.length < 12) {
       _errorMessage =
-          'Le mot de passe maitre doit contenir au moins 12 caracteres.';
+          'Le mot de passe maître doit contenir au moins 12 caractères.';
       notifyListeners();
       return false;
     }
@@ -104,7 +104,7 @@ class OnboardingFlowController extends ChangeNotifier {
       return true;
     } catch (_) {
       _errorMessage =
-          'Impossible de configurer le mot de passe maitre. Reessayez.';
+          'Impossible de configurer le mot de passe maître. Réessayez.';
       notifyListeners();
       return false;
     } finally {
@@ -133,7 +133,7 @@ class OnboardingFlowController extends ChangeNotifier {
       );
     } catch (_) {
       _errorMessage =
-          'Impossible d\'enregistrer votre choix biometrique pour le moment.';
+          'Impossible d\'enregistrer votre choix biométrique pour le moment.';
       notifyListeners();
     } finally {
       _isSubmitting = false;

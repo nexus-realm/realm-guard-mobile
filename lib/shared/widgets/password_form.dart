@@ -129,7 +129,7 @@ class _PasswordFormState extends State<PasswordForm> {
               widget.onPasswordChanged?.call(value);
             },
             decoration: InputDecoration(
-              labelText: 'Mot de passe maitre',
+              labelText: 'Mot de passe maître',
               suffixIcon: IconButton(
                 tooltip: _isPasswordObscured
                     ? 'Afficher le mot de passe'

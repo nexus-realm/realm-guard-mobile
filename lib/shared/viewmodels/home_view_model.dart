@@ -107,7 +107,7 @@ class HomeViewModel extends ChangeNotifier {
 
             ListTile(
               leading: const Icon(Icons.vpn_key),
-              title: const Text('Ajouter une crédential'),
+              title: const Text('Ajouter un identifiant'),
               onTap: () {
                 Navigator.of(context).pop();
                 _addCredential(context);
