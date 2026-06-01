@@ -10,10 +10,16 @@ import '../../features/home/views/home_tab.dart';
 import '../../features/onboarding/service/onboarding_storage_service.dart';
 import '../../features/onboarding/views/onboarding_page.dart';
 import '../../features/onboarding/views/startup_gate_page.dart';
+import '../../features/settings/data/legal_documents.dart';
+import '../../features/settings/service/app_reset_service.dart';
+import '../../features/settings/views/about_page.dart';
+import '../../features/settings/views/legal_page.dart';
+import '../../features/settings/views/settings_page.dart';
 import '../../features/unlock/views/unlock_page.dart';
 import '../../shared/views/home/home_shell.dart';
 import '../../core/database/vault_repository.dart';
 import '../security/app_lock_controller.dart';
+import '../security/biometric_storage_service.dart';
 import '../security/unlock_service.dart';
 import '../security/vault_service.dart';
 import 'app_routes.dart';
@@ -51,7 +57,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.unlock,
       name: 'unlock',
-      builder: (context, state) => UnlockPage(unlockService: _unlockService),
+      builder: (context, state) => UnlockPage(
+        unlockService: _unlockService,
+        lockController: appLockController,
+      ),
     ),
     ShellRoute(
       builder: (context, state, child) => HomeShell(child: child),
@@ -74,6 +83,42 @@ final GoRouter appRouter = GoRouter(
       name: 'addCredential',
       builder: (context, state) =>
           AddCredentialPage(repository: VaultRepository(_vaultService.db)),
+    ),
+    GoRoute(
+      path: AppRoutes.settings,
+      name: 'settings',
+      builder: (context, state) => SettingsPage(
+        vaultService: _vaultService,
+        biometricService: BiometricStorageService(),
+        resetService: AppResetService(),
+      ),
+      routes: [
+        GoRoute(
+          path: 'about',
+          name: 'settingsAbout',
+          builder: (context, state) => const AboutPage(),
+          routes: [
+            GoRoute(
+              path: 'privacy',
+              name: 'settingsPrivacy',
+              builder: (context, state) =>
+                  const LegalPage(document: LegalDocuments.privacy),
+            ),
+            GoRoute(
+              path: 'cgu',
+              name: 'settingsCgu',
+              builder: (context, state) =>
+                  const LegalPage(document: LegalDocuments.cgu),
+            ),
+            GoRoute(
+              path: 'legal',
+              name: 'settingsLegal',
+              builder: (context, state) =>
+                  const LegalPage(document: LegalDocuments.legalNotice),
+            ),
+          ],
+        ),
+      ],
     ),
     GoRoute(
       path: AppRoutes.debug,

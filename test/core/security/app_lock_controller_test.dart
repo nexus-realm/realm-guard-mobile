@@ -93,5 +93,66 @@ void main() {
       controller.evaluateInactivity();
       expect(vault.lockCalled, isFalse);
     });
+
+    test('exposes a background lock reason after a background lock', () {
+      final vault = FakeVaultService()..unlocked = true;
+      final controller = AppLockController(vaultService: vault);
+      addTearDown(controller.detach);
+      controller.attach(onLock: () {});
+
+      controller.handleLifecycleState(AppLifecycleState.paused);
+
+      expect(controller.takePendingMessage(), LockReason.background);
+    });
+
+    test('exposes an inactivity lock reason after an inactivity lock', () {
+      var now = DateTime(2026, 1, 1, 12, 0, 0);
+      final vault = FakeVaultService()..unlocked = true;
+      final controller = AppLockController(
+        vaultService: vault,
+        inactivityTimeout: const Duration(minutes: 2),
+        clock: () => now,
+      );
+      addTearDown(controller.detach);
+      controller.attach(onLock: () {});
+
+      controller.notifyInteraction();
+      now = now.add(const Duration(minutes: 3));
+      controller.evaluateInactivity();
+
+      expect(controller.takePendingMessage(), LockReason.inactivity);
+    });
+
+    test('takePendingMessage consumes the reason (null on second call)', () {
+      final vault = FakeVaultService()..unlocked = true;
+      final controller = AppLockController(vaultService: vault);
+      addTearDown(controller.detach);
+      controller.attach(onLock: () {});
+
+      controller.handleLifecycleState(AppLifecycleState.paused);
+
+      expect(controller.takePendingMessage(), LockReason.background);
+      expect(controller.takePendingMessage(), isNull);
+    });
+
+    test('has no pending message without an automatic lock', () {
+      final vault = FakeVaultService()..unlocked = true;
+      final controller = AppLockController(vaultService: vault);
+      addTearDown(controller.detach);
+      controller.attach(onLock: () {});
+
+      expect(controller.takePendingMessage(), isNull);
+    });
+
+    test('does not set a pending message when already locked', () {
+      final vault = FakeVaultService()..unlocked = false;
+      final controller = AppLockController(vaultService: vault);
+      addTearDown(controller.detach);
+      controller.attach(onLock: () {});
+
+      controller.handleLifecycleState(AppLifecycleState.paused);
+
+      expect(controller.takePendingMessage(), isNull);
+    });
   });
 }
