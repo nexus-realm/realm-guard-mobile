@@ -81,18 +81,40 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Ouvre le menu d'ajout dans une bottom sheet **modale** : elle pose une
-  /// barrière (le FAB n'est plus actionnable) et n'ajoute pas d'entrée
-  /// d'historique (pas de bouton retour parasite dans l'AppBar).
+  /// Ouvre le menu d'ajout dans une bottom sheet **modale**.
+  ///
+  /// `useRootNavigator: true` est indispensable : le FAB qui déclenche ce menu
+  /// vit dans le `Scaffold` de `HomeShell`, AU-DESSUS du Navigator imbriqué du
+  /// `ShellRoute` (celui qui héberge `HomeTab`). Sans ce flag, la sheet serait
+  /// poussée sur ce Navigator imbriqué et sa barrière ne couvrirait que le
+  /// `body` : le FAB resterait visible ET cliquable, permettant d'empiler
+  /// plusieurs sheets. En poussant sur le Navigator racine, la barrière couvre
+  /// tout l'écran (FAB compris) → une seule sheet à la fois, pas d'empilement.
+  ///
+  /// La sheet n'ajoute pas d'entrée d'historique (pas de bouton retour parasite
+  /// dans l'AppBar).
   Future<void> openAddBottomSheet(BuildContext context) async {
     if (!context.mounted) return;
 
     final action = await showModalBottomSheet<_AddAction>(
       context: context,
+      useRootNavigator: true,
+      showDragHandle: true,
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Ajouter au coffre',
+                  style: Theme.of(sheetContext).textTheme.titleMedium,
+                ),
+              ),
+            ),
+            const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.person_add),
               title: const Text('Ajouter un profil'),

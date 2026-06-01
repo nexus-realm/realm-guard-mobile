@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/routes/app_routes.dart';
+import '../../../core/security/app_lock_controller.dart';
 import '../../../core/security/unlock_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
@@ -11,14 +12,19 @@ import '../viewmodels/unlock_view_model.dart';
 
 class UnlockPage extends StatefulWidget {
   final UnlockService unlockService;
+  final AppLockController lockController;
 
-  const UnlockPage({required this.unlockService, super.key});
+  const UnlockPage({
+    required this.unlockService,
+    required this.lockController,
+    super.key,
+  });
 
   @override
   State<UnlockPage> createState() => _UnlockPageState();
 }
 
-class _UnlockPageState extends State<UnlockPage> {
+class _UnlockPageState extends State<UnlockPage> with WidgetsBindingObserver {
   late final UnlockViewModel _viewModel;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _passwordController = TextEditingController();
@@ -26,17 +32,40 @@ class _UnlockPageState extends State<UnlockPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _viewModel = UnlockViewModel(unlockService: widget.unlockService);
     _viewModel.addListener(_onViewModelUpdated);
     _viewModel.initialize();
+
+    // Cas "inactivité" : on atterrit ici alors que l'app est déjà au premier
+    // plan, donc on affiche le message dès le premier frame. Le cas
+    // "arrière-plan" est géré par didChangeAppLifecycleState (affichage au
+    // retour au premier plan, sinon la snackbar s'écoulerait pendant que l'app
+    // est masquée).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+        _showLockMessageIfAny();
+      }
+    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _viewModel.removeListener(_onViewModelUpdated);
     _viewModel.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Le verrouillage automatique en arrière-plan survient pendant que l'app
+    // est masquée : on informe l'utilisateur à son retour au premier plan.
+    if (state == AppLifecycleState.resumed) {
+      _showLockMessageIfAny();
+    }
   }
 
   void _onViewModelUpdated() {
@@ -58,6 +87,24 @@ class _UnlockPageState extends State<UnlockPage> {
         ),
       );
     }
+  }
+
+  /// Affiche une snackbar décrivant la raison du dernier verrouillage
+  /// automatique, s'il y en a un en attente (consommé une seule fois).
+  void _showLockMessageIfAny() {
+    final reason = widget.lockController.takePendingMessage();
+    if (reason == null || !mounted) return;
+
+    final message = switch (reason) {
+      LockReason.background =>
+        'Coffre verrouillé : l\'application est passée en arrière-plan.',
+      LockReason.inactivity =>
+        'Coffre verrouillé après une période d\'inactivité.',
+    };
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override

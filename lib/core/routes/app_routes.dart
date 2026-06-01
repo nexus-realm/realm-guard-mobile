@@ -7,6 +7,12 @@ class AppRoutes {
   static const String addProfile = '/add-profile';
   static const String addCredential = '/add-credential';
 
+  static const String settings = '/settings';
+  static const String settingsAbout = '/settings/about';
+  static const String settingsPrivacy = '/settings/about/privacy';
+  static const String settingsCgu = '/settings/about/cgu';
+  static const String settingsLegal = '/settings/about/legal';
+
   static const String debug = '/debug';
   static const String securityDebug = '/security-debug';
   static const String vaultDebug = '/vault-debug';
