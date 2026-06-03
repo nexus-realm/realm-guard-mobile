@@ -188,13 +188,16 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildDangerSection() {
     return SettingsSection(
       title: 'Zone de danger',
-      titleColor: AppColors.error,
+      titleColor: AppColors.destructive,
       children: [
         ListTile(
-          leading: const Icon(Icons.delete_forever, color: AppColors.error),
+          leading: const Icon(
+            Icons.delete_forever,
+            color: AppColors.destructive,
+          ),
           title: const Text(
             'Supprimer toutes les données',
-            style: TextStyle(color: AppColors.error),
+            style: TextStyle(color: AppColors.destructive),
           ),
           subtitle: const Text('Efface le coffre et tous les réglages'),
           onTap: _viewModel.isBusy ? null : _confirmDelete,

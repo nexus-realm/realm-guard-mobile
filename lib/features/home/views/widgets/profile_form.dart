@@ -290,6 +290,7 @@ class _DynamicList extends StatelessWidget {
                 if (controllers.length > 1)
                   IconButton(
                     tooltip: 'Supprimer',
+                    color: AppColors.destructive,
                     onPressed: enabled
                         ? () {
                             controllers.removeAt(index).dispose();

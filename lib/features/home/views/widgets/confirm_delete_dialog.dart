@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
+import '../../../../shared/widgets/destructive_button.dart';
 
 /// Dialog de confirmation de suppression simple (un seul élément, sans liaison).
 /// Retourne `true` si l'utilisateur confirme.
@@ -30,9 +30,8 @@ class ConfirmDeleteDialog extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(false),
           child: const Text('Annuler'),
         ),
-        FilledButton(
+        DestructiveButton(
           onPressed: () => Navigator.of(context).pop(true),
-          style: FilledButton.styleFrom(backgroundColor: AppColors.error),
           child: const Text('Supprimer'),
         ),
       ],

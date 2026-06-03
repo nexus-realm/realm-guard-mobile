@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../data/custom_field.dart';
 import '../viewmodels/credential_detail_view_model.dart';
@@ -155,6 +156,7 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
             IconButton(
               tooltip: 'Supprimer',
               icon: const Icon(Icons.delete_outline),
+              color: AppColors.destructive,
               onPressed: _viewModel.isSubmitting ? null : _delete,
             ),
           ],

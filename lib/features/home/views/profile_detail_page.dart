@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../data/profile_colors.dart';
 import '../viewmodels/profile_detail_view_model.dart';
@@ -143,6 +144,7 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
             IconButton(
               tooltip: 'Supprimer',
               icon: const Icon(Icons.delete_outline),
+              color: AppColors.destructive,
               onPressed: _viewModel.isSubmitting ? null : _delete,
             ),
           ],

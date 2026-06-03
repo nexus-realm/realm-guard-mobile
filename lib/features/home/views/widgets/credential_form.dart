@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../data/credential_draft.dart';
 import '../../data/custom_field.dart';
 
@@ -335,6 +336,7 @@ class _CustomFieldRow extends StatelessWidget {
             IconButton(
               tooltip: 'Supprimer ce champ',
               icon: const Icon(Icons.remove_circle_outline),
+              color: AppColors.destructive,
               onPressed: onRemove,
             ),
           ],

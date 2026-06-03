@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
+import '../../../../shared/widgets/destructive_button.dart';
 import '../../data/profile_deletion_strategy.dart';
 
 /// Dialog de suppression d'un profil.
@@ -76,11 +76,10 @@ class _DeleteProfileDialogState extends State<DeleteProfileDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Annuler'),
         ),
-        FilledButton(
+        DestructiveButton(
           onPressed: () => Navigator.of(context).pop(
             _hasLinked ? _strategy : ProfileDeletionStrategy.dissociate,
           ),
-          style: FilledButton.styleFrom(backgroundColor: AppColors.error),
           child: const Text('Supprimer'),
         ),
       ],
