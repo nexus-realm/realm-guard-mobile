@@ -56,6 +56,11 @@ class _HomeShellState extends State<HomeShell> {
   late final List<List<Widget>> actions = [
     [
       IconButton(
+        tooltip: 'Profils',
+        onPressed: () => context.push(AppRoutes.profiles),
+        icon: const Icon(Icons.people_outline),
+      ),
+      IconButton(
         tooltip: 'Paramètres',
         onPressed: () => context.push(AppRoutes.settings),
         icon: const Icon(Icons.settings),

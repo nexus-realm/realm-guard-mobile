@@ -9,6 +9,7 @@ import '../../features/home/views/add_profile_page.dart';
 import '../../features/home/views/credential_detail_page.dart';
 import '../../features/home/views/home_tab.dart';
 import '../../features/home/views/profile_detail_page.dart';
+import '../../features/home/views/profiles_page.dart';
 import '../../features/onboarding/service/onboarding_storage_service.dart';
 import '../../features/onboarding/views/onboarding_page.dart';
 import '../../features/onboarding/views/startup_gate_page.dart';
@@ -96,6 +97,12 @@ final GoRouter appRouter = GoRouter(
           credentialId: id,
         );
       },
+    ),
+    GoRoute(
+      path: AppRoutes.profiles,
+      name: 'profiles',
+      builder: (context, state) =>
+          ProfilesPage(repository: VaultRepository(_vaultService.db)),
     ),
     GoRoute(
       path: '${AppRoutes.profileDetail}/:id',

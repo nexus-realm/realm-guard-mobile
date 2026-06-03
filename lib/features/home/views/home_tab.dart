@@ -10,6 +10,12 @@ import '../../../shared/notifiers/fab_notifier_scope.dart';
 import '../../../shared/notifiers/search_notifier_scope.dart';
 import '../../../shared/viewmodels/home_view_model.dart';
 
+/// Onglet principal de la Vault : la liste des identifiants.
+///
+/// Les profils sont gérés dans un écran dédié (icône 👥 de l'AppBar) car ce
+/// sont des données de référence, peu consultées au quotidien. Une TabBar par
+/// type de secret (Identifiants / TOTP / Clés …) sera réintroduite ici lorsque
+/// plusieurs types existeront.
 class HomeTab extends StatefulWidget {
   final VaultService vaultService;
 
@@ -19,9 +25,8 @@ class HomeTab extends StatefulWidget {
   State<HomeTab> createState() => _HomeTabState();
 }
 
-class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
+class _HomeTabState extends State<HomeTab> {
   late final VaultRepository _repository;
-  late final TabController _tabController;
   HomeViewModel? _viewModel;
   // Référence mise en cache : on ne peut pas faire de lookup d'InheritedWidget
   // dans dispose() (le contexte y est désactivé).
@@ -31,12 +36,14 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
   void initState() {
     super.initState();
     _repository = VaultRepository(widget.vaultService.db);
-    _tabController = TabController(length: 2, vsync: this)
-      ..addListener(_onTabChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _registerFab();
+      _fabNotifier?.register(
+        icon: Icons.add,
+        label: 'Identifiant',
+        onPressed: () => _viewModel?.addCredential(context),
+      );
     });
   }
 
@@ -49,70 +56,36 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
 
   @override
   void dispose() {
-    _tabController.removeListener(_onTabChanged);
-    _tabController.dispose();
     _fabNotifier?.unregister();
     _viewModel!.dispose();
     super.dispose();
   }
 
-  void _onTabChanged() {
-    // indexIsChanging filtre les évènements intermédiaires de l'animation.
-    if (!_tabController.indexIsChanging) _registerFab();
-  }
-
-  /// Le FAB est contextuel : il ajoute un identifiant ou un profil selon
-  /// l'onglet actif.
-  void _registerFab() {
-    final isCredentials = _tabController.index == 0;
-    _fabNotifier?.register(
-      icon: Icons.add,
-      label: isCredentials ? 'Identifiant' : 'Profil',
-      onPressed: () => isCredentials
-          ? _viewModel?.addCredential(context)
-          : _viewModel?.addProfile(context),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Identifiants'),
-            Tab(text: 'Profils'),
-          ],
-        ),
-        Expanded(
-          child: ListenableBuilder(
-            listenable: _viewModel!,
-            builder: (context, _) {
-              if (_viewModel!.isLoading) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              return TabBarView(
-                controller: _tabController,
-                children: [_buildCredentialsTab(), _buildProfilesTab()],
-              );
-            },
-          ),
-        ),
-      ],
+    return ListenableBuilder(
+      listenable: _viewModel!,
+      builder: (context, _) => _buildContent(),
     );
   }
 
-  Widget _buildCredentialsTab() {
+  Widget _buildContent() {
+    if (_viewModel!.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     final credentials = _viewModel!.filteredCredentials;
     if (credentials.isEmpty) {
-      return _emptyState(
-        searchIcon: Icons.search_off,
-        emptyIcon: Icons.vpn_key_outlined,
-        emptyTitle: 'Aucun identifiant',
-        emptyMessage: 'Appuyez sur + pour ajouter un identifiant.',
+      final hasQuery = _viewModel!.hasSearchQuery;
+      return _EmptyState(
+        icon: hasQuery ? Icons.search_off : Icons.vpn_key_outlined,
+        title: hasQuery ? 'Aucun résultat' : 'Votre coffre est vide',
+        message: hasQuery
+            ? 'Aucun identifiant ne correspond à votre recherche.'
+            : 'Appuyez sur + pour ajouter un identifiant.',
       );
     }
+
     return ListView.builder(
       itemCount: credentials.length,
       itemBuilder: (context, index) {
@@ -126,45 +99,6 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildProfilesTab() {
-    final profiles = _viewModel!.filteredProfiles;
-    if (profiles.isEmpty) {
-      return _emptyState(
-        searchIcon: Icons.search_off,
-        emptyIcon: Icons.person_outline,
-        emptyTitle: 'Aucun profil',
-        emptyMessage: 'Appuyez sur + pour ajouter un profil.',
-      );
-    }
-    return ListView.builder(
-      itemCount: profiles.length,
-      itemBuilder: (context, index) {
-        final profile = profiles[index];
-        return ListTile(
-          leading: const Icon(Icons.person),
-          title: Text(profile.name),
-          onTap: () => context.push('${AppRoutes.profileDetail}/${profile.id}'),
-        );
-      },
-    );
-  }
-
-  Widget _emptyState({
-    required IconData searchIcon,
-    required IconData emptyIcon,
-    required String emptyTitle,
-    required String emptyMessage,
-  }) {
-    final hasQuery = _viewModel!.hasSearchQuery;
-    return _EmptyState(
-      icon: hasQuery ? searchIcon : emptyIcon,
-      title: hasQuery ? 'Aucun résultat' : emptyTitle,
-      message: hasQuery
-          ? 'Aucun élément ne correspond à votre recherche.'
-          : emptyMessage,
     );
   }
 }
@@ -192,7 +126,11 @@ class _EmptyState extends StatelessWidget {
           children: [
             Icon(icon, size: 48, color: AppColors.secondaryText),
             const SizedBox(height: 12),
-            Text(title, style: textTheme.titleMedium, textAlign: TextAlign.center),
+            Text(
+              title,
+              style: textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 4),
             Text(
               message,
