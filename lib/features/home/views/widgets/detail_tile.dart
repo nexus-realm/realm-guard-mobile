@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/theme/app_spacing.dart';
 
 /// Tuile « card » d'affichage en lecture seule : icône + libellé (petit, gris)
@@ -32,10 +33,7 @@ class DetailTile extends StatelessWidget {
           horizontal: AppSpacing.md,
           vertical: AppSpacing.sm,
         ),
-        decoration: const BoxDecoration(
-          color: AppColors.secondaryBackground,
-          borderRadius: AppRadius.mdAll,
-        ),
+        decoration: AppDecorations.surfaceCard(),
         child: Row(
           children: [
             Icon(icon, color: AppColors.secondaryText, size: 20),

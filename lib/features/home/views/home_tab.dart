@@ -5,6 +5,7 @@ import '../../../core/database/vault_repository.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/vault_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../shared/notifiers/fab_notifier.dart';
 import '../../../shared/notifiers/fab_notifier_scope.dart';
@@ -103,12 +104,18 @@ class _HomeTabState extends State<HomeTab> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (item.credential.favorite)
-                const Padding(
-                  padding: EdgeInsets.only(right: AppSpacing.xs),
-                  child: Icon(
-                    Icons.star,
-                    size: 18,
-                    color: AppColors.mainColor,
+                Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.xs),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: AppDecorations.accentGlow,
+                    ),
+                    child: const Icon(
+                      Icons.star,
+                      size: 18,
+                      color: AppColors.mainColor,
+                    ),
                   ),
                 ),
               if (profile != null)

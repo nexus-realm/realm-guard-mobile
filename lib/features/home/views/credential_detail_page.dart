@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../data/custom_field.dart';
@@ -359,10 +360,7 @@ class _ReadFieldState extends State<_ReadField> {
           horizontal: AppSpacing.md,
           vertical: AppSpacing.sm,
         ),
-        decoration: const BoxDecoration(
-          color: AppColors.secondaryBackground,
-          borderRadius: AppRadius.mdAll,
-        ),
+        decoration: AppDecorations.surfaceCard(),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [

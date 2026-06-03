@@ -36,6 +36,8 @@ class VaultListTile extends StatelessWidget {
         color: AppColors.secondaryBackground,
         borderRadius: AppRadius.mdAll,
         clipBehavior: Clip.antiAlias,
+        elevation: 2,
+        shadowColor: Colors.black54,
         child: InkWell(
           onTap: onTap,
           child: Padding(
