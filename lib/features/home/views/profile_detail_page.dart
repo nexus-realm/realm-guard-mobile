@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
-import '../data/profile_colors.dart';
 import '../viewmodels/profile_detail_view_model.dart';
 import 'widgets/delete_profile_dialog.dart';
+import 'widgets/detail_tile.dart';
 import 'widgets/discard_changes_dialog.dart';
+import 'widgets/profile_avatar.dart';
 import 'widgets/profile_form.dart';
 
 class ProfileDetailPage extends StatefulWidget {
@@ -216,25 +218,33 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
   // --- Mode lecture seule ---
 
   Widget _buildReadView(Profile profile) {
-    final color = ProfileColors.fromValue(profile.color);
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       children: [
-        ListTile(
-          leading: CircleAvatar(
-            backgroundColor: color ?? Theme.of(context).colorScheme.surface,
-            child: color == null
-                ? const Icon(Icons.person)
-                : Text(
-                    profile.name.isNotEmpty
-                        ? profile.name[0].toUpperCase()
-                        : '?',
-                  ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.lg,
           ),
-          title: Text(profile.name),
-          subtitle: const Text('Nom du profil'),
+          child: Row(
+            children: [
+              ProfileAvatar(
+                name: profile.name,
+                colorValue: profile.color,
+                radius: 28,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  profile.name,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+            ],
+          ),
         ),
-        const Divider(),
         ..._section('Emails', Icons.email_outlined, _viewModel.emails),
         ..._section(
           'Noms d\'utilisateur',
@@ -243,24 +253,19 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
         ),
         ..._section('Téléphones', Icons.phone_outlined, _viewModel.phoneNumbers),
         if ((profile.note ?? '').isNotEmpty)
-          ListTile(
-            leading: const Icon(Icons.notes),
-            title: const Text('Note'),
-            subtitle: Text(profile.note!),
+          DetailTile(
+            icon: Icons.notes,
+            label: 'Note',
+            value: profile.note!,
           ),
       ],
     );
   }
 
-  List<Widget> _section(String title, IconData icon, List<String> values) {
-    if (values.isEmpty) return const [];
+  List<Widget> _section(String label, IconData icon, List<String> values) {
     return [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-        child: Text(title, style: Theme.of(context).textTheme.titleSmall),
-      ),
       for (final value in values)
-        ListTile(leading: Icon(icon), title: Text(value)),
+        DetailTile(icon: icon, label: label, value: value),
     ];
   }
 }

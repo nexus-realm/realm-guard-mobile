@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -5,7 +7,9 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import 'widgets/profile_avatar.dart';
+import 'widgets/vault_list_tile.dart';
 
 /// Page de gestion des profils, accessible depuis l'AppBar de la Vault.
 ///
@@ -38,15 +42,18 @@ class ProfilesPage extends StatelessWidget {
               return const _EmptyProfiles();
             }
             return ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
               itemCount: profiles.length,
               itemBuilder: (context, index) {
                 final profile = profiles[index];
-                return ListTile(
+                final subtitle = _profileSubtitle(profile);
+                return VaultListTile(
                   leading: ProfileAvatar(
                     name: profile.name,
                     colorValue: profile.color,
                   ),
-                  title: Text(profile.name),
+                  title: profile.name,
+                  subtitle: subtitle,
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () =>
                       context.push('${AppRoutes.profileDetail}/${profile.id}'),
@@ -57,6 +64,25 @@ class ProfilesPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Résumé affiché sous le nom : 1er email + compteur, sinon « Profil ».
+  String _profileSubtitle(Profile profile) {
+    final emails = _decodeList(profile.emails);
+    if (emails.isEmpty) return 'Profil';
+    if (emails.length == 1) return emails.first;
+    return '${emails.first} +${emails.length - 1}';
+  }
+
+  List<String> _decodeList(String raw) {
+    if (raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) return decoded.whereType<String>().toList();
+    } catch (_) {
+      // Ignore le format inattendu.
+    }
+    return const [];
   }
 }
 

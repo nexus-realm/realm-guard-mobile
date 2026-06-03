@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../data/custom_field.dart';
 import '../viewmodels/credential_detail_view_model.dart';
@@ -346,36 +347,63 @@ class _ReadFieldState extends State<_ReadField> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     final displayed = _obscured ? '••••••••' : widget.value;
-    return ListTile(
-      leading: Icon(widget.icon),
-      title: Text(widget.label),
-      subtitle: Text(displayed),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (widget.secret)
-            IconButton(
-              tooltip: _obscured ? 'Afficher' : 'Masquer',
-              icon: Icon(
-                _obscured ? Icons.visibility : Icons.visibility_off,
-                size: 20,
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xxs,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: const BoxDecoration(
+          color: AppColors.secondaryBackground,
+          borderRadius: AppRadius.mdAll,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(widget.icon, color: AppColors.secondaryText, size: 20),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(widget.label.toUpperCase(), style: textTheme.labelMedium),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(displayed, style: textTheme.bodyLarge),
+                ],
               ),
-              onPressed: () => setState(() => _obscured = !_obscured),
             ),
-          if (widget.onOpen != null)
-            IconButton(
-              tooltip: 'Ouvrir',
-              icon: const Icon(Icons.open_in_new, size: 20),
-              onPressed: widget.onOpen,
-            ),
-          if (widget.onCopy != null)
-            IconButton(
-              tooltip: 'Copier',
-              icon: const Icon(Icons.copy, size: 20),
-              onPressed: widget.onCopy,
-            ),
-        ],
+            if (widget.secret)
+              IconButton(
+                tooltip: _obscured ? 'Afficher' : 'Masquer',
+                icon: Icon(
+                  _obscured ? Icons.visibility : Icons.visibility_off,
+                  size: 20,
+                ),
+                color: AppColors.neutralAction,
+                onPressed: () => setState(() => _obscured = !_obscured),
+              ),
+            if (widget.onOpen != null)
+              IconButton(
+                tooltip: 'Ouvrir',
+                icon: const Icon(Icons.open_in_new, size: 20),
+                color: AppColors.neutralAction,
+                onPressed: widget.onOpen,
+              ),
+            if (widget.onCopy != null)
+              IconButton(
+                tooltip: 'Copier',
+                icon: const Icon(Icons.copy, size: 20),
+                color: AppColors.neutralAction,
+                onPressed: widget.onCopy,
+              ),
+          ],
+        ),
       ),
     );
   }

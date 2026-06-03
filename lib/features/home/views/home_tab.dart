@@ -5,11 +5,13 @@ import '../../../core/database/vault_repository.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/vault_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../shared/notifiers/fab_notifier.dart';
 import '../../../shared/notifiers/fab_notifier_scope.dart';
 import '../../../shared/notifiers/search_notifier_scope.dart';
 import '../../../shared/viewmodels/home_view_model.dart';
 import 'widgets/profile_avatar.dart';
+import 'widgets/vault_list_tile.dart';
 
 /// Onglet principal de la Vault : la liste des identifiants.
 ///
@@ -88,21 +90,35 @@ class _HomeTabState extends State<HomeTab> {
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       itemCount: credentials.length,
       itemBuilder: (context, index) {
         final item = credentials[index];
         final profile = item.profile;
-        return ListTile(
-          leading: const Icon(Icons.vpn_key),
-          title: Text(item.credential.title),
-          subtitle: Text(profile?.name ?? 'Sans profil'),
-          trailing: profile != null
-              ? ProfileAvatar(
+        return VaultListTile(
+          leading: const Icon(Icons.vpn_key, color: AppColors.mainColor),
+          title: item.credential.title,
+          subtitle: profile?.name ?? 'Sans profil',
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (item.credential.favorite)
+                const Padding(
+                  padding: EdgeInsets.only(right: AppSpacing.xs),
+                  child: Icon(
+                    Icons.star,
+                    size: 18,
+                    color: AppColors.mainColor,
+                  ),
+                ),
+              if (profile != null)
+                ProfileAvatar(
                   name: profile.name,
                   colorValue: profile.color,
                   radius: 12,
-                )
-              : null,
+                ),
+            ],
+          ),
           onTap: () => context.push(
             '${AppRoutes.credentialDetail}/${item.credential.id}',
           ),
