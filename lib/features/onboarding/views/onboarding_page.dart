@@ -133,11 +133,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        centerTitle: true,
-        title: _buildProgress(currentStep),
-      ),
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -148,28 +143,36 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   horizontal: 24,
                   vertical: 36,
                 ),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 280),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  transitionBuilder: (child, animation) {
-                    final slideAnimation = Tween<Offset>(
-                      begin: const Offset(0, 0.04),
-                      end: Offset.zero,
-                    ).animate(animation);
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildProgress(currentStep),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 280),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        transitionBuilder: (child, animation) {
+                          final slideAnimation = Tween<Offset>(
+                            begin: const Offset(0, 0.04),
+                            end: Offset.zero,
+                          ).animate(animation);
 
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: slideAnimation,
-                        child: child,
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: slideAnimation,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: KeyedSubtree(
+                          key: ValueKey<OnboardingStep>(currentStep),
+                          child: _buildStepContent(currentStep),
+                        ),
                       ),
-                    );
-                  },
-                  child: KeyedSubtree(
-                    key: ValueKey<OnboardingStep>(currentStep),
-                    child: _buildStepContent(currentStep),
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -185,10 +188,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
 
     final currentIndex = _viewModel.currentStepIndex;
-    return Text(
-      '$currentIndex/${_viewModel.totalStepCount}',
-      style: Theme.of(context).textTheme.titleMedium,
-      textAlign: TextAlign.center,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Text(
+        '$currentIndex/${_viewModel.totalStepCount}',
+        style: Theme.of(context).textTheme.titleMedium,
+        textAlign: TextAlign.center,
+      ),
     );
   }
 
