@@ -83,7 +83,9 @@ void main() {
       final editor = FakeVaultEditor();
       final vm = AddCredentialViewModel(editor);
 
-      final ok = await vm.submit(title: '  ', data: 'secret', profileId: null);
+      final ok = await vm.submit(
+        const CredentialDraft(title: '  ', notes: 'secret'),
+      );
 
       expect(ok, isFalse);
       expect(editor.lastCredentialDraft, isNull);
@@ -94,13 +96,11 @@ void main() {
       final vm = AddCredentialViewModel(editor);
 
       final ok = await vm.submit(
-        title: '  GitHub  ',
-        data: 'token',
-        profileId: 7,
+        const CredentialDraft(title: 'GitHub', notes: 'token', profileId: 7),
       );
 
       expect(ok, isTrue);
-      expect(editor.lastCredentialDraft?.title, 'GitHub'); // trimmé
+      expect(editor.lastCredentialDraft?.title, 'GitHub');
       expect(editor.lastCredentialDraft?.notes, 'token');
       expect(editor.lastCredentialDraft?.profileId, 7);
     });

@@ -41,14 +41,19 @@ CredentialWithProfile _cred(
   int id,
   String title, {
   String data = '',
+  String? username,
+  String? password,
+  bool favorite = false,
   int? profileId,
 }) => CredentialWithProfile(
   Credential(
     id: id,
     title: title,
+    username: username,
+    password: password,
     notes: data,
     customFields: '[]',
-    favorite: false,
+    favorite: favorite,
     profileId: profileId,
     createdAt: DateTime(2026),
     updatedAt: DateTime(2026),
@@ -96,15 +101,21 @@ void main() {
       await _settle();
 
       expect(
-        vm.hasChanges(title: 'GitHub', data: 'token', profileId: 2),
+        vm.hasChanges(
+          const CredentialDraft(title: 'GitHub', notes: 'token', profileId: 2),
+        ),
         isFalse,
       );
       expect(
-        vm.hasChanges(title: 'GitLab', data: 'token', profileId: 2),
+        vm.hasChanges(
+          const CredentialDraft(title: 'GitLab', notes: 'token', profileId: 2),
+        ),
         isTrue,
       );
       expect(
-        vm.hasChanges(title: 'GitHub', data: 'token', profileId: null),
+        vm.hasChanges(
+          const CredentialDraft(title: 'GitHub', notes: 'token'),
+        ),
         isTrue,
       );
     });
@@ -115,7 +126,7 @@ void main() {
       addTearDown(vm.dispose);
       await vm.initialize();
 
-      final ok = await vm.save(title: '   ', data: 'x', profileId: null);
+      final ok = await vm.save(const CredentialDraft(title: '   ', notes: 'x'));
 
       expect(ok, isFalse);
       expect(repo.updatedId, isNull);
@@ -129,11 +140,13 @@ void main() {
       await vm.initialize();
       vm.startEditing();
 
-      final ok = await vm.save(title: '  GitHub  ', data: 'tok', profileId: 3);
+      final ok = await vm.save(
+        const CredentialDraft(title: 'GitHub', notes: 'tok', profileId: 3),
+      );
 
       expect(ok, isTrue);
       expect(repo.updatedId, 7);
-      expect(repo.updatedDraft?.title, 'GitHub'); // trimmé
+      expect(repo.updatedDraft?.title, 'GitHub');
       expect(repo.updatedDraft?.profileId, 3);
       expect(vm.isEditing, isFalse);
     });
@@ -149,6 +162,62 @@ void main() {
       expect(ok, isTrue);
       expect(repo.deletedId, 9);
       expect(vm.deleted, isTrue);
+    });
+
+    test('hasChanges détecte les champs enrichis', () async {
+      final repo = FakeCredentialEditor();
+      final vm = CredentialDetailViewModel(repository: repo, credentialId: 1);
+      addTearDown(vm.dispose);
+      await vm.initialize();
+      repo.controller.add(_cred(1, 'GitHub', username: 'me', password: 'pw'));
+      await _settle();
+
+      expect(
+        vm.hasChanges(
+          const CredentialDraft(
+            title: 'GitHub',
+            username: 'me',
+            password: 'pw',
+          ),
+        ),
+        isFalse,
+      );
+      // Changement de mot de passe détecté.
+      expect(
+        vm.hasChanges(
+          const CredentialDraft(
+            title: 'GitHub',
+            username: 'me',
+            password: 'new',
+          ),
+        ),
+        isTrue,
+      );
+      // Passage en favori détecté.
+      expect(
+        vm.hasChanges(
+          const CredentialDraft(
+            title: 'GitHub',
+            username: 'me',
+            password: 'pw',
+            favorite: true,
+          ),
+        ),
+        isTrue,
+      );
+    });
+
+    test('toggleFavorite enregistre l\'état inversé', () async {
+      final repo = FakeCredentialEditor();
+      final vm = CredentialDetailViewModel(repository: repo, credentialId: 4);
+      addTearDown(vm.dispose);
+      await vm.initialize();
+      repo.controller.add(_cred(4, 'GitHub', favorite: false));
+      await _settle();
+
+      await vm.toggleFavorite();
+
+      expect(repo.updatedDraft?.favorite, isTrue);
     });
   });
 }

@@ -37,14 +37,9 @@ class AddCredentialViewModel extends ChangeNotifier {
   }
 
   /// Enregistre un identifiant. Retourne `true` en cas de succès.
-  /// Le titre est requis ; le profil associé est optionnel.
-  Future<bool> submit({
-    required String title,
-    required String data,
-    int? profileId,
-  }) async {
-    final trimmedTitle = title.trim();
-    if (trimmedTitle.isEmpty) {
+  /// Le titre est requis ; les autres champs sont optionnels.
+  Future<bool> submit(CredentialDraft draft) async {
+    if (draft.title.trim().isEmpty) {
       _errorMessage = 'Veuillez saisir un titre.';
       notifyListeners();
       return false;
@@ -55,9 +50,7 @@ class AddCredentialViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _repository.addCredential(
-        CredentialDraft(title: trimmedTitle, notes: data, profileId: profileId),
-      );
+      await _repository.addCredential(draft);
       return true;
     } catch (_) {
       _errorMessage =
