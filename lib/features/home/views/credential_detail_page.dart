@@ -12,6 +12,7 @@ import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../data/custom_field.dart';
 import '../viewmodels/credential_detail_view_model.dart';
 import 'widgets/confirm_delete_dialog.dart';
+import 'widgets/credential_avatar.dart';
 import 'widgets/credential_form.dart';
 import 'widgets/discard_changes_dialog.dart';
 
@@ -243,12 +244,31 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
     final customFields = CustomField.decode(credential.customFields);
 
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       children: [
-        _ReadField(
-          icon: Icons.title,
-          label: 'Titre',
-          value: credential.title,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.lg,
+          ),
+          child: Row(
+            children: [
+              CredentialAvatar(
+                title: credential.title,
+                uri: credential.uri,
+                radius: 28,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  credential.title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+            ],
+          ),
         ),
         if (credential.username != null)
           _ReadField(

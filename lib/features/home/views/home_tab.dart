@@ -11,6 +11,7 @@ import '../../../shared/notifiers/fab_notifier.dart';
 import '../../../shared/notifiers/fab_notifier_scope.dart';
 import '../../../shared/notifiers/search_notifier_scope.dart';
 import '../../../shared/viewmodels/home_view_model.dart';
+import 'widgets/credential_avatar.dart';
 import 'widgets/profile_avatar.dart';
 import 'widgets/vault_list_tile.dart';
 
@@ -97,7 +98,11 @@ class _HomeTabState extends State<HomeTab> {
         final item = credentials[index];
         final profile = item.profile;
         return VaultListTile(
-          leading: const Icon(Icons.vpn_key, color: AppColors.mainColor),
+          leading: CredentialAvatar(
+            title: item.credential.title,
+            uri: item.credential.uri,
+            radius: 18,
+          ),
           title: item.credential.title,
           subtitle: profile?.name ?? 'Sans profil',
           trailing: Row(
