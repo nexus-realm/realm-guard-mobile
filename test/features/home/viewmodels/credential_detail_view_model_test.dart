@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:realm_guard_mobile/core/database/app_database.dart';
 import 'package:realm_guard_mobile/core/database/vault_repository.dart';
+import 'package:realm_guard_mobile/features/home/data/credential_draft.dart';
 import 'package:realm_guard_mobile/features/home/viewmodels/credential_detail_view_model.dart';
 
 class FakeCredentialEditor implements CredentialEditor {
@@ -11,9 +12,7 @@ class FakeCredentialEditor implements CredentialEditor {
   List<Profile> profilesToReturn = const [];
 
   int? updatedId;
-  String? updatedTitle;
-  String? updatedData;
-  int? updatedProfileId;
+  CredentialDraft? updatedDraft;
   int? deletedId;
   bool throwOnUpdate = false;
 
@@ -24,17 +23,10 @@ class FakeCredentialEditor implements CredentialEditor {
   Future<List<Profile>> getAllProfiles() async => profilesToReturn;
 
   @override
-  Future<bool> updateCredential(
-    int id,
-    String title,
-    String encryptedData,
-    int? profileId,
-  ) async {
+  Future<bool> updateCredential(int id, CredentialDraft draft) async {
     if (throwOnUpdate) throw Exception('db');
     updatedId = id;
-    updatedTitle = title;
-    updatedData = encryptedData;
-    updatedProfileId = profileId;
+    updatedDraft = draft;
     return true;
   }
 
@@ -51,7 +43,16 @@ CredentialWithProfile _cred(
   String data = '',
   int? profileId,
 }) => CredentialWithProfile(
-  Credential(id: id, title: title, encryptedData: data, profileId: profileId),
+  Credential(
+    id: id,
+    title: title,
+    notes: data,
+    customFields: '[]',
+    favorite: false,
+    profileId: profileId,
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+  ),
   null,
 );
 
@@ -132,8 +133,8 @@ void main() {
 
       expect(ok, isTrue);
       expect(repo.updatedId, 7);
-      expect(repo.updatedTitle, 'GitHub'); // trimmé
-      expect(repo.updatedProfileId, 3);
+      expect(repo.updatedDraft?.title, 'GitHub'); // trimmé
+      expect(repo.updatedDraft?.profileId, 3);
       expect(vm.isEditing, isFalse);
     });
 

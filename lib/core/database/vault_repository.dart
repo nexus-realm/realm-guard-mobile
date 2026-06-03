@@ -2,7 +2,10 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../../features/home/data/credential_draft.dart';
+import '../../features/home/data/custom_field.dart';
 import '../../features/home/data/profile_deletion_strategy.dart';
+import '../../features/home/data/profile_draft.dart';
 import 'app_database.dart';
 
 /// Lecture réactive dont la vue Home a besoin. Permet d'injecter un faux
@@ -16,14 +19,14 @@ abstract interface class HomeRepository {
 /// d'injecter un faux dépôt en test sans dépendre de sqlite3 natif.
 abstract interface class VaultEditor {
   Future<List<Profile>> getAllProfiles();
-  Future<int> addProfile(String name, List<String> emails);
-  Future<int> addCredential(String title, String encryptedData, int? profileId);
+  Future<int> addProfile(ProfileDraft draft);
+  Future<int> addCredential(CredentialDraft draft);
 }
 
 /// Consultation / modification / suppression d'un profil existant.
 abstract interface class ProfileEditor {
   Stream<Profile?> watchProfile(int id);
-  Future<bool> updateProfile(int id, String name, List<String> emails);
+  Future<bool> updateProfile(int id, ProfileDraft draft);
   Future<int> countCredentialsForProfile(int profileId);
   Future<void> deleteProfile(int id, ProfileDeletionStrategy strategy);
 }
@@ -33,12 +36,7 @@ abstract interface class ProfileEditor {
 abstract interface class CredentialEditor {
   Stream<CredentialWithProfile?> watchCredential(int id);
   Future<List<Profile>> getAllProfiles();
-  Future<bool> updateCredential(
-    int id,
-    String title,
-    String encryptedData,
-    int? profileId,
-  );
+  Future<bool> updateCredential(int id, CredentialDraft draft);
   Future<int> deleteCredential(int id);
 }
 
@@ -61,20 +59,26 @@ class VaultRepository
           .watchSingleOrNull();
 
   @override
-  Future<int> addProfile(String name, List<String> emails) =>
-      _db.profiles.insertOne(
-        ProfilesCompanion(name: Value(name), emails: Value(jsonEncode(emails))),
-      );
+  Future<int> addProfile(ProfileDraft draft) =>
+      _db.profiles.insertOne(_profileCompanion(draft));
 
   @override
-  Future<bool> updateProfile(int id, String name, List<String> emails) =>
-      _db.profiles.update().replace(
-        ProfilesCompanion(
-          id: Value(id),
-          name: Value(name),
-          emails: Value(jsonEncode(emails)),
-        ),
-      );
+  Future<bool> updateProfile(int id, ProfileDraft draft) =>
+      (_db.profiles.update()..where((tbl) => tbl.id.equals(id))).write(
+        _profileCompanion(draft, updatedAt: DateTime.now()),
+      ).then((rows) => rows > 0);
+
+  ProfilesCompanion _profileCompanion(ProfileDraft draft, {DateTime? updatedAt}) {
+    return ProfilesCompanion(
+      name: Value(draft.name),
+      emails: Value(jsonEncode(draft.emails)),
+      usernames: Value(jsonEncode(draft.usernames)),
+      phoneNumbers: Value(jsonEncode(draft.phoneNumbers)),
+      color: Value(draft.color),
+      note: Value(draft.note),
+      updatedAt: updatedAt == null ? const Value.absent() : Value(updatedAt),
+    );
+  }
 
   @override
   Future<int> countCredentialsForProfile(int profileId) async {
@@ -115,32 +119,31 @@ class VaultRepository
           .get();
 
   @override
-  Future<int> addCredential(
-    String title,
-    String encryptedData,
-    int? profileId,
-  ) => _db.credentials.insertOne(
-    CredentialsCompanion(
-      title: Value(title),
-      encryptedData: Value(encryptedData),
-      profileId: Value(profileId),
-    ),
-  );
+  Future<int> addCredential(CredentialDraft draft) =>
+      _db.credentials.insertOne(_credentialCompanion(draft));
 
   @override
-  Future<bool> updateCredential(
-    int id,
-    String title,
-    String encryptedData,
-    int? profileId,
-  ) => _db.credentials.update().replace(
-    CredentialsCompanion(
-      id: Value(id),
-      title: Value(title),
-      encryptedData: Value(encryptedData),
-      profileId: Value(profileId),
-    ),
-  );
+  Future<bool> updateCredential(int id, CredentialDraft draft) =>
+      (_db.credentials.update()..where((tbl) => tbl.id.equals(id))).write(
+        _credentialCompanion(draft, updatedAt: DateTime.now()),
+      ).then((rows) => rows > 0);
+
+  CredentialsCompanion _credentialCompanion(
+    CredentialDraft draft, {
+    DateTime? updatedAt,
+  }) {
+    return CredentialsCompanion(
+      title: Value(draft.title),
+      username: Value(draft.username),
+      password: Value(draft.password),
+      uri: Value(draft.uri),
+      notes: Value(draft.notes),
+      customFields: Value(CustomField.encode(draft.customFields)),
+      favorite: Value(draft.favorite),
+      profileId: Value(draft.profileId),
+      updatedAt: updatedAt == null ? const Value.absent() : Value(updatedAt),
+    );
+  }
 
   @override
   Future<int> deleteCredential(int id) =>

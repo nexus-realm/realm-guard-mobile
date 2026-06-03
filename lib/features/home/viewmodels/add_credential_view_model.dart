@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
+import '../data/credential_draft.dart';
 
 /// ViewModel de la page d'ajout d'identifiant.
 class AddCredentialViewModel extends ChangeNotifier {
@@ -54,7 +55,9 @@ class AddCredentialViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _repository.addCredential(trimmedTitle, data, profileId);
+      await _repository.addCredential(
+        CredentialDraft(title: trimmedTitle, notes: data, profileId: profileId),
+      );
       return true;
     } catch (_) {
       _errorMessage =

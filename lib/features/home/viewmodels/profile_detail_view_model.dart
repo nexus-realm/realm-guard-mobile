@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
 import '../data/profile_deletion_strategy.dart';
+import '../data/profile_draft.dart';
 
 /// ViewModel de la page détail/édition d'un profil.
 ///
@@ -47,8 +48,10 @@ class ProfileDetailViewModel extends ChangeNotifier {
 
   /// Emails de l'enregistrement courant (décodés du JSON), pour pré-remplir
   /// les champs en mode édition.
-  List<String> get emails {
-    final raw = _current?.emails;
+  List<String> get emails => _decodeList(_current?.emails);
+
+  /// Décode une colonne JSON contenant un tableau de chaînes. Tolérant.
+  static List<String> _decodeList(String? raw) {
     if (raw == null || raw.isEmpty) return const [];
     try {
       final decoded = jsonDecode(raw);
@@ -102,10 +105,19 @@ class ProfileDetailViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Préserve les champs non encore éditables (usernames, téléphones,
+      // couleur, note) en repartant de l'enregistrement courant.
+      final existing = _current;
       await _repository.updateProfile(
         _profileId,
-        trimmedName,
-        _cleanEmails(emails),
+        ProfileDraft(
+          name: trimmedName,
+          emails: _cleanEmails(emails),
+          usernames: _decodeList(existing?.usernames),
+          phoneNumbers: _decodeList(existing?.phoneNumbers),
+          color: existing?.color,
+          note: existing?.note,
+        ),
       );
       _isEditing = false;
       return true;

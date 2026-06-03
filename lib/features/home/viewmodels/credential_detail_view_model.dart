@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
+import '../data/credential_draft.dart';
+import '../data/custom_field.dart';
 
 /// ViewModel de la page détail/édition d'un identifiant.
 ///
@@ -76,7 +78,7 @@ class CredentialDetailViewModel extends ChangeNotifier {
     final credential = _current?.credential;
     if (credential == null) return title.isNotEmpty || data.isNotEmpty;
     return title.trim() != credential.title ||
-        data != credential.encryptedData ||
+        data != (credential.notes ?? '') ||
         profileId != credential.profileId;
   }
 
@@ -97,11 +99,22 @@ class CredentialDetailViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Préserve les champs non encore éditables (username, password, …) en
+      // repartant de l'enregistrement courant ; seuls titre/notes/profil
+      // changent à ce stade.
+      final existing = _current?.credential;
       await _repository.updateCredential(
         _credentialId,
-        trimmedTitle,
-        data,
-        profileId,
+        CredentialDraft(
+          title: trimmedTitle,
+          username: existing?.username,
+          password: existing?.password,
+          uri: existing?.uri,
+          notes: data,
+          customFields: CustomField.decode(existing?.customFields),
+          favorite: existing?.favorite ?? false,
+          profileId: profileId,
+        ),
       );
       _isEditing = false;
       return true;

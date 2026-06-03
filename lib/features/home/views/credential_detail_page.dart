@@ -55,7 +55,7 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
     final credential = _viewModel.current?.credential;
     if (credential != null && !_viewModel.isEditing) {
       _titleController.text = credential.title;
-      _dataController.text = credential.encryptedData;
+      _dataController.text = credential.notes ?? '';
       _selectedProfileId = credential.profileId;
     }
     if (mounted) setState(() {});
@@ -101,7 +101,7 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
     final credential = _viewModel.current?.credential;
     if (credential != null) {
       _titleController.text = credential.title;
-      _dataController.text = credential.encryptedData;
+      _dataController.text = credential.notes ?? '';
       _selectedProfileId = credential.profileId;
     }
     _viewModel.cancelEditing();

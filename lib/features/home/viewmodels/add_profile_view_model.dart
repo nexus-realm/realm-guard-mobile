@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/database/vault_repository.dart';
+import '../data/profile_draft.dart';
 
 /// ViewModel de la page d'ajout de profil.
 class AddProfileViewModel extends ChangeNotifier {
@@ -34,7 +35,9 @@ class AddProfileViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _repository.addProfile(trimmedName, cleanedEmails);
+      await _repository.addProfile(
+        ProfileDraft(name: trimmedName, emails: cleanedEmails),
+      );
       return true;
     } catch (_) {
       _errorMessage =

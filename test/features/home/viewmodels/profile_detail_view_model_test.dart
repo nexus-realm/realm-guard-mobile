@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:realm_guard_mobile/core/database/app_database.dart';
 import 'package:realm_guard_mobile/core/database/vault_repository.dart';
 import 'package:realm_guard_mobile/features/home/data/profile_deletion_strategy.dart';
+import 'package:realm_guard_mobile/features/home/data/profile_draft.dart';
 import 'package:realm_guard_mobile/features/home/viewmodels/profile_detail_view_model.dart';
 
 class FakeProfileEditor implements ProfileEditor {
@@ -12,8 +13,7 @@ class FakeProfileEditor implements ProfileEditor {
   int linkedCount = 0;
 
   int? updatedId;
-  String? updatedName;
-  List<String>? updatedEmails;
+  ProfileDraft? updatedDraft;
   int? deletedId;
   ProfileDeletionStrategy? deletedStrategy;
 
@@ -21,10 +21,9 @@ class FakeProfileEditor implements ProfileEditor {
   Stream<Profile?> watchProfile(int id) => controller.stream;
 
   @override
-  Future<bool> updateProfile(int id, String name, List<String> emails) async {
+  Future<bool> updateProfile(int id, ProfileDraft draft) async {
     updatedId = id;
-    updatedName = name;
-    updatedEmails = emails;
+    updatedDraft = draft;
     return true;
   }
 
@@ -38,8 +37,15 @@ class FakeProfileEditor implements ProfileEditor {
   }
 }
 
-Profile _profile(int id, String name, String emailsJson) =>
-    Profile(id: id, name: name, emails: emailsJson);
+Profile _profile(int id, String name, String emailsJson) => Profile(
+  id: id,
+  name: name,
+  emails: emailsJson,
+  usernames: '[]',
+  phoneNumbers: '[]',
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
 
 Future<void> _settle() => Future<void>.delayed(Duration.zero);
 
@@ -113,8 +119,8 @@ void main() {
 
       expect(ok, isTrue);
       expect(repo.updatedId, 5);
-      expect(repo.updatedName, 'Perso');
-      expect(repo.updatedEmails, ['a@b.com']);
+      expect(repo.updatedDraft?.name, 'Perso');
+      expect(repo.updatedDraft?.emails, ['a@b.com']);
       expect(vm.isEditing, isFalse);
     });
 

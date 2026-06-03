@@ -16,7 +16,7 @@ class AppDatabase extends _$AppDatabase {
     : super(_openConnection(encryptionKeyBytes));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -25,6 +25,35 @@ class AppDatabase extends _$AppDatabase {
         await migrator.renameTable(credentials, 'vault_entries');
         await migrator.addColumn(credentials, credentials.profileId);
         await migrator.createTable(profiles);
+      }
+      if (from < 3) {
+        // Credentials : nouveaux champs structurés + métadonnées.
+        await migrator.addColumn(credentials, credentials.username);
+        await migrator.addColumn(credentials, credentials.password);
+        await migrator.addColumn(credentials, credentials.uri);
+        await migrator.addColumn(credentials, credentials.notes);
+        await migrator.addColumn(credentials, credentials.customFields);
+        await migrator.addColumn(credentials, credentials.favorite);
+        await migrator.addColumn(credentials, credentials.createdAt);
+        await migrator.addColumn(credentials, credentials.updatedAt);
+
+        // Reprise des données : l'ancien blob `encryptedData` devient `notes`.
+        await customStatement(
+          'UPDATE credentials SET notes = encrypted_data '
+          'WHERE encrypted_data IS NOT NULL AND encrypted_data != \'\'',
+        );
+        // L'ancienne colonne n'est plus utilisée (SQLite récent supporte DROP).
+        await customStatement(
+          'ALTER TABLE credentials DROP COLUMN encrypted_data',
+        );
+
+        // Profiles : nouveaux champs.
+        await migrator.addColumn(profiles, profiles.usernames);
+        await migrator.addColumn(profiles, profiles.phoneNumbers);
+        await migrator.addColumn(profiles, profiles.color);
+        await migrator.addColumn(profiles, profiles.note);
+        await migrator.addColumn(profiles, profiles.createdAt);
+        await migrator.addColumn(profiles, profiles.updatedAt);
       }
     },
   );

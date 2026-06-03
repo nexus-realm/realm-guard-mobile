@@ -20,11 +20,26 @@ class FakeHomeRepository implements HomeRepository {
       credentials.stream;
 }
 
-Profile _profile(int id, String name) =>
-    Profile(id: id, name: name, emails: '[]');
+Profile _profile(int id, String name) => Profile(
+  id: id,
+  name: name,
+  emails: '[]',
+  usernames: '[]',
+  phoneNumbers: '[]',
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
 
 CredentialWithProfile _credential(int id, String title) => CredentialWithProfile(
-  Credential(id: id, title: title, encryptedData: '', profileId: null),
+  Credential(
+    id: id,
+    title: title,
+    customFields: '[]',
+    favorite: false,
+    profileId: null,
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+  ),
   null,
 );
 
