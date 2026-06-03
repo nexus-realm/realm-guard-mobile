@@ -29,6 +29,16 @@ class HomeViewModel extends ChangeNotifier {
   final List<dynamic> _results = [];
   List<dynamic> get results => _results;
 
+  // Listes filtrées par type, alimentées par la requête de recherche courante.
+  List<Profile> _filteredProfiles = const [];
+  List<CredentialWithProfile> _filteredCredentials = const [];
+
+  /// Profils correspondant à la recherche courante (pour l'onglet Profils).
+  List<Profile> get filteredProfiles => _filteredProfiles;
+
+  /// Identifiants correspondant à la recherche courante (onglet Identifiants).
+  List<CredentialWithProfile> get filteredCredentials => _filteredCredentials;
+
   /// Vrai tant que le premier chargement des données n'est pas terminé.
   bool get isLoading => !(_profilesLoaded && _credentialsLoaded);
 
@@ -70,15 +80,27 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   void _rebuildResults() {
+    _filteredProfiles = _profiles
+        .where((p) => p.name.toLowerCase().contains(_query))
+        .toList();
+    _filteredCredentials = _credentials
+        .where((c) => _matchesCredential(c.credential))
+        .toList();
+
     _results
       ..clear()
-      ..addAll(_profiles.where((p) => p.name.toLowerCase().contains(_query)))
-      ..addAll(
-        _credentials.where(
-          (c) => c.credential.title.toLowerCase().contains(_query),
-        ),
-      );
+      ..addAll(_filteredProfiles)
+      ..addAll(_filteredCredentials);
     notifyListeners();
+  }
+
+  /// La recherche d'un identifiant porte sur le titre, le nom d'utilisateur et
+  /// l'URL.
+  bool _matchesCredential(Credential c) {
+    if (_query.isEmpty) return true;
+    bool contains(String? value) =>
+        value != null && value.toLowerCase().contains(_query);
+    return contains(c.title) || contains(c.username) || contains(c.uri);
   }
 
   /// Ouvre le menu d'ajout dans une bottom sheet **modale**.
@@ -140,6 +162,14 @@ class HomeViewModel extends ChangeNotifier {
         context.push(AppRoutes.addCredential);
     }
   }
+
+  /// Navigation directe vers l'ajout d'un identifiant (FAB de l'onglet
+  /// Identifiants).
+  void addCredential(BuildContext context) =>
+      context.push(AppRoutes.addCredential);
+
+  /// Navigation directe vers l'ajout d'un profil (FAB de l'onglet Profils).
+  void addProfile(BuildContext context) => context.push(AppRoutes.addProfile);
 
   @override
   void dispose() {

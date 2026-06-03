@@ -118,7 +118,7 @@ class _VaultDebugPageState extends State<VaultDebugPage> {
           .insert(
             const CredentialsCompanion(
               title: drift.Value("Test Entry"),
-              encryptedData: drift.Value("données_super_secrètes_ici"),
+              notes: drift.Value("données_super_secrètes_ici"),
             ),
           );
 

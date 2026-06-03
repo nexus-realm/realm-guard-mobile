@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
+import '../data/credential_draft.dart';
 
 /// ViewModel de la page d'ajout d'identifiant.
 class AddCredentialViewModel extends ChangeNotifier {
@@ -36,14 +37,9 @@ class AddCredentialViewModel extends ChangeNotifier {
   }
 
   /// Enregistre un identifiant. Retourne `true` en cas de succès.
-  /// Le titre est requis ; le profil associé est optionnel.
-  Future<bool> submit({
-    required String title,
-    required String data,
-    int? profileId,
-  }) async {
-    final trimmedTitle = title.trim();
-    if (trimmedTitle.isEmpty) {
+  /// Le titre est requis ; les autres champs sont optionnels.
+  Future<bool> submit(CredentialDraft draft) async {
+    if (draft.title.trim().isEmpty) {
       _errorMessage = 'Veuillez saisir un titre.';
       notifyListeners();
       return false;
@@ -54,7 +50,7 @@ class AddCredentialViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _repository.addCredential(trimmedTitle, data, profileId);
+      await _repository.addCredential(draft);
       return true;
     } catch (_) {
       _errorMessage =

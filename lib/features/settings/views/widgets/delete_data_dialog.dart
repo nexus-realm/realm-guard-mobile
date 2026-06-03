@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
+import '../../../../shared/widgets/destructive_button.dart';
 
 /// Dialog de confirmation forte pour la suppression de toutes les données :
 /// l'utilisateur doit saisir explicitement un mot-clé pour activer le bouton.
@@ -70,11 +70,10 @@ class _DeleteDataDialogState extends State<DeleteDataDialog> {
           onPressed: () => Navigator.of(context).pop(false),
           child: const Text('Annuler'),
         ),
-        FilledButton(
+        DestructiveButton(
           onPressed: _canConfirm
               ? () => Navigator.of(context).pop(true)
               : null,
-          style: FilledButton.styleFrom(backgroundColor: AppColors.error),
           child: const Text('Supprimer'),
         ),
       ],

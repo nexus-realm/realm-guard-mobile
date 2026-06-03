@@ -1,13 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
+import '../../../core/routes/app_routes.dart';
 import '../../../core/security/vault_service.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_decorations.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../shared/notifiers/fab_notifier.dart';
 import '../../../shared/notifiers/fab_notifier_scope.dart';
 import '../../../shared/notifiers/search_notifier_scope.dart';
 import '../../../shared/viewmodels/home_view_model.dart';
+import 'widgets/credential_avatar.dart';
+import 'widgets/profile_avatar.dart';
+import 'widgets/vault_list_tile.dart';
 
+/// Onglet principal de la Vault : la liste des identifiants.
+///
+/// Les profils sont gérés dans un écran dédié (icône 👥 de l'AppBar) car ce
+/// sont des données de référence, peu consultées au quotidien. Une TabBar par
+/// type de secret (Identifiants / TOTP / Clés …) sera réintroduite ici lorsque
+/// plusieurs types existeront.
 class HomeTab extends StatefulWidget {
   final VaultService vaultService;
 
@@ -33,7 +46,8 @@ class _HomeTabState extends State<HomeTab> {
       if (!mounted) return;
       _fabNotifier?.register(
         icon: Icons.add,
-        onPressed: () => _viewModel?.openAddBottomSheet(context),
+        label: 'Identifiant',
+        onPressed: () => _viewModel?.addCredential(context),
       );
     });
   }
@@ -61,57 +75,72 @@ class _HomeTabState extends State<HomeTab> {
   }
 
   Widget _buildContent() {
-    // 1) Chargement initial : on n'affiche pas l'état "vide" prématurément.
     if (_viewModel!.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final results = _viewModel!.results;
-
-    // 2) Aucun élément : on distingue recherche sans résultat et coffre vide.
-    if (results.isEmpty) {
-      return _viewModel!.hasSearchQuery
-          ? const _EmptyState(
-              icon: Icons.search_off,
-              title: 'Aucun résultat',
-              message: 'Aucun élément ne correspond à votre recherche.',
-            )
-          : const _EmptyState(
-              icon: Icons.lock_outline,
-              title: 'Votre coffre est vide',
-              message: 'Appuyez sur + pour ajouter un profil ou un identifiant.',
-            );
+    final credentials = _viewModel!.filteredCredentials;
+    if (credentials.isEmpty) {
+      final hasQuery = _viewModel!.hasSearchQuery;
+      return _EmptyState(
+        icon: hasQuery ? Icons.search_off : Icons.vpn_key_outlined,
+        title: hasQuery ? 'Aucun résultat' : 'Votre coffre est vide',
+        message: hasQuery
+            ? 'Aucun identifiant ne correspond à votre recherche.'
+            : 'Appuyez sur + pour ajouter un identifiant.',
+      );
     }
 
-    // 3) Liste des éléments.
     return ListView.builder(
-      itemCount: results.length,
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      itemCount: credentials.length,
       itemBuilder: (context, index) {
-        final item = results[index];
-        if (item is Profile) {
-          return ListTile(
-            title: Text(item.name),
-            subtitle: const Text('Profil'),
-            onTap: () {
-              // TODO: View profile details
-            },
-          );
-        } else if (item is CredentialWithProfile) {
-          return ListTile(
-            title: Text(item.credential.title),
-            subtitle: Text(item.profile?.name ?? 'Sans profil'),
-            onTap: () {
-              // TODO: View credential details
-            },
-          );
-        }
-        return const SizedBox();
+        final item = credentials[index];
+        final profile = item.profile;
+        return VaultListTile(
+          leading: CredentialAvatar(
+            title: item.credential.title,
+            uri: item.credential.uri,
+            radius: 18,
+          ),
+          title: item.credential.title,
+          subtitle: profile?.name ?? 'Sans profil',
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (item.credential.favorite)
+                Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.xs),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: AppDecorations.accentGlow,
+                    ),
+                    child: const Icon(
+                      Icons.star,
+                      size: 18,
+                      color: AppColors.mainColor,
+                    ),
+                  ),
+                ),
+              if (profile != null)
+                ProfileAvatar(
+                  name: profile.name,
+                  colorValue: profile.color,
+                  radius: 12,
+                ),
+            ],
+          ),
+          onTap: () => context.push(
+            '${AppRoutes.credentialDetail}/${item.credential.id}',
+          ),
+        );
       },
     );
   }
 }
 
-/// État vide générique (coffre vide ou recherche sans résultat).
+/// État vide générique (liste vide ou recherche sans résultat).
 class _EmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -132,7 +161,7 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: textTheme.bodyMedium?.color),
+            Icon(icon, size: 48, color: AppColors.secondaryText),
             const SizedBox(height: 12),
             Text(
               title,

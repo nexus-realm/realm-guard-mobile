@@ -33,4 +33,13 @@ class AppColors {
   static const Color error = lightRed;
   static const Color success = lightGreen;
 
+  // --- Couleurs sémantiques d'action ---
+  // Action destructive (supprimer, dissocier, reset…).
+  static const Color destructive = lightRed;
+  // Action positive / primaire (accent de l'app).
+  static const Color primaryAction = mainColor;
+  // Action neutre (icônes secondaires : copier, masquer…).
+  static const Color neutralAction = grey2;
+  // Surface légèrement teintée pour signaler une zone de danger.
+  static const Color destructiveSurface = darkRed;
 }

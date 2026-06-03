@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'app_spacing.dart';
 
 abstract class AppTheme {
   AppTheme._();
@@ -47,16 +48,40 @@ abstract class AppTheme {
         ),
       ),
       textTheme: const TextTheme(
+        // Valeur principale (ex. contenu d'un champ) : claire, lisible.
         bodyLarge: TextStyle(
           fontFamily: _fontBody,
           color: AppColors.mainText,
           fontSize: 16,
+          fontWeight: FontWeight.w500,
+          height: 1.35,
         ),
+        // Texte courant secondaire.
         bodyMedium: TextStyle(
           fontFamily: _fontBody,
           color: AppColors.secondaryText,
+          fontSize: 14,
+          height: 1.35,
         ),
-        bodySmall: TextStyle(fontFamily: _fontBody, color: AppColors.mainText),
+        bodySmall: TextStyle(
+          fontFamily: _fontBody,
+          color: AppColors.secondaryText,
+          fontSize: 12,
+        ),
+        // Libellé de champ : petit, gris, espacé — contraste avec la valeur.
+        labelMedium: TextStyle(
+          fontFamily: _fontBody,
+          color: AppColors.secondaryText,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.4,
+        ),
+        labelSmall: TextStyle(
+          fontFamily: _fontBody,
+          color: AppColors.secondaryText,
+          fontSize: 11,
+          letterSpacing: 0.4,
+        ),
         labelLarge: TextStyle(
           fontFamily: _fontBody,
           color: AppColors.mainText,
@@ -76,15 +101,23 @@ abstract class AppTheme {
           fontWeight: FontWeight.bold,
           height: 1.25,
         ),
+        // Titre de section (cartes de réglages, en-têtes de groupe).
+        titleMedium: TextStyle(
+          fontFamily: _fontTitle,
+          color: AppColors.mainText,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.mainColor,
           foregroundColor: AppColors.buttonText,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(12)),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
           ),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
           textStyle: const TextStyle(
             fontFamily: _fontBody,
             fontWeight: FontWeight.bold,
@@ -97,10 +130,11 @@ abstract class AppTheme {
         style: OutlinedButton.styleFrom(
           backgroundColor: AppColors.mainBackground,
           foregroundColor: AppColors.mainText,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(12)),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
           ),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
           side: const BorderSide(color: AppColors.mainColor),
           textStyle: const TextStyle(
             fontFamily: _fontBody,
@@ -110,21 +144,22 @@ abstract class AppTheme {
           elevation: 3,
         ),
       ),
-      inputDecorationTheme: InputDecorationTheme(
+      inputDecorationTheme: const InputDecorationTheme(
         filled: true,
         fillColor: AppColors.secondaryBackground,
-        hintStyle: const TextStyle(color: AppColors.secondaryText),
+        hintStyle: TextStyle(color: AppColors.secondaryText),
+        labelStyle: TextStyle(color: AppColors.secondaryText),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.transparent),
+          borderRadius: AppRadius.mdAll,
+          borderSide: BorderSide(color: Colors.transparent),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.transparent),
+          borderRadius: AppRadius.mdAll,
+          borderSide: BorderSide(color: Colors.transparent),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.mainColor),
+          borderRadius: AppRadius.mdAll,
+          borderSide: BorderSide(color: AppColors.mainColor),
         ),
       ),
     );

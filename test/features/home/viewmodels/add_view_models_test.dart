@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:realm_guard_mobile/core/database/app_database.dart';
 import 'package:realm_guard_mobile/core/database/vault_repository.dart';
+import 'package:realm_guard_mobile/features/home/data/credential_draft.dart';
+import 'package:realm_guard_mobile/features/home/data/profile_draft.dart';
 import 'package:realm_guard_mobile/features/home/viewmodels/add_credential_view_model.dart';
 import 'package:realm_guard_mobile/features/home/viewmodels/add_profile_view_model.dart';
 
@@ -8,33 +10,23 @@ class FakeVaultEditor implements VaultEditor {
   bool shouldThrow = false;
   List<Profile> profilesToReturn = const [];
 
-  String? lastProfileName;
-  List<String>? lastProfileEmails;
-  String? lastCredentialTitle;
-  String? lastCredentialData;
-  int? lastCredentialProfileId;
+  ProfileDraft? lastProfileDraft;
+  CredentialDraft? lastCredentialDraft;
 
   @override
   Future<List<Profile>> getAllProfiles() async => profilesToReturn;
 
   @override
-  Future<int> addProfile(String name, List<String> emails) async {
+  Future<int> addProfile(ProfileDraft draft) async {
     if (shouldThrow) throw Exception('db error');
-    lastProfileName = name;
-    lastProfileEmails = emails;
+    lastProfileDraft = draft;
     return 1;
   }
 
   @override
-  Future<int> addCredential(
-    String title,
-    String encryptedData,
-    int? profileId,
-  ) async {
+  Future<int> addCredential(CredentialDraft draft) async {
     if (shouldThrow) throw Exception('db error');
-    lastCredentialTitle = title;
-    lastCredentialData = encryptedData;
-    lastCredentialProfileId = profileId;
+    lastCredentialDraft = draft;
     return 1;
   }
 }
@@ -45,22 +37,24 @@ void main() {
       final editor = FakeVaultEditor();
       final vm = AddProfileViewModel(editor);
 
-      final ok = await vm.submit('   ', ['a@b.com']);
+      final ok = await vm.submit(const ProfileDraft(name: '   '));
 
       expect(ok, isFalse);
       expect(vm.errorMessage, isNotNull);
-      expect(editor.lastProfileName, isNull);
+      expect(editor.lastProfileDraft, isNull);
     });
 
-    test('enregistre le profil en filtrant les emails vides', () async {
+    test('enregistre le profil', () async {
       final editor = FakeVaultEditor();
       final vm = AddProfileViewModel(editor);
 
-      final ok = await vm.submit('  Perso  ', ['a@b.com', '  ', '']);
+      final ok = await vm.submit(
+        const ProfileDraft(name: 'Perso', emails: ['a@b.com']),
+      );
 
       expect(ok, isTrue);
-      expect(editor.lastProfileName, 'Perso'); // trimmé
-      expect(editor.lastProfileEmails, ['a@b.com']); // vides filtrés
+      expect(editor.lastProfileDraft?.name, 'Perso');
+      expect(editor.lastProfileDraft?.emails, ['a@b.com']);
       expect(vm.isSubmitting, isFalse);
     });
 
@@ -68,7 +62,7 @@ void main() {
       final editor = FakeVaultEditor()..shouldThrow = true;
       final vm = AddProfileViewModel(editor);
 
-      final ok = await vm.submit('Perso', const []);
+      final ok = await vm.submit(const ProfileDraft(name: 'Perso'));
 
       expect(ok, isFalse);
       expect(vm.errorMessage, isNotNull);
@@ -78,10 +72,7 @@ void main() {
 
   group('AddCredentialViewModel', () {
     test('initialize charge les profils', () async {
-      final editor = FakeVaultEditor()
-        ..profilesToReturn = [
-          const Profile(id: 1, name: 'Perso', emails: '[]'),
-        ];
+      final editor = FakeVaultEditor()..profilesToReturn = [_profile(1, 'Perso')];
       final vm = AddCredentialViewModel(editor);
 
       await vm.initialize();
@@ -94,10 +85,12 @@ void main() {
       final editor = FakeVaultEditor();
       final vm = AddCredentialViewModel(editor);
 
-      final ok = await vm.submit(title: '  ', data: 'secret', profileId: null);
+      final ok = await vm.submit(
+        const CredentialDraft(title: '  ', notes: 'secret'),
+      );
 
       expect(ok, isFalse);
-      expect(editor.lastCredentialTitle, isNull);
+      expect(editor.lastCredentialDraft, isNull);
     });
 
     test('enregistre l\'identifiant avec le profil associé', () async {
@@ -105,15 +98,23 @@ void main() {
       final vm = AddCredentialViewModel(editor);
 
       final ok = await vm.submit(
-        title: '  GitHub  ',
-        data: 'token',
-        profileId: 7,
+        const CredentialDraft(title: 'GitHub', notes: 'token', profileId: 7),
       );
 
       expect(ok, isTrue);
-      expect(editor.lastCredentialTitle, 'GitHub'); // trimmé
-      expect(editor.lastCredentialData, 'token');
-      expect(editor.lastCredentialProfileId, 7);
+      expect(editor.lastCredentialDraft?.title, 'GitHub');
+      expect(editor.lastCredentialDraft?.notes, 'token');
+      expect(editor.lastCredentialDraft?.profileId, 7);
     });
   });
 }
+
+Profile _profile(int id, String name) => Profile(
+  id: id,
+  name: name,
+  emails: '[]',
+  usernames: '[]',
+  phoneNumbers: '[]',
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);

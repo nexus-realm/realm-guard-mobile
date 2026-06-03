@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../../../shared/widgets/view_title.dart';
 import '../viewmodels/add_credential_view_model.dart';
+import 'widgets/credential_form.dart';
 
 class AddCredentialPage extends StatefulWidget {
   final VaultEditor repository;
@@ -19,9 +19,7 @@ class AddCredentialPage extends StatefulWidget {
 class _AddCredentialPageState extends State<AddCredentialPage> {
   late final AddCredentialViewModel _viewModel;
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _dataController = TextEditingController();
-  int? _selectedProfileId;
+  final _credentialFormKey = GlobalKey<CredentialFormState>();
 
   @override
   void initState() {
@@ -32,8 +30,6 @@ class _AddCredentialPageState extends State<AddCredentialPage> {
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _dataController.dispose();
     _viewModel.dispose();
     super.dispose();
   }
@@ -42,11 +38,8 @@ class _AddCredentialPageState extends State<AddCredentialPage> {
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) return;
 
-    final success = await _viewModel.submit(
-      title: _titleController.text,
-      data: _dataController.text,
-      profileId: _selectedProfileId,
-    );
+    final draft = _credentialFormKey.currentState!.buildDraft();
+    final success = await _viewModel.submit(draft);
 
     if (!mounted) return;
     if (success) {
@@ -74,76 +67,34 @@ class _AddCredentialPageState extends State<AddCredentialPage> {
             }
             return SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const ViewTitle(topTitle: 'Coffre', title: 'Identifiant_'),
-                    const SizedBox(height: 24),
-                    TextFormField(
-                      controller: _titleController,
-                      enabled: !_viewModel.isSubmitting,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(labelText: 'Titre'),
-                      validator: (value) =>
-                          (value == null || value.trim().isEmpty)
-                          ? 'Veuillez saisir un titre.'
-                          : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _dataController,
-                      enabled: !_viewModel.isSubmitting,
-                      minLines: 1,
-                      maxLines: 4,
-                      decoration: const InputDecoration(
-                        labelText: 'Données',
-                        alignLabelWithHint: true,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildProfileSelector(),
-                    const SizedBox(height: 32),
-                    GradientElevatedButton(
-                      onPressed: _viewModel.isSubmitting ? null : _submit,
-                      child: _viewModel.isSubmitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Enregistrer'),
-                    ),
-                  ],
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const ViewTitle(topTitle: 'Coffre', title: 'Identifiant_'),
+                  const SizedBox(height: 24),
+                  CredentialForm(
+                    key: _credentialFormKey,
+                    formKey: _formKey,
+                    profiles: _viewModel.profiles,
+                    enabled: !_viewModel.isSubmitting,
+                  ),
+                  const SizedBox(height: 32),
+                  GradientElevatedButton(
+                    onPressed: _viewModel.isSubmitting ? null : _submit,
+                    child: _viewModel.isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Enregistrer'),
+                  ),
+                ],
               ),
             );
           },
         ),
       ),
-    );
-  }
-
-  Widget _buildProfileSelector() {
-    if (_viewModel.profiles.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return DropdownButtonFormField<int?>(
-      initialValue: _selectedProfileId,
-      decoration: const InputDecoration(labelText: 'Profil associé (optionnel)'),
-      items: [
-        const DropdownMenuItem<int?>(child: Text('Aucun profil')),
-        ..._viewModel.profiles.map(
-          (Profile profile) => DropdownMenuItem<int?>(
-            value: profile.id,
-            child: Text(profile.name),
-          ),
-        ),
-      ],
-      onChanged: _viewModel.isSubmitting
-          ? null
-          : (value) => setState(() => _selectedProfileId = value),
     );
   }
 }
