@@ -115,6 +115,31 @@ void main() {
       expect(vm.results.length, 2);
     });
 
+    test('expose des listes filtrées séparées par type', () async {
+      final repo = FakeHomeRepository();
+      final search = SearchNotifier();
+      final vm = HomeViewModel(
+        search,
+        repo,
+        searchDebounce: const Duration(milliseconds: 20),
+      );
+      addTearDown(vm.dispose);
+
+      repo.profiles.add([_profile(1, 'GitHub'), _profile(2, 'GitLab')]);
+      repo.credentials.add([_credential(10, 'Gmail')]);
+      await _settle();
+
+      expect(vm.filteredProfiles, hasLength(2));
+      expect(vm.filteredCredentials, hasLength(1));
+
+      // La recherche filtre chaque liste indépendamment.
+      search.updateQuery('lab');
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+
+      expect(vm.filteredProfiles.map((p) => p.name), ['GitLab']);
+      expect(vm.filteredCredentials, isEmpty);
+    });
+
     test('filtre par requête de recherche', () async {
       final repo = FakeHomeRepository();
       final search = SearchNotifier();

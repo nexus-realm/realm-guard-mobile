@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../../features/home/data/profile_deletion_strategy.dart';
 import 'app_database.dart';
 
 /// Lecture réactive dont la vue Home a besoin. Permet d'injecter un faux
@@ -19,7 +20,30 @@ abstract interface class VaultEditor {
   Future<int> addCredential(String title, String encryptedData, int? profileId);
 }
 
-class VaultRepository implements HomeRepository, VaultEditor {
+/// Consultation / modification / suppression d'un profil existant.
+abstract interface class ProfileEditor {
+  Stream<Profile?> watchProfile(int id);
+  Future<bool> updateProfile(int id, String name, List<String> emails);
+  Future<int> countCredentialsForProfile(int profileId);
+  Future<void> deleteProfile(int id, ProfileDeletionStrategy strategy);
+}
+
+/// Consultation / modification / suppression d'un identifiant existant, avec
+/// la liste des profils disponibles pour la (ré)association.
+abstract interface class CredentialEditor {
+  Stream<CredentialWithProfile?> watchCredential(int id);
+  Future<List<Profile>> getAllProfiles();
+  Future<bool> updateCredential(
+    int id,
+    String title,
+    String encryptedData,
+    int? profileId,
+  );
+  Future<int> deleteCredential(int id);
+}
+
+class VaultRepository
+    implements HomeRepository, VaultEditor, ProfileEditor, CredentialEditor {
   final AppDatabase _db;
 
   VaultRepository(this._db);
@@ -32,11 +56,17 @@ class VaultRepository implements HomeRepository, VaultEditor {
   Stream<List<Profile>> watchAllProfiles() => _db.profiles.select().watch();
 
   @override
+  Stream<Profile?> watchProfile(int id) =>
+      (_db.profiles.select()..where((tbl) => tbl.id.equals(id)))
+          .watchSingleOrNull();
+
+  @override
   Future<int> addProfile(String name, List<String> emails) =>
       _db.profiles.insertOne(
         ProfilesCompanion(name: Value(name), emails: Value(jsonEncode(emails))),
       );
 
+  @override
   Future<bool> updateProfile(int id, String name, List<String> emails) =>
       _db.profiles.update().replace(
         ProfilesCompanion(
@@ -46,8 +76,34 @@ class VaultRepository implements HomeRepository, VaultEditor {
         ),
       );
 
-  Future<int> deleteProfile(int id) =>
-      _db.profiles.deleteWhere((tbl) => tbl.id.equals(id));
+  @override
+  Future<int> countCredentialsForProfile(int profileId) async {
+    final countExp = _db.credentials.id.count();
+    final query = _db.credentials.selectOnly()
+      ..addColumns([countExp])
+      ..where(_db.credentials.profileId.equals(profileId));
+    final row = await query.getSingle();
+    return row.read(countExp) ?? 0;
+  }
+
+  /// Supprime un profil. Selon [strategy], les identifiants liés sont soit
+  /// dissociés (profileId → null), soit supprimés. Opération atomique.
+  @override
+  Future<void> deleteProfile(int id, ProfileDeletionStrategy strategy) {
+    return _db.transaction(() async {
+      switch (strategy) {
+        case ProfileDeletionStrategy.dissociate:
+          await (_db.credentials.update()
+                ..where((tbl) => tbl.profileId.equals(id)))
+              .write(const CredentialsCompanion(profileId: Value(null)));
+        case ProfileDeletionStrategy.cascade:
+          await (_db.credentials.delete()
+                ..where((tbl) => tbl.profileId.equals(id)))
+              .go();
+      }
+      await (_db.profiles.delete()..where((tbl) => tbl.id.equals(id))).go();
+    });
+  }
 
   // Credentials
   Future<List<Credential>> getAllCredentials() =>
@@ -71,6 +127,7 @@ class VaultRepository implements HomeRepository, VaultEditor {
     ),
   );
 
+  @override
   Future<bool> updateCredential(
     int id,
     String title,
@@ -85,8 +142,26 @@ class VaultRepository implements HomeRepository, VaultEditor {
     ),
   );
 
+  @override
   Future<int> deleteCredential(int id) =>
       _db.credentials.deleteWhere((tbl) => tbl.id.equals(id));
+
+  @override
+  Stream<CredentialWithProfile?> watchCredential(int id) {
+    final query = _db.credentials.select().join([
+      leftOuterJoin(
+        _db.profiles,
+        _db.profiles.id.equalsExp(_db.credentials.profileId),
+      ),
+    ])..where(_db.credentials.id.equals(id));
+
+    return query.watchSingleOrNull().map((row) {
+      if (row == null) return null;
+      final credential = row.readTable(_db.credentials);
+      final profile = row.readTableOrNull(_db.profiles);
+      return CredentialWithProfile(credential, profile);
+    });
+  }
 
   // Combined
   Future<List<CredentialWithProfile>> getCredentialsWithProfiles() async {

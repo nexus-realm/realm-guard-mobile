@@ -6,7 +6,9 @@ import '../../features/debug/views/security_debug_page.dart';
 import '../../features/debug/views/vault_debug_page.dart';
 import '../../features/home/views/add_credential_page.dart';
 import '../../features/home/views/add_profile_page.dart';
+import '../../features/home/views/credential_detail_page.dart';
 import '../../features/home/views/home_tab.dart';
+import '../../features/home/views/profile_detail_page.dart';
 import '../../features/onboarding/service/onboarding_storage_service.dart';
 import '../../features/onboarding/views/onboarding_page.dart';
 import '../../features/onboarding/views/startup_gate_page.dart';
@@ -83,6 +85,28 @@ final GoRouter appRouter = GoRouter(
       name: 'addCredential',
       builder: (context, state) =>
           AddCredentialPage(repository: VaultRepository(_vaultService.db)),
+    ),
+    GoRoute(
+      path: '${AppRoutes.credentialDetail}/:id',
+      name: 'credentialDetail',
+      builder: (context, state) {
+        final id = int.parse(state.pathParameters['id']!);
+        return CredentialDetailPage(
+          repository: VaultRepository(_vaultService.db),
+          credentialId: id,
+        );
+      },
+    ),
+    GoRoute(
+      path: '${AppRoutes.profileDetail}/:id',
+      name: 'profileDetail',
+      builder: (context, state) {
+        final id = int.parse(state.pathParameters['id']!);
+        return ProfileDetailPage(
+          repository: VaultRepository(_vaultService.db),
+          profileId: id,
+        );
+      },
     ),
     GoRoute(
       path: AppRoutes.settings,
