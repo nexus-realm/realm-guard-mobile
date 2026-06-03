@@ -84,7 +84,7 @@ class HomeViewModel extends ChangeNotifier {
         .where((p) => p.name.toLowerCase().contains(_query))
         .toList();
     _filteredCredentials = _credentials
-        .where((c) => c.credential.title.toLowerCase().contains(_query))
+        .where((c) => _matchesCredential(c.credential))
         .toList();
 
     _results
@@ -92,6 +92,15 @@ class HomeViewModel extends ChangeNotifier {
       ..addAll(_filteredProfiles)
       ..addAll(_filteredCredentials);
     notifyListeners();
+  }
+
+  /// La recherche d'un identifiant porte sur le titre, le nom d'utilisateur et
+  /// l'URL.
+  bool _matchesCredential(Credential c) {
+    if (_query.isEmpty) return true;
+    bool contains(String? value) =>
+        value != null && value.toLowerCase().contains(_query);
+    return contains(c.title) || contains(c.username) || contains(c.uri);
   }
 
   /// Ouvre le menu d'ajout dans une bottom sheet **modale**.

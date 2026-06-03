@@ -86,11 +86,19 @@ void main() {
       await _settle();
 
       expect(
-        vm.hasChanges(name: 'Perso', emails: ['a@b.com', '  ']),
+        vm.hasChanges(
+          const ProfileDraft(name: 'Perso', emails: ['a@b.com']),
+        ),
         isFalse,
       );
-      expect(vm.hasChanges(name: 'Pro', emails: ['a@b.com']), isTrue);
-      expect(vm.hasChanges(name: 'Perso', emails: ['x@y.com']), isTrue);
+      expect(
+        vm.hasChanges(const ProfileDraft(name: 'Pro', emails: ['a@b.com'])),
+        isTrue,
+      );
+      expect(
+        vm.hasChanges(const ProfileDraft(name: 'Perso', emails: ['x@y.com'])),
+        isTrue,
+      );
     });
 
     test('save refuse un nom vide', () async {
@@ -99,13 +107,13 @@ void main() {
       addTearDown(vm.dispose);
       await vm.initialize();
 
-      final ok = await vm.save(name: '  ', emails: const []);
+      final ok = await vm.save(const ProfileDraft(name: '  '));
 
       expect(ok, isFalse);
       expect(repo.updatedId, isNull);
     });
 
-    test('save met à jour en filtrant les emails vides', () async {
+    test('save met à jour le profil', () async {
       final repo = FakeProfileEditor();
       final vm = ProfileDetailViewModel(repository: repo, profileId: 5);
       addTearDown(vm.dispose);
@@ -113,8 +121,7 @@ void main() {
       vm.startEditing();
 
       final ok = await vm.save(
-        name: '  Perso  ',
-        emails: ['a@b.com', '', '  '],
+        const ProfileDraft(name: 'Perso', emails: ['a@b.com']),
       );
 
       expect(ok, isTrue);

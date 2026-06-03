@@ -5,6 +5,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
+import 'widgets/profile_avatar.dart';
 
 /// Page de gestion des profils, accessible depuis l'AppBar de la Vault.
 ///
@@ -41,7 +42,10 @@ class ProfilesPage extends StatelessWidget {
               itemBuilder: (context, index) {
                 final profile = profiles[index];
                 return ListTile(
-                  leading: const Icon(Icons.person),
+                  leading: ProfileAvatar(
+                    name: profile.name,
+                    colorValue: profile.color,
+                  ),
                   title: Text(profile.name),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () =>

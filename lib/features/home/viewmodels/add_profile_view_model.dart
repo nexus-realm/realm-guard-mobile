@@ -16,28 +16,20 @@ class AddProfileViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   /// Enregistre un profil. Retourne `true` en cas de succès.
-  /// Le nom est requis ; les emails vides sont ignorés.
-  Future<bool> submit(String name, List<String> emails) async {
-    final trimmedName = name.trim();
-    if (trimmedName.isEmpty) {
+  /// Le nom est requis.
+  Future<bool> submit(ProfileDraft draft) async {
+    if (draft.name.trim().isEmpty) {
       _errorMessage = 'Veuillez saisir un nom de profil.';
       notifyListeners();
       return false;
     }
-
-    final cleanedEmails = emails
-        .map((email) => email.trim())
-        .where((email) => email.isNotEmpty)
-        .toList();
 
     _isSubmitting = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      await _repository.addProfile(
-        ProfileDraft(name: trimmedName, emails: cleanedEmails),
-      );
+      await _repository.addProfile(draft);
       return true;
     } catch (_) {
       _errorMessage =

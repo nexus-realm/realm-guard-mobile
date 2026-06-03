@@ -37,22 +37,24 @@ void main() {
       final editor = FakeVaultEditor();
       final vm = AddProfileViewModel(editor);
 
-      final ok = await vm.submit('   ', ['a@b.com']);
+      final ok = await vm.submit(const ProfileDraft(name: '   '));
 
       expect(ok, isFalse);
       expect(vm.errorMessage, isNotNull);
       expect(editor.lastProfileDraft, isNull);
     });
 
-    test('enregistre le profil en filtrant les emails vides', () async {
+    test('enregistre le profil', () async {
       final editor = FakeVaultEditor();
       final vm = AddProfileViewModel(editor);
 
-      final ok = await vm.submit('  Perso  ', ['a@b.com', '  ', '']);
+      final ok = await vm.submit(
+        const ProfileDraft(name: 'Perso', emails: ['a@b.com']),
+      );
 
       expect(ok, isTrue);
-      expect(editor.lastProfileDraft?.name, 'Perso'); // trimmé
-      expect(editor.lastProfileDraft?.emails, ['a@b.com']); // vides filtrés
+      expect(editor.lastProfileDraft?.name, 'Perso');
+      expect(editor.lastProfileDraft?.emails, ['a@b.com']);
       expect(vm.isSubmitting, isFalse);
     });
 
@@ -60,7 +62,7 @@ void main() {
       final editor = FakeVaultEditor()..shouldThrow = true;
       final vm = AddProfileViewModel(editor);
 
-      final ok = await vm.submit('Perso', const []);
+      final ok = await vm.submit(const ProfileDraft(name: 'Perso'));
 
       expect(ok, isFalse);
       expect(vm.errorMessage, isNotNull);

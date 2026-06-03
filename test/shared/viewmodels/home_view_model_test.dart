@@ -30,10 +30,17 @@ Profile _profile(int id, String name) => Profile(
   updatedAt: DateTime(2026),
 );
 
-CredentialWithProfile _credential(int id, String title) => CredentialWithProfile(
+CredentialWithProfile _credential(
+  int id,
+  String title, {
+  String? username,
+  String? uri,
+}) => CredentialWithProfile(
   Credential(
     id: id,
     title: title,
+    username: username,
+    uri: uri,
     customFields: '[]',
     favorite: false,
     profileId: null,
@@ -153,6 +160,35 @@ void main() {
 
       expect(vm.filteredProfiles.map((p) => p.name), ['GitLab']);
       expect(vm.filteredCredentials, isEmpty);
+    });
+
+    test('la recherche d\'identifiant porte sur titre, username et url', () async {
+      final repo = FakeHomeRepository();
+      final search = SearchNotifier();
+      final vm = HomeViewModel(
+        search,
+        repo,
+        searchDebounce: const Duration(milliseconds: 10),
+      );
+      addTearDown(vm.dispose);
+
+      repo.profiles.add(const []);
+      repo.credentials.add([
+        _credential(1, 'GitHub', username: 'octocat'),
+        _credential(2, 'Mail', uri: 'https://gmail.com'),
+        _credential(3, 'Autre'),
+      ]);
+      await _settle();
+
+      // Match sur username.
+      search.updateQuery('octo');
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(vm.filteredCredentials.map((c) => c.credential.title), ['GitHub']);
+
+      // Match sur l'url.
+      search.updateQuery('gmail');
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(vm.filteredCredentials.map((c) => c.credential.title), ['Mail']);
     });
 
     test('filtre par requête de recherche', () async {

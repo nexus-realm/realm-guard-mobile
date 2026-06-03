@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
+import '../data/profile_colors.dart';
 import '../viewmodels/profile_detail_view_model.dart';
 import 'widgets/delete_profile_dialog.dart';
 import 'widgets/discard_changes_dialog.dart';
+import 'widgets/profile_form.dart';
 
 class ProfileDetailPage extends StatefulWidget {
   const ProfileDetailPage({
@@ -24,8 +27,7 @@ class ProfileDetailPage extends StatefulWidget {
 class _ProfileDetailPageState extends State<ProfileDetailPage> {
   late final ProfileDetailViewModel _viewModel;
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
-  List<TextEditingController> _emailControllers = [];
+  final _profileFormKey = GlobalKey<ProfileFormState>();
 
   @override
   void initState() {
@@ -41,59 +43,26 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
-    _nameController.dispose();
-    _disposeEmailControllers();
     _viewModel.dispose();
     super.dispose();
   }
 
-  void _disposeEmailControllers() {
-    for (final controller in _emailControllers) {
-      controller.dispose();
-    }
-  }
-
   void _onViewModelChanged() {
-    final profile = _viewModel.current;
-    if (profile != null && !_viewModel.isEditing) {
-      _seedControllers();
-    }
     if (mounted) setState(() {});
   }
 
-  void _seedControllers() {
-    _nameController.text = _viewModel.current?.name ?? '';
-    _disposeEmailControllers();
-    final emails = _viewModel.emails;
-    _emailControllers = [
-      for (final email in emails) TextEditingController(text: email),
-      if (emails.isEmpty) TextEditingController(),
-    ];
-  }
-
-  List<String> get _emailValues =>
-      _emailControllers.map((c) => c.text).toList();
-
-  bool get _hasUnsavedChanges =>
-      _viewModel.isEditing &&
-      _viewModel.hasChanges(name: _nameController.text, emails: _emailValues);
-
-  void _addEmailField() {
-    setState(() => _emailControllers.add(TextEditingController()));
-  }
-
-  void _removeEmailField(int index) {
-    setState(() => _emailControllers.removeAt(index).dispose());
+  bool get _hasUnsavedChanges {
+    final formState = _profileFormKey.currentState;
+    if (!_viewModel.isEditing || formState == null) return false;
+    return _viewModel.hasChanges(formState.buildDraft());
   }
 
   Future<void> _save() async {
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) return;
 
-    final ok = await _viewModel.save(
-      name: _nameController.text,
-      emails: _emailValues,
-    );
+    final draft = _profileFormKey.currentState!.buildDraft();
+    final ok = await _viewModel.save(draft);
     if (!mounted) return;
     if (ok) {
       ScaffoldMessenger.of(
@@ -113,7 +82,6 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
     if (_hasUnsavedChanges && !await confirmDiscardChanges(context)) {
       return;
     }
-    _seedControllers();
     _viewModel.cancelEditing();
   }
 
@@ -142,7 +110,7 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
     final shouldDiscard = await confirmDiscardChanges(context);
     if (!shouldDiscard || !mounted) return;
     _viewModel.cancelEditing();
-    context.pop();
+    if (mounted) context.pop();
   }
 
   @override
@@ -191,116 +159,106 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
     if (_viewModel.notFound) {
       return const Center(child: Text('Ce profil n\'existe plus.'));
     }
+    final profile = _viewModel.current;
+    if (profile == null) return const SizedBox.shrink();
 
+    return _viewModel.isEditing
+        ? _buildEditView()
+        : _buildReadView(profile);
+  }
+
+  // --- Mode édition ---
+
+  Widget _buildEditView() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextFormField(
-              controller: _nameController,
-              enabled: _viewModel.isEditing && !_viewModel.isSubmitting,
-              decoration: const InputDecoration(labelText: 'Nom'),
-              validator: (value) => (value == null || value.trim().isEmpty)
-                  ? 'Veuillez saisir un nom de profil.'
-                  : null,
-            ),
-            const SizedBox(height: 24),
-            Text('Emails', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            ..._buildEmailFields(),
-            const SizedBox(height: 32),
-            if (_viewModel.isEditing) _buildEditActions(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildEmailFields() {
-    final isEditing = _viewModel.isEditing;
-
-    if (!isEditing) {
-      final emails = _viewModel.emails;
-      if (emails.isEmpty) {
-        return [
-          Text(
-            'Aucun email',
-            style: Theme.of(context).textTheme.bodyMedium,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ProfileForm(
+            key: _profileFormKey,
+            formKey: _formKey,
+            initial: _viewModel.currentDraft,
+            enabled: !_viewModel.isSubmitting,
+            onChanged: () => setState(() {}),
           ),
-        ];
-      }
-      return [
-        for (final email in emails)
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.email_outlined),
-            title: Text(email),
-          ),
-      ];
-    }
-
-    return [
-      for (var index = 0; index < _emailControllers.length; index++)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Row(
+          const SizedBox(height: 32),
+          Row(
             children: [
               Expanded(
-                child: TextFormField(
-                  controller: _emailControllers[index],
-                  enabled: !_viewModel.isSubmitting,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(labelText: 'Email ${index + 1}'),
+                child: OutlinedButton(
+                  onPressed: _viewModel.isSubmitting ? null : _cancelEditing,
+                  child: const Text('Annuler'),
                 ),
               ),
-              if (_emailControllers.length > 1)
-                IconButton(
-                  tooltip: 'Supprimer cet email',
-                  onPressed: _viewModel.isSubmitting
-                      ? null
-                      : () => _removeEmailField(index),
-                  icon: const Icon(Icons.remove_circle_outline),
+              const SizedBox(width: 12),
+              Expanded(
+                child: GradientElevatedButton(
+                  onPressed: _viewModel.isSubmitting ? null : _save,
+                  child: _viewModel.isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Enregistrer'),
                 ),
+              ),
             ],
           ),
-        ),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: TextButton.icon(
-          onPressed: _viewModel.isSubmitting ? null : _addEmailField,
-          icon: const Icon(Icons.add),
-          label: const Text('Ajouter un email'),
-        ),
+        ],
       ),
-    ];
+    );
   }
 
-  Widget _buildEditActions() {
-    return Row(
+  // --- Mode lecture seule ---
+
+  Widget _buildReadView(Profile profile) {
+    final color = ProfileColors.fromValue(profile.color);
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: _viewModel.isSubmitting ? null : _cancelEditing,
-            child: const Text('Annuler'),
+        ListTile(
+          leading: CircleAvatar(
+            backgroundColor: color ?? Theme.of(context).colorScheme.surface,
+            child: color == null
+                ? const Icon(Icons.person)
+                : Text(
+                    profile.name.isNotEmpty
+                        ? profile.name[0].toUpperCase()
+                        : '?',
+                  ),
           ),
+          title: Text(profile.name),
+          subtitle: const Text('Nom du profil'),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: GradientElevatedButton(
-            onPressed: _viewModel.isSubmitting ? null : _save,
-            child: _viewModel.isSubmitting
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Enregistrer'),
+        const Divider(),
+        ..._section('Emails', Icons.email_outlined, _viewModel.emails),
+        ..._section(
+          'Noms d\'utilisateur',
+          Icons.person_outline,
+          _viewModel.usernames,
+        ),
+        ..._section('Téléphones', Icons.phone_outlined, _viewModel.phoneNumbers),
+        if ((profile.note ?? '').isNotEmpty)
+          ListTile(
+            leading: const Icon(Icons.notes),
+            title: const Text('Note'),
+            subtitle: Text(profile.note!),
           ),
-        ),
       ],
     );
+  }
+
+  List<Widget> _section(String title, IconData icon, List<String> values) {
+    if (values.isEmpty) return const [];
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: Text(title, style: Theme.of(context).textTheme.titleSmall),
+      ),
+      for (final value in values)
+        ListTile(leading: Icon(icon), title: Text(value)),
+    ];
   }
 }

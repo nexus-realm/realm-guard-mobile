@@ -46,9 +46,27 @@ class ProfileDetailViewModel extends ChangeNotifier {
 
   bool get notFound => !_isLoading && _current == null && !_deleted;
 
-  /// Emails de l'enregistrement courant (décodés du JSON), pour pré-remplir
-  /// les champs en mode édition.
+  /// Emails de l'enregistrement courant (décodés du JSON).
   List<String> get emails => _decodeList(_current?.emails);
+
+  /// Noms d'utilisateur / téléphones de l'enregistrement courant.
+  List<String> get usernames => _decodeList(_current?.usernames);
+  List<String> get phoneNumbers => _decodeList(_current?.phoneNumbers);
+
+  /// Brouillon pré-rempli depuis l'enregistrement courant (pour l'édition).
+  ProfileDraft? get currentDraft {
+    final p = _current;
+    return p == null
+        ? null
+        : ProfileDraft(
+            name: p.name,
+            emails: emails,
+            usernames: usernames,
+            phoneNumbers: phoneNumbers,
+            color: p.color,
+            note: p.note,
+          );
+  }
 
   /// Décode une colonne JSON contenant un tableau de chaînes. Tolérant.
   static List<String> _decodeList(String? raw) {
@@ -84,17 +102,26 @@ class ProfileDetailViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool hasChanges({required String name, required List<String> emails}) {
-    final cleaned = _cleanEmails(emails);
+  bool hasChanges(ProfileDraft draft) {
     final profile = _current;
-    if (profile == null) return name.isNotEmpty || cleaned.isNotEmpty;
-    return name.trim() != profile.name ||
-        !listEquals(cleaned, this.emails);
+    if (profile == null) {
+      return draft.name.isNotEmpty ||
+          draft.emails.isNotEmpty ||
+          draft.usernames.isNotEmpty ||
+          draft.phoneNumbers.isNotEmpty ||
+          draft.color != null ||
+          (draft.note ?? '').isNotEmpty;
+    }
+    return draft.name.trim() != profile.name ||
+        !listEquals(draft.emails, emails) ||
+        !listEquals(draft.usernames, usernames) ||
+        !listEquals(draft.phoneNumbers, phoneNumbers) ||
+        draft.color != profile.color ||
+        (draft.note ?? '') != (profile.note ?? '');
   }
 
-  Future<bool> save({required String name, required List<String> emails}) async {
-    final trimmedName = name.trim();
-    if (trimmedName.isEmpty) {
+  Future<bool> save(ProfileDraft draft) async {
+    if (draft.name.trim().isEmpty) {
       _errorMessage = 'Veuillez saisir un nom de profil.';
       notifyListeners();
       return false;
@@ -105,20 +132,7 @@ class ProfileDetailViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Préserve les champs non encore éditables (usernames, téléphones,
-      // couleur, note) en repartant de l'enregistrement courant.
-      final existing = _current;
-      await _repository.updateProfile(
-        _profileId,
-        ProfileDraft(
-          name: trimmedName,
-          emails: _cleanEmails(emails),
-          usernames: _decodeList(existing?.usernames),
-          phoneNumbers: _decodeList(existing?.phoneNumbers),
-          color: existing?.color,
-          note: existing?.note,
-        ),
-      );
+      await _repository.updateProfile(_profileId, draft);
       _isEditing = false;
       return true;
     } catch (_) {
@@ -149,11 +163,6 @@ class ProfileDetailViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
-
-  List<String> _cleanEmails(List<String> emails) => emails
-      .map((email) => email.trim())
-      .where((email) => email.isNotEmpty)
-      .toList();
 
   @override
   void dispose() {
