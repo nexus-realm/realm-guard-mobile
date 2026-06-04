@@ -16,6 +16,7 @@ import '../../features/onboarding/views/startup_gate_page.dart';
 import '../../features/settings/data/legal_documents.dart';
 import '../../features/settings/service/app_reset_service.dart';
 import '../../features/settings/views/about_page.dart';
+import '../../features/settings/views/change_password_page.dart';
 import '../../features/settings/views/legal_page.dart';
 import '../../features/settings/views/settings_page.dart';
 import '../../features/unlock/views/unlock_page.dart';
@@ -124,6 +125,12 @@ final GoRouter appRouter = GoRouter(
         resetService: AppResetService(),
       ),
       routes: [
+        GoRoute(
+          path: 'change-password',
+          name: 'settingsChangePassword',
+          builder: (context, state) =>
+              ChangePasswordPage(vaultService: _vaultService),
+        ),
         GoRoute(
           path: 'about',
           name: 'settingsAbout',
