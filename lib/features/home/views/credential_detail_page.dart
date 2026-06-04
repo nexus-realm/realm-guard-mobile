@@ -9,12 +9,14 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
+import '../../../shared/widgets/secondary_button.dart';
 import '../data/custom_field.dart';
 import '../viewmodels/credential_detail_view_model.dart';
 import 'widgets/confirm_delete_dialog.dart';
 import 'widgets/credential_avatar.dart';
 import 'widgets/credential_form.dart';
 import 'widgets/discard_changes_dialog.dart';
+import 'widgets/password_strength_indicator.dart';
 
 class CredentialDetailPage extends StatefulWidget {
   const CredentialDetailPage({
@@ -215,7 +217,7 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton(
+          child: SecondaryButton(
             onPressed: _viewModel.isSubmitting ? null : _cancelEditing,
             child: const Text('Annuler'),
           ),
@@ -277,7 +279,7 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
             value: credential.username!,
             onCopy: () => _copy(credential.username!),
           ),
-        if (credential.password != null)
+        if (credential.password != null) ...[
           _ReadField(
             icon: Icons.lock_outline,
             label: 'Mot de passe',
@@ -285,6 +287,16 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
             secret: true,
             onCopy: () => _copy(credential.password!),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              0,
+              AppSpacing.md,
+              AppSpacing.xs,
+            ),
+            child: PasswordStrengthIndicator(password: credential.password!),
+          ),
+        ],
         if (credential.uri != null)
           _ReadField(
             icon: Icons.link,
@@ -303,6 +315,11 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
           icon: Icons.person_pin_outlined,
           label: 'Profil associé',
           value: profileName ?? 'Sans profil',
+          trailingAction: _ReadFieldAction(
+            icon: Icons.edit_outlined,
+            tooltip: 'Modifier le profil associé',
+            onPressed: _viewModel.isSubmitting ? null : _selectProfile,
+          ),
         ),
         for (final field in customFields)
           _ReadField(
@@ -322,6 +339,59 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Copié dans le presse-papiers.')),
     );
+  }
+
+  /// Action rapide depuis la lecture seule : choisir/changer le profil associé
+  /// via une bottom sheet, puis enregistrement immédiat.
+  Future<void> _selectProfile() async {
+    final currentId = _viewModel.current?.credential.profileId;
+    final selected = await showModalBottomSheet<_ProfileChoice>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.block),
+              title: const Text('Aucun profil'),
+              trailing: currentId == null
+                  ? const Icon(Icons.check, color: AppColors.mainColor)
+                  : null,
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(const _ProfileChoice(null)),
+            ),
+            for (final profile in _viewModel.profiles)
+              ListTile(
+                leading: const Icon(Icons.person_outline),
+                title: Text(profile.name),
+                trailing: currentId == profile.id
+                    ? const Icon(Icons.check, color: AppColors.mainColor)
+                    : null,
+                onTap: () => Navigator.of(
+                  sheetContext,
+                ).pop(_ProfileChoice(profile.id)),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+
+    final ok = await _viewModel.setProfile(selected.profileId);
+    if (!mounted) return;
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profil associé mis à jour.')),
+      );
+    } else {
+      final message = _viewModel.errorMessage;
+      if (message != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
+    }
   }
 
   Future<void> _openUri(String uri) async {
@@ -350,6 +420,7 @@ class _ReadField extends StatefulWidget {
     this.secret = false,
     this.onCopy,
     this.onOpen,
+    this.trailingAction,
   });
 
   final IconData icon;
@@ -359,8 +430,41 @@ class _ReadField extends StatefulWidget {
   final VoidCallback? onCopy;
   final VoidCallback? onOpen;
 
+  /// Action additionnelle affichée en fin de ligne (ex. modifier le profil).
+  final Widget? trailingAction;
+
   @override
   State<_ReadField> createState() => _ReadFieldState();
+}
+
+/// Résultat de la bottom sheet de sélection de profil (permet de distinguer
+/// « aucun profil choisi » d'une fermeture sans choix).
+class _ProfileChoice {
+  const _ProfileChoice(this.profileId);
+  final int? profileId;
+}
+
+/// Bouton d'action neutre pour la fin d'une ligne [_ReadField].
+class _ReadFieldAction extends StatelessWidget {
+  const _ReadFieldAction({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      icon: Icon(icon, size: 20),
+      color: AppColors.neutralAction,
+      onPressed: onPressed,
+    );
+  }
 }
 
 class _ReadFieldState extends State<_ReadField> {
@@ -420,6 +524,7 @@ class _ReadFieldState extends State<_ReadField> {
                 color: AppColors.neutralAction,
                 onPressed: widget.onCopy,
               ),
+            ?widget.trailingAction,
           ],
         ),
       ),

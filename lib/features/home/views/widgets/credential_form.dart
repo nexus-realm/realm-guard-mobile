@@ -5,6 +5,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/credential_draft.dart';
 import '../../data/custom_field.dart';
+import 'password_strength_indicator.dart';
 
 /// Formulaire partagé d'identifiant (ajout & édition).
 ///
@@ -145,6 +146,9 @@ class CredentialFormState extends State<CredentialForm> {
             controller: _password,
             enabled: widget.enabled,
             obscureText: _passwordObscured,
+            // Reconstruit le champ à chaque frappe pour rafraîchir l'indicateur
+            // de force et l'état du bouton copier.
+            onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
               labelText: 'Mot de passe',
               suffixIcon: Row(
@@ -169,6 +173,7 @@ class CredentialFormState extends State<CredentialForm> {
               ),
             ),
           ),
+          PasswordStrengthIndicator(password: _password.text),
           const SizedBox(height: 16),
           TextFormField(
             controller: _uri,

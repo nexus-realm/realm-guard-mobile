@@ -6,6 +6,7 @@ import '../../../core/database/vault_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
+import '../../../shared/widgets/secondary_button.dart';
 import '../viewmodels/profile_detail_view_model.dart';
 import 'widgets/delete_profile_dialog.dart';
 import 'widgets/detail_tile.dart';
@@ -190,7 +191,7 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
+                child: SecondaryButton(
                   onPressed: _viewModel.isSubmitting ? null : _cancelEditing,
                   child: const Text('Annuler'),
                 ),
