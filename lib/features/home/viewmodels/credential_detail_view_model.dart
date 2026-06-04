@@ -143,9 +143,37 @@ class CredentialDetailViewModel extends ChangeNotifier {
     );
   }
 
+  /// Associe (ou dissocie si `null`) un profil et enregistre immédiatement
+  /// (action rapide depuis la vue lecture seule).
+  Future<bool> setProfile(int? profileId) async {
+    final credential = _current?.credential;
+    if (credential == null) return false;
+    if (profileId == credential.profileId) return true; // pas de changement
+    _isSubmitting = true;
+    notifyListeners();
+    try {
+      await _repository.updateCredential(
+        _credentialId,
+        _draftFrom(credential, profileId: profileId, overrideProfileId: true),
+      );
+      return true;
+    } catch (_) {
+      _errorMessage = 'Impossible de modifier le profil associé.';
+      return false;
+    } finally {
+      _isSubmitting = false;
+      notifyListeners();
+    }
+  }
+
   /// Construit un brouillon à partir de l'enregistrement courant, en
-  /// surchargeant éventuellement le favori.
-  CredentialDraft _draftFrom(Credential c, {bool? favorite}) => CredentialDraft(
+  /// surchargeant éventuellement le favori ou le profil associé.
+  CredentialDraft _draftFrom(
+    Credential c, {
+    bool? favorite,
+    int? profileId,
+    bool overrideProfileId = false,
+  }) => CredentialDraft(
     title: c.title,
     username: c.username,
     password: c.password,
@@ -153,7 +181,7 @@ class CredentialDetailViewModel extends ChangeNotifier {
     notes: c.notes,
     customFields: CustomField.decode(c.customFields),
     favorite: favorite ?? c.favorite,
-    profileId: c.profileId,
+    profileId: overrideProfileId ? profileId : c.profileId,
   );
 
   Future<bool> delete() async {

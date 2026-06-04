@@ -219,5 +219,47 @@ void main() {
 
       expect(repo.updatedDraft?.favorite, isTrue);
     });
+
+    test('setProfile enregistre le profil choisi', () async {
+      final repo = FakeCredentialEditor();
+      final vm = CredentialDetailViewModel(repository: repo, credentialId: 4);
+      addTearDown(vm.dispose);
+      await vm.initialize();
+      repo.controller.add(_cred(4, 'GitHub'));
+      await _settle();
+
+      final ok = await vm.setProfile(9);
+
+      expect(ok, isTrue);
+      expect(repo.updatedDraft?.profileId, 9);
+    });
+
+    test('setProfile à null dissocie le profil', () async {
+      final repo = FakeCredentialEditor();
+      final vm = CredentialDetailViewModel(repository: repo, credentialId: 4);
+      addTearDown(vm.dispose);
+      await vm.initialize();
+      repo.controller.add(_cred(4, 'GitHub', profileId: 3));
+      await _settle();
+
+      final ok = await vm.setProfile(null);
+
+      expect(ok, isTrue);
+      expect(repo.updatedDraft?.profileId, isNull);
+    });
+
+    test('setProfile sans changement n\'appelle pas le dépôt', () async {
+      final repo = FakeCredentialEditor();
+      final vm = CredentialDetailViewModel(repository: repo, credentialId: 4);
+      addTearDown(vm.dispose);
+      await vm.initialize();
+      repo.controller.add(_cred(4, 'GitHub', profileId: 3));
+      await _settle();
+
+      final ok = await vm.setProfile(3); // déjà ce profil
+
+      expect(ok, isTrue);
+      expect(repo.updatedDraft, isNull);
+    });
   });
 }
