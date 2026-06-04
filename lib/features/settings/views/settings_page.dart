@@ -156,11 +156,13 @@ class _SettingsPageState extends State<SettingsPage> {
           subtitle: Text('Bientôt disponible'),
           enabled: false,
         ),
-        const ListTile(
-          leading: Icon(Icons.key_outlined),
-          title: Text('Changer le mot de passe maître'),
-          subtitle: Text('Bientôt disponible'),
-          enabled: false,
+        ListTile(
+          leading: const Icon(Icons.key_outlined),
+          title: const Text('Changer le mot de passe maître'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: _viewModel.isBusy
+              ? null
+              : () => context.push(AppRoutes.settingsChangePassword),
         ),
         ListTile(
           leading: const Icon(Icons.lock_outline),

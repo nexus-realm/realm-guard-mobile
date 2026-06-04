@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:cryptography/cryptography.dart';
 
 import '../database/app_database.dart';
@@ -5,6 +7,21 @@ import '../exceptions/vault_unlock_exception.dart';
 import 'biometric_storage_service.dart';
 import 'key_derivator.dart';
 import 'salt_manager.dart';
+
+/// Issue d'un changement de mot de passe maître.
+enum ChangePasswordResult {
+  /// Mot de passe changé, base re-chiffrée.
+  success,
+
+  /// Coffre verrouillé : impossible de changer le mot de passe.
+  vaultLocked,
+
+  /// L'ancien mot de passe fourni est incorrect.
+  wrongCurrentPassword,
+
+  /// Échec technique du re-chiffrement (la base reste sous l'ancienne clé).
+  failure,
+}
 
 class VaultService {
   AppDatabase? _database;
@@ -75,6 +92,65 @@ class VaultService {
       throw VaultUnlockException(e);
     }
   }
+
+  /// Change le mot de passe maître : re-chiffre la base via `PRAGMA rekey`
+  /// (toutes les données sont conservées) puis re-protège la clé biométrique.
+  ///
+  /// Le coffre doit être déverrouillé. L'[currentPassword] est vérifié avant
+  /// tout re-chiffrement. En cas d'échec du rekey, la base reste lisible avec
+  /// l'ancien mot de passe (opération SQLCipher atomique).
+  Future<ChangePasswordResult> changeMasterPassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final db = _database;
+    if (db == null) return ChangePasswordResult.vaultLocked;
+
+    try {
+      final salt = await SaltManager.getOrGenerateSalt();
+
+      // 1. Vérifier l'ancien mot de passe : la clé dérivée doit ouvrir la base.
+      final currentKey = await _deriveKeyBytes(currentPassword, salt);
+      final isCurrentValid = await _keyOpensDatabase(currentKey);
+      if (!isCurrentValid) {
+        return ChangePasswordResult.wrongCurrentPassword;
+      }
+
+      // 2. Dériver la nouvelle clé (même sel : non secret, pas besoin de
+      //    rotation) et re-chiffrer la base en place.
+      final newKey = await _deriveKeyBytes(newPassword, salt);
+      await db.customStatement('PRAGMA rekey = "x\'${_toHex(newKey)}\'";');
+
+      // 3. Re-protéger la clé de déverrouillage biométrique (best-effort).
+      await _persistKeyForBiometricsIfEnabled(newKey);
+
+      return ChangePasswordResult.success;
+    } catch (_) {
+      return ChangePasswordResult.failure;
+    }
+  }
+
+  Future<List<int>> _deriveKeyBytes(String password, Uint8List salt) async {
+    final secretKey = await KeyDerivator.deriveKeyFromPassword(password, salt);
+    return secretKey.extractBytes();
+  }
+
+  /// Vérifie qu'une clé donnée ouvre bien la base, via une connexion temporaire
+  /// (ne perturbe pas la session principale ouverte).
+  Future<bool> _keyOpensDatabase(List<int> keyBytes) async {
+    final probe = AppDatabase(keyBytes);
+    try {
+      await probe.customSelect('SELECT 1').get();
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      await probe.close();
+    }
+  }
+
+  String _toHex(List<int> bytes) =>
+      bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
   /// Verrouille activement le coffre
   void lockVault() {
