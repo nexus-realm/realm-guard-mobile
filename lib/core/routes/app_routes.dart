@@ -9,6 +9,8 @@ class AppRoutes {
   static const String addCredential = '/add-credential';
   static const String credentialDetail = '/credential';
   static const String profileDetail = '/profile';
+  static const String addTotp = '/add-totp';
+  static const String totpDetail = '/totp';
 
   static const String settings = '/settings';
   static const String settingsChangePassword = '/settings/change-password';

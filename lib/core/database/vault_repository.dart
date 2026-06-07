@@ -14,6 +14,7 @@ import 'app_database.dart';
 abstract interface class HomeRepository {
   Stream<List<Profile>> watchAllProfiles();
   Stream<List<CredentialWithProfile>> watchCredentialsWithProfiles();
+  Stream<List<TotpWithProfile>> watchTotpsWithProfiles();
 }
 
 /// Opérations d'écriture/lecture nécessaires aux pages d'ajout. Permet

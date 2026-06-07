@@ -15,16 +15,19 @@ class HomeViewModel extends ChangeNotifier {
 
   List<Profile> _profiles = [];
   List<CredentialWithProfile> _credentials = [];
+  List<TotpWithProfile> _totps = [];
   String _query = '';
 
-  // Le chargement est terminé quand les DEUX flux ont émis au moins une fois ;
+  // Le chargement est terminé quand les flux ont émis au moins une fois ;
   // évite d'afficher l'état "vide" pendant le chargement initial.
   bool _profilesLoaded = false;
   bool _credentialsLoaded = false;
+  bool _totpsLoaded = false;
 
   Timer? _debounceTimer;
   StreamSubscription<List<Profile>>? _profilesSub;
   StreamSubscription<List<CredentialWithProfile>>? _credentialsSub;
+  StreamSubscription<List<TotpWithProfile>>? _totpsSub;
 
   final List<dynamic> _results = [];
   List<dynamic> get results => _results;
@@ -32,6 +35,7 @@ class HomeViewModel extends ChangeNotifier {
   // Listes filtrées par type, alimentées par la requête de recherche courante.
   List<Profile> _filteredProfiles = const [];
   List<CredentialWithProfile> _filteredCredentials = const [];
+  List<TotpWithProfile> _filteredTotps = const [];
 
   /// Profils correspondant à la recherche courante (pour l'onglet Profils).
   List<Profile> get filteredProfiles => _filteredProfiles;
@@ -39,8 +43,12 @@ class HomeViewModel extends ChangeNotifier {
   /// Identifiants correspondant à la recherche courante (onglet Identifiants).
   List<CredentialWithProfile> get filteredCredentials => _filteredCredentials;
 
+  /// TOTP correspondant à la recherche courante (onglet TOTP).
+  List<TotpWithProfile> get filteredTotps => _filteredTotps;
+
   /// Vrai tant que le premier chargement des données n'est pas terminé.
-  bool get isLoading => !(_profilesLoaded && _credentialsLoaded);
+  bool get isLoading =>
+      !(_profilesLoaded && _credentialsLoaded && _totpsLoaded);
 
   /// Vrai si une recherche est active (permet de distinguer "coffre vide" de
   /// "aucun résultat de recherche").
@@ -68,6 +76,11 @@ class HomeViewModel extends ChangeNotifier {
       _credentialsLoaded = true;
       _rebuildResults();
     });
+    _totpsSub = _vaultRepository.watchTotpsWithProfiles().listen((totps) {
+      _totps = totps;
+      _totpsLoaded = true;
+      _rebuildResults();
+    });
   }
 
   void _onSearchChanged() {
@@ -86,6 +99,7 @@ class HomeViewModel extends ChangeNotifier {
     _filteredCredentials = _credentials
         .where((c) => _matchesCredential(c.credential))
         .toList();
+    _filteredTotps = _totps.where((t) => _matchesTotp(t.totp)).toList();
 
     _results
       ..clear()
@@ -101,6 +115,14 @@ class HomeViewModel extends ChangeNotifier {
     bool contains(String? value) =>
         value != null && value.toLowerCase().contains(_query);
     return contains(c.title) || contains(c.username) || contains(c.uri);
+  }
+
+  /// La recherche d'un TOTP porte sur le libellé et le compte.
+  bool _matchesTotp(Totp t) {
+    if (_query.isEmpty) return true;
+    bool contains(String? value) =>
+        value != null && value.toLowerCase().contains(_query);
+    return contains(t.label) || contains(t.account);
   }
 
   /// Ouvre le menu d'ajout dans une bottom sheet **modale**.
@@ -171,11 +193,15 @@ class HomeViewModel extends ChangeNotifier {
   /// Navigation directe vers l'ajout d'un profil (FAB de l'onglet Profils).
   void addProfile(BuildContext context) => context.push(AppRoutes.addProfile);
 
+  /// Navigation directe vers l'ajout d'un TOTP (FAB de l'onglet TOTP).
+  void addTotp(BuildContext context) => context.push(AppRoutes.addTotp);
+
   @override
   void dispose() {
     _debounceTimer?.cancel();
     _profilesSub?.cancel();
     _credentialsSub?.cancel();
+    _totpsSub?.cancel();
     _searchNotifier.removeListener(_onSearchChanged);
     super.dispose();
   }
