@@ -6,6 +6,7 @@ import '../../features/home/data/credential_draft.dart';
 import '../../features/home/data/custom_field.dart';
 import '../../features/home/data/profile_deletion_strategy.dart';
 import '../../features/home/data/profile_draft.dart';
+import '../../features/home/data/totp_draft.dart';
 import 'app_database.dart';
 
 /// Lecture réactive dont la vue Home a besoin. Permet d'injecter un faux
@@ -40,8 +41,29 @@ abstract interface class CredentialEditor {
   Future<int> deleteCredential(int id);
 }
 
+/// Lecture réactive des TOTP (liste pour l'onglet Vault).
+abstract interface class TotpReader {
+  Stream<List<TotpWithProfile>> watchTotpsWithProfiles();
+}
+
+/// Création / consultation / modification / suppression d'un TOTP, avec la
+/// liste des profils pour l'association.
+abstract interface class TotpEditor {
+  Future<List<Profile>> getAllProfiles();
+  Future<int> addTotp(TotpDraft draft);
+  Stream<TotpWithProfile?> watchTotp(int id);
+  Future<bool> updateTotp(int id, TotpDraft draft);
+  Future<int> deleteTotp(int id);
+}
+
 class VaultRepository
-    implements HomeRepository, VaultEditor, ProfileEditor, CredentialEditor {
+    implements
+        HomeRepository,
+        VaultEditor,
+        ProfileEditor,
+        CredentialEditor,
+        TotpReader,
+        TotpEditor {
   final AppDatabase _db;
 
   VaultRepository(this._db);
@@ -200,6 +222,74 @@ class VaultRepository
       }).toList(),
     );
   }
+
+  // TOTP
+  TotpsCompanion _totpCompanion(TotpDraft draft, {DateTime? updatedAt}) {
+    return TotpsCompanion(
+      label: Value(draft.label),
+      account: Value(draft.account),
+      secret: Value(draft.secret),
+      digits: Value(draft.digits),
+      period: Value(draft.period),
+      algorithm: Value(draft.algorithm),
+      profileId: Value(draft.profileId),
+      favorite: Value(draft.favorite),
+      updatedAt: updatedAt == null ? const Value.absent() : Value(updatedAt),
+    );
+  }
+
+  @override
+  Future<int> addTotp(TotpDraft draft) =>
+      _db.totps.insertOne(_totpCompanion(draft));
+
+  @override
+  Future<bool> updateTotp(int id, TotpDraft draft) =>
+      (_db.totps.update()..where((tbl) => tbl.id.equals(id))).write(
+        _totpCompanion(draft, updatedAt: DateTime.now()),
+      ).then((rows) => rows > 0);
+
+  @override
+  Future<int> deleteTotp(int id) =>
+      _db.totps.deleteWhere((tbl) => tbl.id.equals(id));
+
+  @override
+  Stream<TotpWithProfile?> watchTotp(int id) {
+    final query = _db.totps.select().join([
+      leftOuterJoin(
+        _db.profiles,
+        _db.profiles.id.equalsExp(_db.totps.profileId),
+      ),
+    ])..where(_db.totps.id.equals(id));
+
+    return query.watchSingleOrNull().map((row) {
+      if (row == null) return null;
+      return TotpWithProfile(
+        row.readTable(_db.totps),
+        row.readTableOrNull(_db.profiles),
+      );
+    });
+  }
+
+  @override
+  Stream<List<TotpWithProfile>> watchTotpsWithProfiles() {
+    final query = _db.totps.select().join([
+      leftOuterJoin(
+        _db.profiles,
+        _db.profiles.id.equalsExp(_db.totps.profileId),
+      ),
+    ]);
+
+    return query.watch().map(
+      (rows) => rows
+          .map(
+            (row) => TotpWithProfile(
+              row.readTable(_db.totps),
+              row.readTableOrNull(_db.profiles),
+            ),
+          )
+          .toList(),
+    );
+  }
 }
 
 class CredentialWithProfile {
@@ -207,4 +297,11 @@ class CredentialWithProfile {
   final Profile? profile;
 
   CredentialWithProfile(this.credential, this.profile);
+}
+
+class TotpWithProfile {
+  final Totp totp;
+  final Profile? profile;
+
+  TotpWithProfile(this.totp, this.profile);
 }
