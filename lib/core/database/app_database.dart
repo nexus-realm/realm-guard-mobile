@@ -7,16 +7,17 @@ import 'package:path_provider/path_provider.dart';
 
 import 'models/credentials.dart';
 import 'models/profiles.dart';
+import 'models/totps.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Profiles, Credentials])
+@DriftDatabase(tables: [Profiles, Credentials, Totps])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(List<int> encryptionKeyBytes)
     : super(_openConnection(encryptionKeyBytes));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -54,6 +55,10 @@ class AppDatabase extends _$AppDatabase {
         await migrator.addColumn(profiles, profiles.note);
         await migrator.addColumn(profiles, profiles.createdAt);
         await migrator.addColumn(profiles, profiles.updatedAt);
+      }
+      if (from < 4) {
+        // Nouveau type de secret : TOTP.
+        await migrator.createTable(totps);
       }
     },
   );

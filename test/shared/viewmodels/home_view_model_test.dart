@@ -11,6 +11,8 @@ class FakeHomeRepository implements HomeRepository {
       StreamController<List<Profile>>.broadcast();
   final StreamController<List<CredentialWithProfile>> credentials =
       StreamController<List<CredentialWithProfile>>.broadcast();
+  final StreamController<List<TotpWithProfile>> totps =
+      StreamController<List<TotpWithProfile>>.broadcast();
 
   @override
   Stream<List<Profile>> watchAllProfiles() => profiles.stream;
@@ -18,6 +20,9 @@ class FakeHomeRepository implements HomeRepository {
   @override
   Stream<List<CredentialWithProfile>> watchCredentialsWithProfiles() =>
       credentials.stream;
+
+  @override
+  Stream<List<TotpWithProfile>> watchTotpsWithProfiles() => totps.stream;
 }
 
 Profile _profile(int id, String name) => Profile(
@@ -50,12 +55,29 @@ CredentialWithProfile _credential(
   null,
 );
 
+TotpWithProfile _totp(int id, String label, {String? account}) =>
+    TotpWithProfile(
+      Totp(
+        id: id,
+        label: label,
+        account: account,
+        secret: 'JBSWY3DP',
+        digits: 6,
+        period: 30,
+        algorithm: 'SHA1',
+        favorite: false,
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      ),
+      null,
+    );
+
 // Laisse tourner les microtasks pour que les listeners de stream s'exécutent.
 Future<void> _settle() => Future<void>.delayed(Duration.zero);
 
 void main() {
   group('HomeViewModel', () {
-    test('isLoading reste vrai tant que les deux flux n\'ont pas émis', () async {
+    test('isLoading reste vrai tant que les flux n\'ont pas tous émis', () async {
       final repo = FakeHomeRepository();
       final vm = HomeViewModel(SearchNotifier(), repo);
       addTearDown(vm.dispose);
@@ -63,13 +85,16 @@ void main() {
       // Aucune émission : chargement en cours.
       expect(vm.isLoading, isTrue);
 
-      // Un seul flux a émis : toujours en chargement.
+      // Tous les flux n'ont pas émis : toujours en chargement.
       repo.profiles.add([_profile(1, 'GitHub')]);
       await _settle();
       expect(vm.isLoading, isTrue);
-
-      // Les deux flux ont émis : chargement terminé.
       repo.credentials.add(const []);
+      await _settle();
+      expect(vm.isLoading, isTrue);
+
+      // Les trois flux ont émis : chargement terminé.
+      repo.totps.add(const []);
       await _settle();
       expect(vm.isLoading, isFalse);
     });
@@ -81,6 +106,7 @@ void main() {
 
       repo.profiles.add(const []);
       repo.credentials.add(const []);
+      repo.totps.add(const []);
       await _settle();
 
       expect(vm.isLoading, isFalse);
@@ -100,6 +126,7 @@ void main() {
 
       repo.profiles.add(const []);
       repo.credentials.add(const []);
+      repo.totps.add(const []);
       await _settle();
       expect(vm.hasSearchQuery, isFalse);
 
@@ -135,6 +162,36 @@ void main() {
       repo.profiles.add([_profile(1, 'GitHub'), _profile(2, 'GitLab')]);
       await _settle();
       expect(vm.results.length, 2);
+    });
+
+    test('expose et filtre les TOTP (label + compte)', () async {
+      final repo = FakeHomeRepository();
+      final search = SearchNotifier();
+      final vm = HomeViewModel(
+        search,
+        repo,
+        searchDebounce: const Duration(milliseconds: 10),
+      );
+      addTearDown(vm.dispose);
+
+      repo.profiles.add(const []);
+      repo.credentials.add(const []);
+      repo.totps.add([
+        _totp(1, 'GitHub', account: 'octo@example.com'),
+        _totp(2, 'GitLab'),
+      ]);
+      await _settle();
+      expect(vm.filteredTotps, hasLength(2));
+
+      // Recherche sur le compte.
+      search.updateQuery('octo');
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(vm.filteredTotps.map((t) => t.totp.label), ['GitHub']);
+
+      // Recherche sur le label.
+      search.updateQuery('lab');
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(vm.filteredTotps.map((t) => t.totp.label), ['GitLab']);
     });
 
     test('expose des listes filtrées séparées par type', () async {

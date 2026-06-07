@@ -13,14 +13,14 @@ import '../../../shared/notifiers/search_notifier_scope.dart';
 import '../../../shared/viewmodels/home_view_model.dart';
 import 'widgets/credential_avatar.dart';
 import 'widgets/profile_avatar.dart';
+import 'widgets/totp_list_tile.dart';
 import 'widgets/vault_list_tile.dart';
 
-/// Onglet principal de la Vault : la liste des identifiants.
+/// Onglet principal de la Vault : une TabBar par type de secret
+/// (Identifiants / TOTP). La recherche (AppBar de HomeShell) et le FAB sont
+/// communs et contextualisés selon l'onglet actif.
 ///
-/// Les profils sont gérés dans un écran dédié (icône 👥 de l'AppBar) car ce
-/// sont des données de référence, peu consultées au quotidien. Une TabBar par
-/// type de secret (Identifiants / TOTP / Clés …) sera réintroduite ici lorsque
-/// plusieurs types existeront.
+/// Les profils restent gérés dans un écran dédié (icône 👥 de l'AppBar).
 class HomeTab extends StatefulWidget {
   final VaultService vaultService;
 
@@ -30,25 +30,23 @@ class HomeTab extends StatefulWidget {
   State<HomeTab> createState() => _HomeTabState();
 }
 
-class _HomeTabState extends State<HomeTab> {
+class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
   late final VaultRepository _repository;
+  late final TabController _tabController;
   HomeViewModel? _viewModel;
-  // Référence mise en cache : on ne peut pas faire de lookup d'InheritedWidget
-  // dans dispose() (le contexte y est désactivé).
+  // Référence mise en cache : lookup d'InheritedWidget interdit dans dispose().
   FabNotifier? _fabNotifier;
 
   @override
   void initState() {
     super.initState();
     _repository = VaultRepository(widget.vaultService.db);
+    _tabController = TabController(length: 2, vsync: this)
+      ..addListener(_onTabChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _fabNotifier?.register(
-        icon: Icons.add,
-        label: 'Identifiant',
-        onPressed: () => _viewModel?.addCredential(context),
-      );
+      _registerFab();
     });
   }
 
@@ -61,36 +59,72 @@ class _HomeTabState extends State<HomeTab> {
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
+    _tabController.dispose();
     _fabNotifier?.unregister();
     _viewModel!.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _viewModel!,
-      builder: (context, _) => _buildContent(),
+  void _onTabChanged() {
+    if (!_tabController.indexIsChanging) _registerFab();
+  }
+
+  /// FAB contextuel : ajoute un identifiant ou un TOTP selon l'onglet actif.
+  void _registerFab() {
+    final isCredentials = _tabController.index == 0;
+    _fabNotifier?.register(
+      icon: Icons.add,
+      label: isCredentials ? 'Identifiant' : 'TOTP',
+      onPressed: () => isCredentials
+          ? _viewModel?.addCredential(context)
+          : _viewModel?.addTotp(context),
     );
   }
 
-  Widget _buildContent() {
-    if (_viewModel!.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          indicatorColor: AppColors.mainColor,
+          indicatorWeight: 3,
+          labelColor: AppColors.mainColor,
+          unselectedLabelColor: AppColors.secondaryText,
+          dividerColor: AppColors.secondaryBackground,
+          tabs: const [
+            Tab(text: 'Identifiants'),
+            Tab(text: 'TOTP'),
+          ],
+        ),
+        Expanded(
+          child: ListenableBuilder(
+            listenable: _viewModel!,
+            builder: (context, _) {
+              if (_viewModel!.isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              return TabBarView(
+                controller: _tabController,
+                children: [_buildCredentialsTab(), _buildTotpsTab()],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
+  Widget _buildCredentialsTab() {
     final credentials = _viewModel!.filteredCredentials;
     if (credentials.isEmpty) {
-      final hasQuery = _viewModel!.hasSearchQuery;
-      return _EmptyState(
-        icon: hasQuery ? Icons.search_off : Icons.vpn_key_outlined,
-        title: hasQuery ? 'Aucun résultat' : 'Votre coffre est vide',
-        message: hasQuery
-            ? 'Aucun identifiant ne correspond à votre recherche.'
-            : 'Appuyez sur + pour ajouter un identifiant.',
+      return _emptyState(
+        emptyIcon: Icons.vpn_key_outlined,
+        emptyTitle: 'Aucun identifiant',
+        emptyMessage: 'Appuyez sur + pour ajouter un identifiant.',
       );
     }
-
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       itemCount: credentials.length,
@@ -138,6 +172,45 @@ class _HomeTabState extends State<HomeTab> {
       },
     );
   }
+
+  Widget _buildTotpsTab() {
+    final totps = _viewModel!.filteredTotps;
+    if (totps.isEmpty) {
+      return _emptyState(
+        emptyIcon: Icons.timer_outlined,
+        emptyTitle: 'Aucun code TOTP',
+        emptyMessage: 'Appuyez sur + pour ajouter un code à validation en '
+            'deux étapes.',
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      itemCount: totps.length,
+      itemBuilder: (context, index) {
+        final item = totps[index];
+        return TotpListTile(
+          totp: item.totp,
+          subtitle: item.totp.account ?? item.profile?.name ?? '',
+          onTap: () => context.push('${AppRoutes.totpDetail}/${item.totp.id}'),
+        );
+      },
+    );
+  }
+
+  Widget _emptyState({
+    required IconData emptyIcon,
+    required String emptyTitle,
+    required String emptyMessage,
+  }) {
+    final hasQuery = _viewModel!.hasSearchQuery;
+    return _EmptyState(
+      icon: hasQuery ? Icons.search_off : emptyIcon,
+      title: hasQuery ? 'Aucun résultat' : emptyTitle,
+      message: hasQuery
+          ? 'Aucun élément ne correspond à votre recherche.'
+          : emptyMessage,
+    );
+  }
 }
 
 /// État vide générique (liste vide ou recherche sans résultat).
@@ -163,11 +236,7 @@ class _EmptyState extends StatelessWidget {
           children: [
             Icon(icon, size: 48, color: AppColors.secondaryText),
             const SizedBox(height: 12),
-            Text(
-              title,
-              style: textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
+            Text(title, style: textTheme.titleMedium, textAlign: TextAlign.center),
             const SizedBox(height: 4),
             Text(
               message,
