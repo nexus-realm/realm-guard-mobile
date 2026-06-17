@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 import '../../../core/database/vault_repository.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
+import '../../../shared/widgets/secondary_button.dart';
 import '../../../shared/widgets/view_title.dart';
+import '../data/totp_draft.dart';
 import '../viewmodels/add_totp_view_model.dart';
+import 'scan_totp_page.dart';
 import 'widgets/totp_form.dart';
 
 class AddTotpPage extends StatefulWidget {
@@ -19,8 +22,11 @@ class AddTotpPage extends StatefulWidget {
 
 class _AddTotpPageState extends State<AddTotpPage> {
   late final AddTotpViewModel _viewModel;
-  final _formKey = GlobalKey<FormState>();
-  final _totpFormKey = GlobalKey<TotpFormState>();
+  GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  GlobalKey<TotpFormState> _totpFormKey = GlobalKey<TotpFormState>();
+
+  // Valeurs initiales du formulaire (renseignées après un scan QR réussi).
+  TotpDraft? _initialDraft;
 
   @override
   void initState() {
@@ -33,6 +39,24 @@ class _AddTotpPageState extends State<AddTotpPage> {
   void dispose() {
     _viewModel.dispose();
     super.dispose();
+  }
+
+  Future<void> _scan() async {
+    final draft = await Navigator.of(context).push<TotpDraft>(
+      MaterialPageRoute(builder: (_) => const ScanTotpPage()),
+    );
+    if (draft == null || !mounted) return;
+    setState(() {
+      _initialDraft = draft;
+      // Nouvelles clés : recrée le formulaire avec les valeurs scannées.
+      _formKey = GlobalKey<FormState>();
+      _totpFormKey = GlobalKey<TotpFormState>();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('QR code lu. Vérifiez puis enregistrez.'),
+      ),
+    );
   }
 
   Future<void> _submit() async {
@@ -73,10 +97,23 @@ class _AddTotpPageState extends State<AddTotpPage> {
                 children: [
                   const ViewTitle(topTitle: 'Coffre', title: 'TOTP_'),
                   AppSpacing.gapLg,
+                  SecondaryButton(
+                    onPressed: _viewModel.isSubmitting ? null : _scan,
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.qr_code_scanner, size: 20),
+                        SizedBox(width: AppSpacing.xs),
+                        Text('Scanner un QR code'),
+                      ],
+                    ),
+                  ),
+                  AppSpacing.gapLg,
                   TotpForm(
                     key: _totpFormKey,
                     formKey: _formKey,
                     profiles: _viewModel.profiles,
+                    initial: _initialDraft,
                     enabled: !_viewModel.isSubmitting,
                   ),
                   AppSpacing.gapXl,
