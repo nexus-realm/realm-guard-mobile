@@ -46,6 +46,30 @@ class OnboardingProgress {
     );
   }
 
+  /// Étapes de préférences ajoutées après la version initiale de l'onboarding.
+  /// Pour un utilisateur déjà installé, elles sont considérées comme acquises
+  /// (avec leur valeur par défaut) afin de ne pas le renvoyer dans l'onboarding.
+  static const List<OnboardingStep> _preferenceSteps = [
+    OnboardingStep.totpChoice,
+  ];
+
+  /// Normalise une progression chargée : si le mot de passe maître est déjà
+  /// configuré (utilisateur existant), marque les étapes de préférences
+  /// récentes comme terminées. Sans effet pour un nouvel utilisateur (le mot de
+  /// passe maître n'est pas encore défini), qui verra donc bien ces étapes.
+  OnboardingProgress withMigratedSteps() {
+    if (!completedSteps.contains(OnboardingStep.masterPassword)) {
+      return this;
+    }
+    var migrated = this;
+    for (final step in _preferenceSteps) {
+      if (!migrated.completedSteps.contains(step)) {
+        migrated = migrated.markStepCompleted(step);
+      }
+    }
+    return migrated;
+  }
+
   Map<String, Object?> toJson() {
     return <String, Object?>{
       'completedSteps': completedSteps.map((step) => step.storageKey).toList(),

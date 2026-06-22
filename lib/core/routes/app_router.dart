@@ -63,6 +63,7 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => OnboardingPage(
         onboardingStorageService: _onboardingStorageService,
         vaultService: _vaultService,
+        featureFlagsController: featureFlagsController,
       ),
     ),
     GoRoute(

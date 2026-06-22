@@ -5,6 +5,8 @@ import 'package:realm_guard_mobile/features/onboarding/service/onboarding_storag
 import 'package:realm_guard_mobile/core/security/vault_service.dart';
 import 'package:realm_guard_mobile/features/onboarding/viewmodels/onboarding_view_model.dart';
 
+import '../../../support/feature_flags_test_doubles.dart';
+
 class InMemoryOnboardingStorageService extends OnboardingStorageService {
   OnboardingProgress _progress = OnboardingProgress.initial();
 
@@ -29,13 +31,16 @@ class FakeVaultService extends VaultService {
   Future<void> unlockWithMasterPassword(String masterPassword) async {}
 }
 
+OnboardingViewModel _buildViewModel() => OnboardingViewModel(
+  onboardingStorageService: InMemoryOnboardingStorageService(),
+  vaultService: FakeVaultService(),
+  featureFlagsController: featureFlagsControllerWith(),
+);
+
 void main() {
   group('OnboardingViewModel', () {
     test('returns validation error for empty master password fields', () async {
-      final viewModel = OnboardingViewModel(
-        onboardingStorageService: InMemoryOnboardingStorageService(),
-        vaultService: FakeVaultService(),
-      );
+      final viewModel = _buildViewModel();
 
       await viewModel.initialize();
       await viewModel.completeWelcomeStep();
@@ -48,10 +53,7 @@ void main() {
     });
 
     test('completes onboarding flow with valid inputs', () async {
-      final viewModel = OnboardingViewModel(
-        onboardingStorageService: InMemoryOnboardingStorageService(),
-        vaultService: FakeVaultService(),
-      );
+      final viewModel = _buildViewModel();
 
       await viewModel.initialize();
       await viewModel.completeWelcomeStep();
@@ -61,6 +63,7 @@ void main() {
         'Motdepasse1!',
       );
       await viewModel.completeBiometricStep(true);
+      await viewModel.completeTotpChoiceStep(true);
 
       expect(success, isTrue);
       expect(viewModel.currentStep, isNull);
@@ -69,10 +72,7 @@ void main() {
     });
 
     test('starts at welcome step after initialization', () async {
-      final viewModel = OnboardingViewModel(
-        onboardingStorageService: InMemoryOnboardingStorageService(),
-        vaultService: FakeVaultService(),
-      );
+      final viewModel = _buildViewModel();
 
       await viewModel.initialize();
 
@@ -81,4 +81,3 @@ void main() {
     });
   });
 }
-

@@ -28,7 +28,11 @@ class StartupGateViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final progress = await _onboardingStorageService.loadProgress();
+    // `withMigratedSteps` évite de renvoyer un utilisateur déjà installé dans
+    // l'onboarding lorsqu'une étape de préférence (ex. choix TOTP) a été
+    // ajoutée après sa première configuration.
+    final progress = (await _onboardingStorageService.loadProgress())
+        .withMigratedSteps();
     final isBiometricAvailable = await _biometricStorageService
         .isBiometricAvailable();
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/feature_flags/feature_flags_controller.dart';
 import '../../../core/security/vault_service.dart';
 import '../data/onboarding_step.dart';
 import '../service/onboarding_flow_controller.dart';
@@ -11,10 +12,12 @@ class OnboardingViewModel extends ChangeNotifier {
   OnboardingViewModel({
     required OnboardingStorageService onboardingStorageService,
     required VaultService vaultService,
+    required FeatureFlagsController featureFlagsController,
   }) {
     _flowController = OnboardingFlowController(
       onboardingStorageService: onboardingStorageService,
       vaultService: vaultService,
+      featureFlagsController: featureFlagsController,
     );
     _flowController.addListener(_forwardFlowControllerUpdates);
   }
@@ -40,6 +43,10 @@ class OnboardingViewModel extends ChangeNotifier {
 
   Future<void> completeBiometricStep(bool enabled) {
     return _flowController.completeBiometricStep(enabled);
+  }
+
+  Future<void> completeTotpChoiceStep(bool enabled) {
+    return _flowController.completeTotpChoiceStep(enabled);
   }
 
   void _forwardFlowControllerUpdates() {
