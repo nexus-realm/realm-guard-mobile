@@ -80,7 +80,10 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: AppRoutes.home,
           name: 'home',
-          builder: (context, state) => HomeTab(vaultService: _vaultService),
+          builder: (context, state) => HomeTab(
+            vaultService: _vaultService,
+            featureFlagsController: featureFlagsController,
+          ),
         ),
       ],
     ),
@@ -148,6 +151,7 @@ final GoRouter appRouter = GoRouter(
         vaultService: _vaultService,
         biometricService: BiometricStorageService(),
         resetService: AppResetService(),
+        featureFlagsController: featureFlagsController,
       ),
       routes: [
         GoRoute(

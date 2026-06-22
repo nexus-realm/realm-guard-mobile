@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/vault_repository.dart';
+import '../../../core/feature_flags/feature_flag.dart';
+import '../../../core/feature_flags/feature_flags_controller.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/vault_service.dart';
 import '../../../core/theme/app_colors.dart';
@@ -23,8 +25,13 @@ import 'widgets/vault_list_tile.dart';
 /// Les profils restent gérés dans un écran dédié (icône 👥 de l'AppBar).
 class HomeTab extends StatefulWidget {
   final VaultService vaultService;
+  final FeatureFlagsController featureFlagsController;
 
-  const HomeTab({required this.vaultService, super.key});
+  const HomeTab({
+    required this.vaultService,
+    required this.featureFlagsController,
+    super.key,
+  });
 
   @override
   State<HomeTab> createState() => _HomeTabState();
@@ -43,6 +50,7 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
     _repository = VaultRepository(widget.vaultService.db);
     _tabController = TabController(length: 2, vsync: this)
       ..addListener(_onTabChanged);
+    widget.featureFlagsController.addListener(_onFlagsChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -59,6 +67,7 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
 
   @override
   void dispose() {
+    widget.featureFlagsController.removeListener(_onFlagsChanged);
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _fabNotifier?.unregister();
@@ -70,9 +79,21 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
     if (!_tabController.indexIsChanging) _registerFab();
   }
 
+  /// La gestion des TOTP a été (dés)activée dans les paramètres : recompose
+  /// l'onglet (TabBar ou non) et réajuste le FAB contextuel.
+  void _onFlagsChanged() {
+    if (!mounted) return;
+    setState(() {});
+    _registerFab();
+  }
+
   /// FAB contextuel : ajoute un identifiant ou un TOTP selon l'onglet actif.
+  /// Si la gestion des TOTP est désactivée, il n'y a qu'un seul type d'ajout.
   void _registerFab() {
-    final isCredentials = _tabController.index == 0;
+    final totpEnabled = widget.featureFlagsController.isEnabled(
+      FeatureFlag.totp,
+    );
+    final isCredentials = !totpEnabled || _tabController.index == 0;
     _fabNotifier?.register(
       icon: Icons.add,
       label: isCredentials ? 'Identifiant' : 'TOTP',
@@ -84,6 +105,24 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final totpEnabled = widget.featureFlagsController.isEnabled(
+      FeatureFlag.totp,
+    );
+
+    // TOTP désactivé : interface simplifiée, uniquement la liste d'identifiants
+    // (ni TabBar, ni onglet/FAB TOTP).
+    if (!totpEnabled) {
+      return ListenableBuilder(
+        listenable: _viewModel!,
+        builder: (context, _) {
+          if (_viewModel!.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return _buildCredentialsTab();
+        },
+      );
+    }
+
     return Column(
       children: [
         TabBar(
