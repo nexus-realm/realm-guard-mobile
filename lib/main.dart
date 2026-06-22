@@ -10,7 +10,7 @@ import 'core/routes/app_router.dart';
 import 'core/routes/app_routes.dart';
 import 'core/theme/app_theme.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
@@ -19,6 +19,11 @@ void main() {
   if (Platform.isAndroid) {
     open.overrideFor(OperatingSystem.android, openCipherOnAndroid);
   }
+
+  // Préférences de fonctionnalités chargées avant le premier rendu pour que
+  // l'interface (onglets de l'accueil) reflète immédiatement le choix de
+  // l'utilisateur.
+  await featureFlagsController.load();
 
   runApp(const RealmGuard());
 }

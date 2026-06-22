@@ -24,6 +24,7 @@ import '../../features/settings/views/settings_page.dart';
 import '../../features/unlock/views/unlock_page.dart';
 import '../../shared/views/home/home_shell.dart';
 import '../../core/database/vault_repository.dart';
+import '../feature_flags/feature_flags_controller.dart';
 import '../security/app_lock_controller.dart';
 import '../security/biometric_storage_service.dart';
 import '../security/unlock_service.dart';
@@ -38,6 +39,10 @@ final UnlockService _unlockService = UnlockService(vaultService: _vaultService);
 final AppLockController appLockController = AppLockController(
   vaultService: _vaultService,
 );
+
+/// Préférences de fonctionnalités (ex. activation de la gestion des TOTP).
+/// Chargé au démarrage dans `main()`, consommé par l'accueil et les paramètres.
+final FeatureFlagsController featureFlagsController = FeatureFlagsController();
 
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.startup,
