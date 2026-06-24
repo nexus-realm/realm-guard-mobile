@@ -3,26 +3,33 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
+import '../../../core/feature_flags/feature_flag.dart';
+import '../../../core/feature_flags/feature_flags_controller.dart';
+import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../../../shared/widgets/secondary_button.dart';
 import '../viewmodels/profile_detail_view_model.dart';
+import 'widgets/credential_avatar.dart';
 import 'widgets/delete_profile_dialog.dart';
 import 'widgets/detail_tile.dart';
 import 'widgets/discard_changes_dialog.dart';
 import 'widgets/profile_avatar.dart';
 import 'widgets/profile_form.dart';
+import 'widgets/vault_list_tile.dart';
 
 class ProfileDetailPage extends StatefulWidget {
   const ProfileDetailPage({
     required this.repository,
     required this.profileId,
+    required this.featureFlagsController,
     super.key,
   });
 
   final ProfileEditor repository;
   final int profileId;
+  final FeatureFlagsController featureFlagsController;
 
   @override
   State<ProfileDetailPage> createState() => _ProfileDetailPageState();
@@ -259,6 +266,38 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
             label: 'Note',
             value: profile.note!,
           ),
+
+        // --- Éléments liés ---
+        _linkedHeader('Identifiants liés', _viewModel.linkedCredentials.length),
+        if (_viewModel.linkedCredentials.isEmpty)
+          _linkedEmpty('Aucun identifiant lié à ce profil.'),
+        for (final credential in _viewModel.linkedCredentials)
+          VaultListTile(
+            leading: CredentialAvatar(
+              title: credential.title,
+              uri: credential.uri,
+              radius: 18,
+            ),
+            title: credential.title,
+            subtitle: credential.username ?? credential.uri,
+            onTap: () => context.push(
+              '${AppRoutes.credentialDetail}/${credential.id}',
+            ),
+          ),
+
+        if (widget.featureFlagsController.isEnabled(FeatureFlag.totp)) ...[
+          _linkedHeader('Codes TOTP liés', _viewModel.linkedTotps.length),
+          if (_viewModel.linkedTotps.isEmpty)
+            _linkedEmpty('Aucun code TOTP lié à ce profil.'),
+          for (final totp in _viewModel.linkedTotps)
+            VaultListTile(
+              leading: const _TotpLeadingAvatar(),
+              title: totp.label,
+              subtitle: totp.account,
+              onTap: () => context.push('${AppRoutes.totpDetail}/${totp.id}'),
+            ),
+        ],
+        const SizedBox(height: AppSpacing.lg),
       ],
     );
   }
@@ -268,5 +307,51 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
       for (final value in values)
         DetailTile(icon: icon, label: label, value: value),
     ];
+  }
+
+  /// En-tête d'une section d'éléments liés : titre + nombre d'éléments.
+  Widget _linkedHeader(String title, int count) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.xs,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+          ),
+          Text('$count', style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
+    );
+  }
+
+  Widget _linkedEmpty(String message) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        AppSpacing.xs,
+      ),
+      child: Text(message, style: Theme.of(context).textTheme.bodyMedium),
+    );
+  }
+}
+
+/// Pastille circulaire d'un TOTP dans la liste des éléments liés d'un profil.
+class _TotpLeadingAvatar extends StatelessWidget {
+  const _TotpLeadingAvatar();
+
+  @override
+  Widget build(BuildContext context) {
+    return const CircleAvatar(
+      radius: 18,
+      backgroundColor: AppColors.mainBackground,
+      child: Icon(Icons.timer_outlined, size: 18, color: AppColors.mainColor),
+    );
   }
 }

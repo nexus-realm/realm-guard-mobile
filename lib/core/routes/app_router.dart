@@ -124,6 +124,7 @@ final GoRouter appRouter = GoRouter(
         return ProfileDetailPage(
           repository: VaultRepository(_vaultService.db),
           profileId: id,
+          featureFlagsController: featureFlagsController,
         );
       },
     ),
