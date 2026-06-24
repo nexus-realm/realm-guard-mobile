@@ -162,6 +162,16 @@ abstract class AppTheme {
           borderSide: BorderSide(color: AppColors.mainColor),
         ),
       ),
+      listTileTheme: const ListTileThemeData(
+        // Description (sous-titre) volontairement plus discrète que le libellé :
+        // couleur secondaire et taille légèrement réduite pour la hiérarchie.
+        subtitleTextStyle: TextStyle(
+          fontFamily: _fontBody,
+          color: AppColors.secondaryText,
+          fontSize: 13,
+          height: 1.3,
+        ),
+      ),
     );
   }
 }
