@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
@@ -159,11 +160,21 @@ class VaultService {
   String _toHex(List<int> bytes) =>
       bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
-  /// Verrouille activement le coffre
-  void lockVault() {
-    _database?.close();
+  /// Ferme la base et oublie la clé en mémoire. **Attendable** : à utiliser
+  /// avant toute suppression des fichiers du coffre, pour garantir que la
+  /// connexion SQLCipher est totalement fermée (aucun fragment -wal/-shm laissé
+  /// par un checkpoint concurrent).
+  Future<void> closeVault() async {
+    final db = _database;
     _database = null;
     _currentKey = null;
+    await db?.close();
+  }
+
+  /// Verrouille activement le coffre. Fermeture best-effort non bloquante :
+  /// l'état « verrouillé » ([isUnlocked] == false) est effectif immédiatement.
+  void lockVault() {
+    unawaited(closeVault());
   }
 
   /// Indique si le coffre est actuellement déverrouillé (DB ouverte en mémoire).

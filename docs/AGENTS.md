@@ -129,7 +129,7 @@ ShellRoute(HomeShell)
 
 - Android requires the SQLCipher override in `main.dart` (`open.overrideFor(OperatingSystem.android, openCipherOnAndroid)`). **Do not remove** without a platform alternative.
 - Use `SecurityException` (`lib/core/exceptions/security_exception.dart`) for security-critical failures.
-- Developer "full reset" (in `HomeShell` settings sheet, debug-only) wipes secure storage + DB files + salt — useful for testing onboarding.
+- "Supprimer toutes les données" (Settings → "Zone de danger", available to **all** users, confirm by typing `SUPPRIMER`) wipes secure storage + the Android Keystore key + DB files (+`-wal`/`-shm`/`-journal`) + salt, then routes to `/startup` → onboarding. `SettingsViewModel.deleteAllData` awaits `VaultService.closeVault()` before `AppResetService.wipeAllData()`.
 
 ## 7. Data layer (Drift)
 
