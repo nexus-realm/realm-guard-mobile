@@ -10,6 +10,10 @@ import 'package:realm_guard_mobile/features/home/viewmodels/profile_detail_view_
 class FakeProfileEditor implements ProfileEditor {
   final StreamController<Profile?> controller =
       StreamController<Profile?>.broadcast();
+  final StreamController<List<Credential>> credentialsController =
+      StreamController<List<Credential>>.broadcast();
+  final StreamController<List<Totp>> totpsController =
+      StreamController<List<Totp>>.broadcast();
   int linkedCount = 0;
 
   int? updatedId;
@@ -19,6 +23,14 @@ class FakeProfileEditor implements ProfileEditor {
 
   @override
   Stream<Profile?> watchProfile(int id) => controller.stream;
+
+  @override
+  Stream<List<Credential>> watchCredentialsForProfile(int profileId) =>
+      credentialsController.stream;
+
+  @override
+  Stream<List<Totp>> watchTotpsForProfile(int profileId) =>
+      totpsController.stream;
 
   @override
   Future<bool> updateProfile(int id, ProfileDraft draft) async {
@@ -43,6 +55,29 @@ Profile _profile(int id, String name, String emailsJson) => Profile(
   emails: emailsJson,
   usernames: '[]',
   phoneNumbers: '[]',
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
+
+Credential _credential(int id, String title, int profileId) => Credential(
+  id: id,
+  title: title,
+  customFields: '[]',
+  favorite: false,
+  profileId: profileId,
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
+
+Totp _totp(int id, String label, int profileId) => Totp(
+  id: id,
+  label: label,
+  secret: 'JBSWY3DPEHPK3PXP',
+  digits: 6,
+  period: 30,
+  algorithm: 'SHA1',
+  favorite: false,
+  profileId: profileId,
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
 );
@@ -151,6 +186,26 @@ void main() {
       expect(repo.deletedId, 8);
       expect(repo.deletedStrategy, ProfileDeletionStrategy.cascade);
       expect(vm.deleted, isTrue);
+    });
+
+    test('expose les identifiants et TOTP liés (réactif)', () async {
+      final repo = FakeProfileEditor();
+      final vm = ProfileDetailViewModel(repository: repo, profileId: 1);
+      addTearDown(vm.dispose);
+      await vm.initialize();
+
+      repo.credentialsController.add([
+        _credential(1, 'GitHub', 1),
+        _credential(2, 'GitLab', 1),
+      ]);
+      repo.totpsController.add([_totp(7, 'GitHub', 1)]);
+      await _settle();
+
+      expect(vm.linkedCredentials.map((c) => c.title).toList(), [
+        'GitHub',
+        'GitLab',
+      ]);
+      expect(vm.linkedTotps.single.label, 'GitHub');
     });
   });
 }

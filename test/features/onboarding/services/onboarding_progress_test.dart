@@ -20,11 +20,13 @@ void main() {
         OnboardingStep.biometricChoice,
         biometricEnabled: true,
       );
+      final step4 = step3.markStepCompleted(OnboardingStep.totpChoice);
 
       expect(step2.nextMissingStep, OnboardingStep.biometricChoice);
-      expect(step3.nextMissingStep, isNull);
-      expect(step3.isCompleted, isTrue);
-      expect(step3.biometricEnabled, isTrue);
+      expect(step3.nextMissingStep, OnboardingStep.totpChoice);
+      expect(step4.nextMissingStep, isNull);
+      expect(step4.isCompleted, isTrue);
+      expect(step4.biometricEnabled, isTrue);
     });
 
     test('serializes and deserializes completed steps', () {
@@ -46,7 +48,8 @@ void main() {
     test('computes completion on a reduced set of active steps', () {
       final progress = OnboardingProgress.initial()
           .markStepCompleted(OnboardingStep.welcome)
-          .markStepCompleted(OnboardingStep.masterPassword);
+          .markStepCompleted(OnboardingStep.masterPassword)
+          .markStepCompleted(OnboardingStep.totpChoice);
       final activeSteps = OnboardingStep.values
           .where((step) => step != OnboardingStep.biometricChoice)
           .toList(growable: false);
@@ -55,6 +58,37 @@ void main() {
       expect(progress.nextMissingStepFor(activeSteps), isNull);
       expect(progress.isCompleted, isFalse);
       expect(progress.nextMissingStep, OnboardingStep.biometricChoice);
+    });
+  });
+
+  group('OnboardingProgress.withMigratedSteps', () {
+    test('marks preference steps done for an already-installed user', () {
+      final existing = OnboardingProgress.initial()
+          .markStepCompleted(OnboardingStep.welcome)
+          .markStepCompleted(OnboardingStep.masterPassword)
+          .markStepCompleted(OnboardingStep.biometricChoice);
+
+      final migrated = existing.withMigratedSteps();
+
+      expect(
+        migrated.completedSteps.contains(OnboardingStep.totpChoice),
+        isTrue,
+      );
+      expect(migrated.isCompleted, isTrue);
+    });
+
+    test('leaves a new user untouched (master password not set yet)', () {
+      final fresh = OnboardingProgress.initial().markStepCompleted(
+        OnboardingStep.welcome,
+      );
+
+      final migrated = fresh.withMigratedSteps();
+
+      expect(
+        migrated.completedSteps.contains(OnboardingStep.totpChoice),
+        isFalse,
+      );
+      expect(migrated.nextMissingStep, OnboardingStep.masterPassword);
     });
   });
 }

@@ -57,12 +57,15 @@ class SettingsViewModel extends ChangeNotifier {
     _vaultService.lockVault();
   }
 
-  /// Verrouille puis efface toutes les données locales. Irréversible.
+  /// Ferme le coffre puis efface toutes les données locales. Irréversible.
   Future<void> deleteAllData() async {
     _isBusy = true;
     notifyListeners();
     try {
-      _vaultService.lockVault();
+      // Fermeture **attendue** de la base avant d'effacer ses fichiers : évite
+      // toute course avec la fermeture asynchrone de SQLCipher (fragments
+      // chiffrés résiduels).
+      await _vaultService.closeVault();
       await _resetService.wipeAllData();
     } finally {
       _isBusy = false;

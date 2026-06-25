@@ -74,6 +74,33 @@ void main() {
     });
 
     test(
+      'migrates an already-onboarded user (no TOTP step) to unlock',
+      () async {
+        // Utilisateur installé avant l'ajout de l'étape TOTP : anciennes étapes
+        // terminées, mais `totpChoice` absent. Il ne doit pas être renvoyé dans
+        // l'onboarding.
+        final legacyProgress = OnboardingProgress.initial()
+            .markStepCompleted(OnboardingStep.welcome)
+            .markStepCompleted(OnboardingStep.masterPassword)
+            .markStepCompleted(
+              OnboardingStep.biometricChoice,
+              biometricEnabled: true,
+            );
+
+        final viewModel = StartupGateViewModel(
+          onboardingStorageService: InMemoryOnboardingStorageService(
+            legacyProgress,
+          ),
+          biometricStorageService: FakeBiometricStorageService(),
+        );
+
+        await viewModel.initialize();
+
+        expect(viewModel.targetRoute, StartupRouteTarget.unlock);
+      },
+    );
+
+    test(
       'targets unlock without biometric completion when biometrics are unavailable',
       () async {
         final progressWithoutBiometric = OnboardingProgress.initial()

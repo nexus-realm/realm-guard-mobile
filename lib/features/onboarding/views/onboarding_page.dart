@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/feature_flags/feature_flags_controller.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/vault_service.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
@@ -15,10 +16,12 @@ import '../viewmodels/onboarding_view_model.dart';
 class OnboardingPage extends StatefulWidget {
   final OnboardingStorageService onboardingStorageService;
   final VaultService vaultService;
+  final FeatureFlagsController featureFlagsController;
 
   const OnboardingPage({
     required this.onboardingStorageService,
     required this.vaultService,
+    required this.featureFlagsController,
     super.key,
   });
 
@@ -41,6 +44,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     _viewModel = OnboardingViewModel(
       onboardingStorageService: widget.onboardingStorageService,
       vaultService: widget.vaultService,
+      featureFlagsController: widget.featureFlagsController,
     );
     _viewModel.addListener(_onViewModelUpdated);
     _viewModel.initialize();
@@ -206,6 +210,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
         return _buildMasterPasswordStep();
       case OnboardingStep.biometricChoice:
         return _buildBiometricChoiceStep();
+      case OnboardingStep.totpChoice:
+        return _buildTotpChoiceStep();
     }
   }
 
@@ -326,6 +332,62 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   ? null
                   : () => _viewModel.completeBiometricStep(false),
               child: const Text('Non, utiliser uniquement le mot de passe'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTotpChoiceStep() {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 24,
+      children: [
+        Column(
+          spacing: 24,
+          children: [
+            const ViewTitle(topTitle: 'Personnalisation', title: 'TOTP_'),
+            Column(
+              spacing: 12,
+              children: [
+                Text(
+                  'Realm Guard peut aussi générer vos codes à usage unique '
+                  '(TOTP / 2FA), en plus de vos identifiants.',
+                  style: textTheme.bodyLarge,
+                ),
+                Text(
+                  'Activez cette gestion si vous utilisez l\'authentification à '
+                  'deux facteurs ; sinon, gardez une interface simplifiée.',
+                  style: textTheme.bodyLarge,
+                ),
+                Text(
+                  'Vous pourrez changer ce choix à tout moment dans les '
+                  'paramètres.',
+                  style: textTheme.bodyLarge,
+                ),
+              ],
+            ),
+          ],
+        ),
+        Column(
+          spacing: 12,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            GradientElevatedButton.icon(
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : () => _viewModel.completeTotpChoiceStep(true),
+              icon: const Icon(Icons.timer_outlined),
+              label: const Text('Oui, activer la gestion des TOTP'),
+            ),
+            OutlinedButton(
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : () => _viewModel.completeTotpChoiceStep(false),
+              child: const Text('Non, interface simplifiée'),
             ),
           ],
         ),

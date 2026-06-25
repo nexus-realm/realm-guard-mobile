@@ -31,6 +31,10 @@ abstract interface class ProfileEditor {
   Future<bool> updateProfile(int id, ProfileDraft draft);
   Future<int> countCredentialsForProfile(int profileId);
   Future<void> deleteProfile(int id, ProfileDeletionStrategy strategy);
+
+  /// Éléments rattachés au profil (consultation réactive depuis sa fiche).
+  Stream<List<Credential>> watchCredentialsForProfile(int profileId);
+  Stream<List<Totp>> watchTotpsForProfile(int profileId);
 }
 
 /// Consultation / modification / suppression d'un identifiant existant, avec
@@ -131,6 +135,17 @@ class VaultRepository
       await (_db.profiles.delete()..where((tbl) => tbl.id.equals(id))).go();
     });
   }
+
+  @override
+  Stream<List<Credential>> watchCredentialsForProfile(int profileId) =>
+      (_db.credentials.select()
+            ..where((tbl) => tbl.profileId.equals(profileId)))
+          .watch();
+
+  @override
+  Stream<List<Totp>> watchTotpsForProfile(int profileId) =>
+      (_db.totps.select()..where((tbl) => tbl.profileId.equals(profileId)))
+          .watch();
 
   // Credentials
   Future<List<Credential>> getAllCredentials() =>

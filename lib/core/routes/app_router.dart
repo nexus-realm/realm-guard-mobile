@@ -24,6 +24,7 @@ import '../../features/settings/views/settings_page.dart';
 import '../../features/unlock/views/unlock_page.dart';
 import '../../shared/views/home/home_shell.dart';
 import '../../core/database/vault_repository.dart';
+import '../feature_flags/feature_flags_controller.dart';
 import '../security/app_lock_controller.dart';
 import '../security/biometric_storage_service.dart';
 import '../security/unlock_service.dart';
@@ -38,6 +39,10 @@ final UnlockService _unlockService = UnlockService(vaultService: _vaultService);
 final AppLockController appLockController = AppLockController(
   vaultService: _vaultService,
 );
+
+/// Préférences de fonctionnalités (ex. activation de la gestion des TOTP).
+/// Chargé au démarrage dans `main()`, consommé par l'accueil et les paramètres.
+final FeatureFlagsController featureFlagsController = FeatureFlagsController();
 
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.startup,
@@ -58,6 +63,7 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => OnboardingPage(
         onboardingStorageService: _onboardingStorageService,
         vaultService: _vaultService,
+        featureFlagsController: featureFlagsController,
       ),
     ),
     GoRoute(
@@ -74,7 +80,10 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: AppRoutes.home,
           name: 'home',
-          builder: (context, state) => HomeTab(vaultService: _vaultService),
+          builder: (context, state) => HomeTab(
+            vaultService: _vaultService,
+            featureFlagsController: featureFlagsController,
+          ),
         ),
       ],
     ),
@@ -115,6 +124,7 @@ final GoRouter appRouter = GoRouter(
         return ProfileDetailPage(
           repository: VaultRepository(_vaultService.db),
           profileId: id,
+          featureFlagsController: featureFlagsController,
         );
       },
     ),
@@ -142,6 +152,7 @@ final GoRouter appRouter = GoRouter(
         vaultService: _vaultService,
         biometricService: BiometricStorageService(),
         resetService: AppResetService(),
+        featureFlagsController: featureFlagsController,
       ),
       routes: [
         GoRoute(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/feature_flags/feature_flag.dart';
+import '../../../core/feature_flags/feature_flags_controller.dart';
 import '../../../core/security/biometric_storage_service.dart';
 import '../../../core/security/vault_service.dart';
 import 'onboarding_progress.dart';
@@ -10,6 +12,9 @@ class OnboardingFlowController extends ChangeNotifier {
   final OnboardingStorageService _onboardingStorageService;
   final VaultService _vaultService;
   final BiometricStorageService _biometricStorageService;
+  // Le contrôleur partagé (singleton) doit être injecté pour que le choix fait
+  // ici se reflète immédiatement sur l'accueil après l'onboarding.
+  final FeatureFlagsController _featureFlagsController;
 
   OnboardingProgress _progress = OnboardingProgress.initial();
   bool _isLoading = true;
@@ -20,9 +25,11 @@ class OnboardingFlowController extends ChangeNotifier {
   OnboardingFlowController({
     required OnboardingStorageService onboardingStorageService,
     required VaultService vaultService,
+    required FeatureFlagsController featureFlagsController,
     BiometricStorageService? biometricStorageService,
   }) : _onboardingStorageService = onboardingStorageService,
        _vaultService = vaultService,
+       _featureFlagsController = featureFlagsController,
        _biometricStorageService =
            biometricStorageService ?? BiometricStorageService();
 
@@ -134,6 +141,27 @@ class OnboardingFlowController extends ChangeNotifier {
     } catch (_) {
       _errorMessage =
           'Impossible d\'enregistrer votre choix biométrique pour le moment.';
+      notifyListeners();
+    } finally {
+      _isSubmitting = false;
+      notifyListeners();
+    }
+  }
+
+  /// Enregistre le choix d'activation de la gestion des TOTP et termine
+  /// l'étape. Aucune donnée TOTP existante n'est supprimée (désactivation =
+  /// masquage de l'interface uniquement).
+  Future<void> completeTotpChoiceStep(bool enabled) async {
+    _isSubmitting = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _featureFlagsController.setEnabled(FeatureFlag.totp, enabled);
+      await _markStepCompleted(OnboardingStep.totpChoice);
+    } catch (_) {
+      _errorMessage =
+          'Impossible d\'enregistrer votre choix pour le moment. Réessayez.';
       notifyListeners();
     } finally {
       _isSubmitting = false;

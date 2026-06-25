@@ -32,9 +32,13 @@ class FakeBiometricStorageService extends BiometricStorageService {
 
 class FakeVaultService extends VaultService {
   int lockCount = 0;
+  int closeCount = 0;
 
   @override
   void lockVault() => lockCount++;
+
+  @override
+  Future<void> closeVault() async => closeCount++;
 }
 
 class FakeAppResetService extends AppResetService {
@@ -116,14 +120,14 @@ void main() {
       expect(vault.lockCount, 1);
     });
 
-    test('deleteAllData verrouille puis efface tout', () async {
+    test('deleteAllData ferme le coffre (awaited) puis efface tout', () async {
       final vault = FakeVaultService();
       final reset = FakeAppResetService();
       final vm = _build(vault: vault, reset: reset);
 
       await vm.deleteAllData();
 
-      expect(vault.lockCount, 1);
+      expect(vault.closeCount, 1);
       expect(reset.wiped, isTrue);
       expect(vm.isBusy, isFalse);
     });

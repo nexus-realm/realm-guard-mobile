@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/feature_flags/feature_flag.dart';
+import '../../../core/feature_flags/feature_flags_controller.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/biometric_storage_service.dart';
 import '../../../core/security/vault_service.dart';
@@ -15,12 +17,14 @@ class SettingsPage extends StatefulWidget {
     required this.vaultService,
     required this.biometricService,
     required this.resetService,
+    required this.featureFlagsController,
     super.key,
   });
 
   final VaultService vaultService;
   final BiometricStorageService biometricService;
   final AppResetService resetService;
+  final FeatureFlagsController featureFlagsController;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -96,6 +100,7 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: const EdgeInsets.symmetric(vertical: 12),
               children: [
                 _buildGeneralSection(),
+                _buildFeaturesSection(),
                 _buildSecuritySection(),
                 _buildAboutSection(),
                 _buildDangerSection(),
@@ -124,6 +129,33 @@ class _SettingsPageState extends State<SettingsPage> {
           enabled: false,
         ),
       ],
+    );
+  }
+
+  /// Section générique pilotée par le registre [FeatureFlag] : chaque
+  /// fonctionnalité activable y apparaît automatiquement (aucun code par flag).
+  Widget _buildFeaturesSection() {
+    return ListenableBuilder(
+      listenable: widget.featureFlagsController,
+      builder: (context, _) {
+        return SettingsSection(
+          title: 'Fonctionnalités',
+          children: [
+            for (final flag in FeatureFlag.values)
+              SwitchListTile(
+                secondary: Icon(flag.icon),
+                title: Text(flag.label),
+                subtitle: Text(flag.description),
+                value: widget.featureFlagsController.isEnabled(flag),
+                onChanged: _viewModel.isBusy
+                    ? null
+                    : (value) {
+                        widget.featureFlagsController.setEnabled(flag, value);
+                      },
+              ),
+          ],
+        );
+      },
     );
   }
 

@@ -25,6 +25,8 @@ class ProfileDetailViewModel extends ChangeNotifier {
   final int _profileId;
 
   StreamSubscription<Profile?>? _sub;
+  StreamSubscription<List<Credential>>? _credentialsSub;
+  StreamSubscription<List<Totp>>? _totpsSub;
 
   bool _isLoading = true;
   bool get isLoading => _isLoading;
@@ -45,6 +47,14 @@ class ProfileDetailViewModel extends ChangeNotifier {
   Profile? get current => _current;
 
   bool get notFound => !_isLoading && _current == null && !_deleted;
+
+  /// Identifiants rattachés à ce profil (lecture réactive).
+  List<Credential> _linkedCredentials = const [];
+  List<Credential> get linkedCredentials => _linkedCredentials;
+
+  /// Codes TOTP rattachés à ce profil (lecture réactive).
+  List<Totp> _linkedTotps = const [];
+  List<Totp> get linkedTotps => _linkedTotps;
 
   /// Emails de l'enregistrement courant (décodés du JSON).
   List<String> get emails => _decodeList(_current?.emails);
@@ -86,6 +96,16 @@ class ProfileDetailViewModel extends ChangeNotifier {
     _sub = _repository.watchProfile(_profileId).listen((value) {
       _current = value;
       _isLoading = false;
+      notifyListeners();
+    });
+    _credentialsSub = _repository.watchCredentialsForProfile(_profileId).listen((
+      items,
+    ) {
+      _linkedCredentials = items;
+      notifyListeners();
+    });
+    _totpsSub = _repository.watchTotpsForProfile(_profileId).listen((items) {
+      _linkedTotps = items;
       notifyListeners();
     });
   }
@@ -167,6 +187,8 @@ class ProfileDetailViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _sub?.cancel();
+    _credentialsSub?.cancel();
+    _totpsSub?.cancel();
     super.dispose();
   }
 }
