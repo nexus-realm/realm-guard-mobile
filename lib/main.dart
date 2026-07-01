@@ -40,6 +40,14 @@ void main() async {
 @pragma('vm:entry-point')
 void autofillEntryPoint() {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+  // Cet entrypoint ne passe pas par main() : la surcharge SQLCipher doit être
+  // ré-appliquée ici car le remplissage ouvre le coffre chiffré dans son isolate.
+  if (Platform.isAndroid) {
+    open.overrideFor(OperatingSystem.android, openCipherOnAndroid);
+  }
+
   runApp(const AutofillApp());
 }
 

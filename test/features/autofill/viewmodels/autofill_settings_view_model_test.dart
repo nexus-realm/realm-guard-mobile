@@ -24,6 +24,19 @@ class FakeAutofillGateway implements AutofillGateway {
     disableCount++;
     statusValue = AutofillServiceStatus.disabled;
   }
+
+  // Opérations de remplissage (lot 2) non utilisées par le réglage : stubs.
+  @override
+  Future<bool> isInteractiveFillRequest() async => false;
+
+  @override
+  Future<AutofillMetadata?> fillMetadata() async => null;
+
+  @override
+  Future<void> submit(PwDataset dataset) async {}
+
+  @override
+  Future<void> configureFillOnly() async {}
 }
 
 void main() {
