@@ -6,7 +6,7 @@ Ce document décrit les prérequis et les étapes pour mettre en place l'environ
 
 - Windows 10/11
 - Git
-- Flutter SDK 3.38.9
+- Flutter SDK 3.44.4
 - Dart (inclus avec Flutter)
 - Android Studio (2025.2.1 ou plus recommandé) avec :
     - Android SDK Tools, Platform tools
