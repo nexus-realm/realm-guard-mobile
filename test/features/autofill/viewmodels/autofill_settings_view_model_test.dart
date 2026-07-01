@@ -1,0 +1,76 @@
+import 'package:flutter_autofill_service/flutter_autofill_service.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:realm_guard_mobile/features/autofill/service/autofill_gateway.dart';
+import 'package:realm_guard_mobile/features/autofill/viewmodels/autofill_settings_view_model.dart';
+
+class FakeAutofillGateway implements AutofillGateway {
+  FakeAutofillGateway(this.statusValue);
+
+  AutofillServiceStatus statusValue;
+  int enableCount = 0;
+  int disableCount = 0;
+
+  @override
+  Future<AutofillServiceStatus> status() async => statusValue;
+
+  @override
+  Future<void> requestEnable() async {
+    enableCount++;
+    statusValue = AutofillServiceStatus.enabled;
+  }
+
+  @override
+  Future<void> disable() async {
+    disableCount++;
+    statusValue = AutofillServiceStatus.disabled;
+  }
+}
+
+void main() {
+  group('AutofillSettingsViewModel', () {
+    test('refresh charge le statut', () async {
+      final vm = AutofillSettingsViewModel(
+        gateway: FakeAutofillGateway(AutofillServiceStatus.disabled),
+      );
+
+      await vm.refresh();
+
+      expect(vm.status, AutofillServiceStatus.disabled);
+      expect(vm.isSupported, isTrue);
+      expect(vm.isEnabled, isFalse);
+    });
+
+    test('unsupported => non supporté, non activé', () async {
+      final vm = AutofillSettingsViewModel(
+        gateway: FakeAutofillGateway(AutofillServiceStatus.unsupported),
+      );
+
+      await vm.refresh();
+
+      expect(vm.isSupported, isFalse);
+      expect(vm.isEnabled, isFalse);
+    });
+
+    test('enable délègue puis rafraîchit le statut', () async {
+      final gateway = FakeAutofillGateway(AutofillServiceStatus.disabled);
+      final vm = AutofillSettingsViewModel(gateway: gateway);
+
+      await vm.enable();
+
+      expect(gateway.enableCount, 1);
+      expect(vm.isEnabled, isTrue);
+      expect(vm.isBusy, isFalse);
+    });
+
+    test('disable délègue puis rafraîchit le statut', () async {
+      final gateway = FakeAutofillGateway(AutofillServiceStatus.enabled);
+      final vm = AutofillSettingsViewModel(gateway: gateway);
+
+      await vm.disable();
+
+      expect(gateway.disableCount, 1);
+      expect(vm.isEnabled, isFalse);
+      expect(vm.isBusy, isFalse);
+    });
+  });
+}

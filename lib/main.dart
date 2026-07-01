@@ -10,6 +10,7 @@ import 'package:sqlite3/open.dart';
 import 'core/routes/app_router.dart';
 import 'core/routes/app_routes.dart';
 import 'core/theme/app_theme.dart';
+import 'features/autofill/views/autofill_app.dart';
 
 void main() async {
   final WidgetsBinding binding = WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +31,16 @@ void main() async {
   FlutterNativeSplash.remove();
 
   runApp(const RealmGuard());
+}
+
+/// Entrypoint Dart dédié au remplissage automatique, exécuté par
+/// `AutofillActivity` lorsque le service d'autofill de l'OS sollicite Realm
+/// Guard. Séparé de [main] : ne démarre ni le routeur ni l'auto-lock, seulement
+/// l'écran d'autofill.
+@pragma('vm:entry-point')
+void autofillEntryPoint() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const AutofillApp());
 }
 
 /// Enregistre les licences OFL des polices embarquées (visibles dans la page

@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <!-- Scan des QR codes de configuration TOTP. La caméra n'est pas requise
          pour faire fonctionner l'app (ajout manuel possible). -->
@@ -34,6 +35,40 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- Remplissage automatique : activité Flutter dédiée (entrypoint
+             autofillEntryPoint), lancée par le service d'autofill de l'OS.
+             FLAG_SECURE est appliqué côté natif (présente des identifiants). -->
+        <activity
+            android:name=".AutofillActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+        </activity>
+
+        <!-- Pointeur du plugin flutter_autofill_service vers l'activité ci-dessus. -->
+        <meta-data
+            android:name="com.keevault.flutter_autofill_service.ACTIVITY_NAME"
+            android:value="io.github.sachabarbet.realm_guard_mobile.AutofillActivity" />
+
+        <!-- Le service d'autofill est déclaré par le plugin (fusion de manifeste) ;
+             on personnalise son libellé et le texte de déverrouillage. -->
+        <service
+            android:name="com.keevault.flutter_autofill_service.FlutterAutofillService"
+            android:label="Realm Guard"
+            tools:replace="android:label">
+            <meta-data
+                android:name="com.keevault.flutter_autofill_service.unlock_label"
+                android:value="Déverrouiller Realm Guard" />
+        </service>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
