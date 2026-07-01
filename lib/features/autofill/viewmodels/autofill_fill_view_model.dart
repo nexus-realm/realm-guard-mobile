@@ -81,8 +81,15 @@ class AutofillFillViewModel extends ChangeNotifier {
         return;
       }
 
-      _requestedDomains =
-          metadata?.webDomains.map((d) => d.domain).toSet() ?? const {};
+      // Domaines demandés = domaines web + domaines déduits du nom de paquet de
+      // l'app native (heuristique reverse-DNS), pour proposer le bon identifiant
+      // aussi bien sur un site que dans une application.
+      _requestedDomains = <String>{
+        ...?metadata?.webDomains.map((d) => d.domain),
+        ...AutofillMatcher.domainsFromPackages(
+          metadata?.packageNames ?? const {},
+        ),
+      };
 
       final strategy = await _unlockService.determineUnlockStrategy();
       if (strategy == UnlockStrategy.biometric) {

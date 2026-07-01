@@ -56,4 +56,42 @@ void main() {
       expect(AutofillMatcher.matchByDomain(creds, {'unknown.test'}), isEmpty);
     });
   });
+
+  group('AutofillMatcher.domainsFromPackages', () {
+    test('déduit le domaine reverse-DNS', () {
+      expect(AutofillMatcher.domainsFromPackages({'com.github.android'}), {
+        'github.com',
+      });
+      expect(AutofillMatcher.domainsFromPackages({'org.mozilla.firefox'}), {
+        'mozilla.org',
+      });
+      expect(AutofillMatcher.domainsFromPackages({'com.google.android.gm'}), {
+        'google.com',
+      });
+    });
+
+    test('ignore les paquets à moins de deux segments', () {
+      expect(AutofillMatcher.domainsFromPackages({'android'}), isEmpty);
+      expect(AutofillMatcher.domainsFromPackages({''}), isEmpty);
+    });
+
+    test('union de plusieurs paquets', () {
+      expect(
+        AutofillMatcher.domainsFromPackages({
+          'com.github.android',
+          'org.mozilla.firefox',
+        }),
+        {'github.com', 'mozilla.org'},
+      );
+    });
+
+    test('combiné avec matchByDomain : une app native correspond', () {
+      final creds = [_credential(1, 'GitHub', 'https://github.com/login')];
+      final domains = AutofillMatcher.domainsFromPackages({'com.github.android'});
+      expect(
+        AutofillMatcher.matchByDomain(creds, domains).map((c) => c.title),
+        ['GitHub'],
+      );
+    });
+  });
 }

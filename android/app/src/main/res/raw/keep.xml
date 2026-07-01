@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- L'icône d'autofill est référencée par son nom (méta-donnée du service), pas
+     directement dans le code : on empêche R8 / le shrinker de la supprimer des
+     builds release. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_autofill_shield" />

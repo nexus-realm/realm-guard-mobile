@@ -27,6 +27,26 @@ abstract final class AutofillMatcher {
     }).toList();
   }
 
+  /// Domaines candidats déduits des noms de paquets d'applications natives
+  /// (convention reverse-DNS : `com.github.android` → `github.com`).
+  ///
+  /// Heuristique best-effort et sûre : une déduction erronée ne fait que
+  /// produire aucune (ou une) suggestion — jamais un remplissage silencieux du
+  /// mauvais identifiant (le choix reste manuel et derrière déverrouillage).
+  static Set<String> domainsFromPackages(Iterable<String> packageNames) {
+    final domains = <String>{};
+    for (final package in packageNames) {
+      final labels = package
+          .toLowerCase()
+          .split('.')
+          .where((label) => label.isNotEmpty)
+          .toList();
+      if (labels.length < 2) continue;
+      domains.add('${labels[1]}.${labels[0]}');
+    }
+    return domains;
+  }
+
   /// Hôte normalisé d'une URI d'identifiant (schéma optionnel, `www.` retiré).
   static String? _hostOf(String? uri) {
     if (uri == null || uri.trim().isEmpty) return null;

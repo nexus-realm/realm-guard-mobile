@@ -67,6 +67,9 @@
             <meta-data
                 android:name="com.keevault.flutter_autofill_service.unlock_label"
                 android:value="Déverrouiller Realm Guard" />
+            <meta-data
+                android:name="com.keevault.flutter_autofill_service.unlock_drawable_name"
+                android:value="ic_autofill_shield" />
         </service>
 
         <!-- Don't delete the meta-data below.
