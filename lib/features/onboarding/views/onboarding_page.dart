@@ -150,7 +150,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildProgress(currentStep),
                     Expanded(
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 280),
@@ -182,22 +181,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildProgress(OnboardingStep currentStep) {
-    if (currentStep == OnboardingStep.welcome) {
-      return const SizedBox.shrink();
-    }
-
-    final currentIndex = _viewModel.currentStepIndex;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        '$currentIndex/${_viewModel.totalStepCount}',
-        style: Theme.of(context).textTheme.titleMedium,
-        textAlign: TextAlign.center,
       ),
     );
   }

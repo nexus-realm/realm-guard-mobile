@@ -16,7 +16,7 @@
 
 | Concern | Choice |
 |---|---|
-| Framework | Flutter (**3.38.9**, stable channel — matches CI; INSTALL.md still says 3.35.7 and should be aligned) |
+| Framework | Flutter (**3.44.4**, stable channel — matches CI) |
 | Language | Dart (SDK `^3.10.8`) |
 | Routing | `go_router` ^16.3.0 (`MaterialApp.router`, `ShellRoute`) |
 | DB | `drift` ^2.31.0 over **SQLCipher** (`sqlcipher_flutter_libs` ^0.6.7, `sqlite3`) |
@@ -188,7 +188,7 @@ Local setup details (Windows toolchain): see `docs/INSTALL.md`.
   - `develop` → `main`
   - `hotfix/rg-<N>` → `main`
   - `<N>` is numeric only. `rg-<N>` = the issue/ticket key.
-- PR CI: `flutter analyze` + `flutter test` (Flutter 3.38.9).
+- PR CI: `flutter analyze` + `flutter test` (Flutter 3.44.4).
 - Release (`.github/workflows/release.yml`): on push to `home` or `release/*` → `conventional-changelog-action` bumps `pubspec.yaml` `version`, builds APK, publishes a GitHub release with `CHANGELOG.md`. (The `home` trigger is unusual — verify before relying on it.)
 
 ## 13. Known gaps / open questions (as of this writing)
@@ -200,7 +200,7 @@ Local setup details (Windows toolchain): see `docs/INSTALL.md`.
 5. `AppTransitions` exists but isn't wired into `appRouter`.
 6. Duplicate (unused) `CategoryFilter` enum in both `home_shell.dart` and `home_tab.dart`.
 7. Release build signs with **debug keys** (`android/app/build.gradle.kts` TODO).
-8. `docs/INSTALL.md` says Flutter 3.35.7; the project standard is **3.38.9** (CI). Align INSTALL.md.
+8. Toolchain pinned to Flutter **3.44.4** across CI, the release workflow, and INSTALL.md (aligned).
 
 ## 14. When you change X, do Y
 

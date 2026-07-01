@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:sqlcipher_flutter_libs/sqlcipher_flutter_libs.dart';
 import 'package:sqlite3/open.dart';
 
@@ -11,7 +12,8 @@ import 'core/routes/app_routes.dart';
 import 'core/theme/app_theme.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final WidgetsBinding binding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: binding);
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   _registerFontLicenses();
@@ -24,6 +26,8 @@ void main() async {
   // l'interface (onglets de l'accueil) reflète immédiatement le choix de
   // l'utilisateur.
   await featureFlagsController.load();
+
+  FlutterNativeSplash.remove();
 
   runApp(const RealmGuard());
 }
