@@ -18,6 +18,7 @@
 |---|---|
 | Framework | Flutter (**3.44.4**, stable channel — matches CI) |
 | Language | Dart (SDK `^3.10.8`) |
+| Min SDK | **Android 10 (API 29)** — raised from 24 for `flutter_autofill_service` (autofill). Kotlin Gradle Plugin 2.2.20 |
 | Routing | `go_router` ^16.3.0 (`MaterialApp.router`, `ShellRoute`) |
 | DB | `drift` ^2.31.0 over **SQLCipher** (`sqlcipher_flutter_libs` ^0.6.7, `sqlite3`) |
 | Crypto | `cryptography` ^2.9.0 (Argon2id) |

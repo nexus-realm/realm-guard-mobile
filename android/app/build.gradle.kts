@@ -24,7 +24,9 @@ android {
         applicationId = "io.github.sachabarbet.realm_guard_mobile"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // Raised to 29 (Android 10): the flutter_autofill_service plugin
+        // (autofill) requires minSdk 29. Above the Flutter default (24).
+        minSdk = 29
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

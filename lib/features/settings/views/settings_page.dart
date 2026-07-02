@@ -7,6 +7,8 @@ import '../../../core/routes/app_routes.dart';
 import '../../../core/security/biometric_storage_service.dart';
 import '../../../core/security/vault_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../autofill/viewmodels/autofill_settings_view_model.dart';
+import '../../autofill/views/widgets/autofill_settings_tile.dart';
 import '../service/app_reset_service.dart';
 import '../viewmodels/settings_view_model.dart';
 import 'widgets/delete_data_dialog.dart';
@@ -32,6 +34,8 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   late final SettingsViewModel _viewModel;
+  final AutofillSettingsViewModel _autofillViewModel =
+      AutofillSettingsViewModel();
 
   @override
   void initState() {
@@ -47,6 +51,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void dispose() {
     _viewModel.dispose();
+    _autofillViewModel.dispose();
     super.dispose();
   }
 
@@ -176,6 +181,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ? _onBiometricChanged
               : null,
         ),
+        AutofillSettingsTile(viewModel: _autofillViewModel),
         const ListTile(
           leading: Icon(Icons.timer_outlined),
           title: Text('Verrouillage automatique'),
