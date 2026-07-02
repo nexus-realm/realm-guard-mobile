@@ -70,7 +70,6 @@ class AutofillFillViewModel extends ChangeNotifier {
 
   Future<void> initialize() async {
     try {
-      await _gateway.configureFillOnly();
       final interactive = await _gateway.isInteractiveFillRequest();
       final metadata = await _gateway.fillMetadata();
 
