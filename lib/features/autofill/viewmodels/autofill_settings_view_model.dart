@@ -28,6 +28,11 @@ class AutofillSettingsViewModel extends ChangeNotifier {
   /// (l'activation se fait dans les réglages système, hors de l'application).
   Future<void> refresh() async {
     _status = await _gateway.status();
+    // Active le remplissage + l'enregistrement dès que le service est supporté
+    // (l'utilisateur est justement dans les réglages pour l'activer).
+    if (isSupported) {
+      await _gateway.configureAutofill();
+    }
     notifyListeners();
   }
 

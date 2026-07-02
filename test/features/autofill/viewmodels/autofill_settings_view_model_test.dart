@@ -25,7 +25,9 @@ class FakeAutofillGateway implements AutofillGateway {
     statusValue = AutofillServiceStatus.disabled;
   }
 
-  // Opérations de remplissage (lot 2) non utilisées par le réglage : stubs.
+  // Opérations de remplissage / sauvegarde non utilisées par le réglage : stubs.
+  int configureCount = 0;
+
   @override
   Future<bool> isInteractiveFillRequest() async => false;
 
@@ -36,7 +38,12 @@ class FakeAutofillGateway implements AutofillGateway {
   Future<void> submit(PwDataset dataset) async {}
 
   @override
-  Future<void> configureFillOnly() async {}
+  Future<void> onSaveComplete() async {}
+
+  @override
+  Future<void> configureAutofill() async {
+    configureCount++;
+  }
 }
 
 void main() {
@@ -84,6 +91,24 @@ void main() {
       expect(gateway.disableCount, 1);
       expect(vm.isEnabled, isFalse);
       expect(vm.isBusy, isFalse);
+    });
+
+    test('refresh active l\'autofill quand le service est supporté', () async {
+      final gateway = FakeAutofillGateway(AutofillServiceStatus.disabled);
+      final vm = AutofillSettingsViewModel(gateway: gateway);
+
+      await vm.refresh();
+
+      expect(gateway.configureCount, greaterThan(0));
+    });
+
+    test('refresh n\'active pas l\'autofill si non supporté', () async {
+      final gateway = FakeAutofillGateway(AutofillServiceStatus.unsupported);
+      final vm = AutofillSettingsViewModel(gateway: gateway);
+
+      await vm.refresh();
+
+      expect(gateway.configureCount, 0);
     });
   });
 }

@@ -30,9 +30,13 @@ abstract interface class AutofillGateway {
   /// Renvoie l'identifiant choisi à l'OS, qui remplit le champ et ferme l'écran.
   Future<void> submit(PwDataset dataset);
 
-  /// Configure le service pour le remplissage seul (v1) : pas d'enregistrement,
-  /// pas de suggestions clavier (IME).
-  Future<void> configureFillOnly();
+  /// Signale à l'OS qu'une requête de sauvegarde a été traitée.
+  Future<void> onSaveComplete();
+
+  /// Configure le service : remplissage + enregistrement activés ; suggestions
+  /// clavier (IME) désactivées (expérimental, incompatible avec l'étape de
+  /// déverrouillage).
+  Future<void> configureAutofill();
 }
 
 /// Implémentation réelle adossée au plugin `flutter_autofill_service`.
@@ -63,10 +67,13 @@ class PlatformAutofillGateway implements AutofillGateway {
   );
 
   @override
-  Future<void> configureFillOnly() => AutofillService().setPreferences(
+  Future<void> onSaveComplete() => AutofillService().onSaveComplete();
+
+  @override
+  Future<void> configureAutofill() => AutofillService().setPreferences(
     AutofillPreferences(
       enableDebug: false,
-      enableSaving: false,
+      enableSaving: true,
       enableIMERequests: false,
     ),
   );
