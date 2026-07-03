@@ -16,6 +16,7 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +26,18 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.44.4"
+          cache: true
+
+      - name: Cache pub & Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: deps-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            deps-${{ runner.os }}-
 
       - name: Install dependencies
         run: flutter pub get

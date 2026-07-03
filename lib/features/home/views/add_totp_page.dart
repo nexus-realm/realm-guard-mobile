@@ -42,9 +42,9 @@ class _AddTotpPageState extends State<AddTotpPage> {
   }
 
   Future<void> _scan() async {
-    final draft = await Navigator.of(context).push<TotpDraft>(
-      MaterialPageRoute(builder: (_) => const ScanTotpPage()),
-    );
+    final draft = await Navigator.of(
+      context,
+    ).push<TotpDraft>(MaterialPageRoute(builder: (_) => const ScanTotpPage()));
     if (draft == null || !mounted) return;
     setState(() {
       _initialDraft = draft;
@@ -53,9 +53,7 @@ class _AddTotpPageState extends State<AddTotpPage> {
       _totpFormKey = GlobalKey<TotpFormState>();
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('QR code lu. Vérifiez puis enregistrez.'),
-      ),
+      const SnackBar(content: Text('QR code lu. Vérifiez puis enregistrez.')),
     );
   }
 

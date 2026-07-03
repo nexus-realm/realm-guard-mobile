@@ -55,14 +55,12 @@ void autofillEntryPoint() {
 /// "Licences" de l'application).
 void _registerFontLicenses() {
   LicenseRegistry.addLicense(() async* {
-    yield LicenseEntryWithLineBreaks(
-      const ['Plus Jakarta Sans'],
-      await rootBundle.loadString('assets/fonts/OFL-PlusJakartaSans.txt'),
-    );
-    yield LicenseEntryWithLineBreaks(
-      const ['Space Grotesk'],
-      await rootBundle.loadString('assets/fonts/OFL-SpaceGrotesk.txt'),
-    );
+    yield LicenseEntryWithLineBreaks(const [
+      'Plus Jakarta Sans',
+    ], await rootBundle.loadString('assets/fonts/OFL-PlusJakartaSans.txt'));
+    yield LicenseEntryWithLineBreaks(const [
+      'Space Grotesk',
+    ], await rootBundle.loadString('assets/fonts/OFL-SpaceGrotesk.txt'));
   });
 }
 

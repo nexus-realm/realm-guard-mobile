@@ -15,7 +15,8 @@ class OnboardingProgress {
 
   bool get isCompleted => isCompletedFor(OnboardingStep.values);
 
-  OnboardingStep? get nextMissingStep => nextMissingStepFor(OnboardingStep.values);
+  OnboardingStep? get nextMissingStep =>
+      nextMissingStepFor(OnboardingStep.values);
 
   bool isCompletedFor(Iterable<OnboardingStep> activeSteps) {
     for (final step in activeSteps) {
@@ -94,8 +95,9 @@ class OnboardingProgress {
 
     return OnboardingProgress(
       completedSteps: completed,
-      biometricEnabled:
-          json['biometricEnabled'] is bool ? json['biometricEnabled'] as bool : null,
+      biometricEnabled: json['biometricEnabled'] is bool
+          ? json['biometricEnabled'] as bool
+          : null,
     );
   }
 }

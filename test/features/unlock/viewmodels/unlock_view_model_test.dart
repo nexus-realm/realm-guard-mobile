@@ -70,14 +70,18 @@ void main() {
 
   group('UnlockViewModel.formatLockout (U6)', () {
     test('formate en mm:ss avec zéros de remplissage', () {
-      expect(UnlockViewModel.formatLockout(const Duration(minutes: 5)), '05:00');
       expect(
-        UnlockViewModel.formatLockout(
-          const Duration(minutes: 4, seconds: 30),
-        ),
+        UnlockViewModel.formatLockout(const Duration(minutes: 5)),
+        '05:00',
+      );
+      expect(
+        UnlockViewModel.formatLockout(const Duration(minutes: 4, seconds: 30)),
         '04:30',
       );
-      expect(UnlockViewModel.formatLockout(const Duration(seconds: 9)), '00:09');
+      expect(
+        UnlockViewModel.formatLockout(const Duration(seconds: 9)),
+        '00:09',
+      );
     });
 
     test('arrondit les secondes au supérieur (pas de 00:00 prématuré)', () {

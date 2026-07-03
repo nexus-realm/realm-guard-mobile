@@ -12,7 +12,9 @@ abstract final class OtpauthParser {
   static TotpDraft parse(String raw) {
     final uri = Uri.tryParse(raw.trim());
     if (uri == null || uri.scheme.toLowerCase() != 'otpauth') {
-      throw const FormatException('QR code non reconnu (schéma otpauth requis).');
+      throw const FormatException(
+        'QR code non reconnu (schéma otpauth requis).',
+      );
     }
     if (uri.host.toLowerCase() != 'totp') {
       throw const FormatException('Seuls les codes TOTP sont pris en charge.');

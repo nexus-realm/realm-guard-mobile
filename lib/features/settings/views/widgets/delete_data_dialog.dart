@@ -71,9 +71,7 @@ class _DeleteDataDialogState extends State<DeleteDataDialog> {
           child: const Text('Annuler'),
         ),
         DestructiveButton(
-          onPressed: _canConfirm
-              ? () => Navigator.of(context).pop(true)
-              : null,
+          onPressed: _canConfirm ? () => Navigator.of(context).pop(true) : null,
           child: const Text('Supprimer'),
         ),
       ],

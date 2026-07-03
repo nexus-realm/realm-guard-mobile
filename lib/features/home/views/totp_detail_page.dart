@@ -19,7 +19,11 @@ import 'widgets/discard_changes_dialog.dart';
 import 'widgets/totp_form.dart';
 
 class TotpDetailPage extends StatefulWidget {
-  const TotpDetailPage({required this.repository, required this.totpId, super.key});
+  const TotpDetailPage({
+    required this.repository,
+    required this.totpId,
+    super.key,
+  });
 
   final TotpEditor repository;
   final int totpId;
@@ -220,7 +224,11 @@ class _TotpDetailPageState extends State<TotpDetailPage> {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       children: [
         _LiveCodeCard(totp: totp),
-        DetailTile(icon: Icons.label_outline, label: 'Libellé', value: totp.label),
+        DetailTile(
+          icon: Icons.label_outline,
+          label: 'Libellé',
+          value: totp.label,
+        ),
         if (totp.account != null)
           DetailTile(
             icon: Icons.person_outline,
@@ -235,7 +243,8 @@ class _TotpDetailPageState extends State<TotpDetailPage> {
         DetailTile(
           icon: Icons.tune,
           label: 'Paramètres',
-          value: '${totp.digits} chiffres · ${totp.period}s · ${totp.algorithm}',
+          value:
+              '${totp.digits} chiffres · ${totp.period}s · ${totp.algorithm}',
         ),
       ],
     );

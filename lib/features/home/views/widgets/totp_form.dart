@@ -120,9 +120,8 @@ class TotpFormState extends State<TotpForm> {
               labelText: 'Secret (Base32)',
               hintText: 'JBSWY3DPEHPK3PXP',
             ),
-            validator: (value) => Base32.isValid(value ?? '')
-                ? null
-                : 'Secret Base32 invalide.',
+            validator: (value) =>
+                Base32.isValid(value ?? '') ? null : 'Secret Base32 invalide.',
           ),
           const SizedBox(height: AppSpacing.sm),
           if (widget.profiles.isNotEmpty) ...[

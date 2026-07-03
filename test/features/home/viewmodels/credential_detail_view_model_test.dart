@@ -113,9 +113,7 @@ void main() {
         isTrue,
       );
       expect(
-        vm.hasChanges(
-          const CredentialDraft(title: 'GitHub', notes: 'token'),
-        ),
+        vm.hasChanges(const CredentialDraft(title: 'GitHub', notes: 'token')),
         isTrue,
       );
     });

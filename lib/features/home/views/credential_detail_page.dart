@@ -73,9 +73,9 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
     final ok = await _viewModel.save(draft);
     if (!mounted) return;
     if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Identifiant mis à jour.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Identifiant mis à jour.')));
     } else {
       final message = _viewModel.errorMessage;
       if (message != null) {
@@ -148,9 +148,7 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
               tooltip: credential.favorite
                   ? 'Retirer des favoris'
                   : 'Ajouter aux favoris',
-              icon: Icon(
-                credential.favorite ? Icons.star : Icons.star_border,
-              ),
+              icon: Icon(credential.favorite ? Icons.star : Icons.star_border),
               onPressed: _viewModel.toggleFavorite,
             ),
             IconButton(
@@ -368,9 +366,8 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
                 trailing: currentId == profile.id
                     ? const Icon(Icons.check, color: AppColors.mainColor)
                     : null,
-                onTap: () => Navigator.of(
-                  sheetContext,
-                ).pop(_ProfileChoice(profile.id)),
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(_ProfileChoice(profile.id)),
               ),
           ],
         ),
@@ -494,7 +491,10 @@ class _ReadFieldState extends State<_ReadField> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(widget.label.toUpperCase(), style: textTheme.labelMedium),
+                  Text(
+                    widget.label.toUpperCase(),
+                    style: textTheme.labelMedium,
+                  ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(displayed, style: textTheme.bodyLarge),
                 ],

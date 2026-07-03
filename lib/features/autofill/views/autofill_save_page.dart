@@ -29,7 +29,9 @@ class _AutofillSavePageState extends State<AutofillSavePage> {
   @override
   void initState() {
     super.initState();
-    _viewModel = AutofillSaveViewModel(gateway: const PlatformAutofillGateway());
+    _viewModel = AutofillSaveViewModel(
+      gateway: const PlatformAutofillGateway(),
+    );
     _viewModel.addListener(_onChanged);
     _viewModel.initialize();
   }
@@ -211,7 +213,11 @@ class _AutofillSavePageState extends State<AutofillSavePage> {
           children: [
             Icon(icon, size: 48, color: AppColors.secondaryText),
             const SizedBox(height: AppSpacing.md),
-            Text(title, style: textTheme.titleMedium, textAlign: TextAlign.center),
+            Text(
+              title,
+              style: textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               message,

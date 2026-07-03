@@ -49,9 +49,7 @@ class _ScanTotpPageState extends State<ScanTotpPage> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        const SnackBar(
-          content: Text('QR code non reconnu (TOTP attendu).'),
-        ),
+        const SnackBar(content: Text('QR code non reconnu (TOTP attendu).')),
       );
   }
 

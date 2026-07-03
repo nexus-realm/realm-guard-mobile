@@ -121,9 +121,7 @@ void main() {
       await _settle();
 
       expect(
-        vm.hasChanges(
-          const ProfileDraft(name: 'Perso', emails: ['a@b.com']),
-        ),
+        vm.hasChanges(const ProfileDraft(name: 'Perso', emails: ['a@b.com'])),
         isFalse,
       );
       expect(

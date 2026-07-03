@@ -112,10 +112,16 @@ void main() {
       for (var i = 0; i < 4; i++) {
         final (result, locked) = await service.attemptPasswordUnlock('wrong');
         expect(result, UnlockAttemptResult.invalidPassword);
-        expect(locked, isFalse, reason: 'tentative ${i + 1} ne doit pas verrouiller');
+        expect(
+          locked,
+          isFalse,
+          reason: 'tentative ${i + 1} ne doit pas verrouiller',
+        );
       }
 
-      final (_, lockedAfterFifth) = await service.attemptPasswordUnlock('wrong');
+      final (_, lockedAfterFifth) = await service.attemptPasswordUnlock(
+        'wrong',
+      );
       expect(lockedAfterFifth, isTrue);
       expect(storage.store.containsKey(_lockoutKey), isTrue);
     });
@@ -136,53 +142,73 @@ void main() {
       expect(storage.store.containsKey(_lastAttemptKey), isFalse);
     });
 
-    test('re-verrouille immédiatement si échec dans la fenêtre de reset', () async {
-      // 5 échecs déjà comptés, dernière tentative il y a 6 min :
-      // lockout (5 min) expiré mais fenêtre de reset (15 min) non écoulée.
-      storage.store[_countKey] = '5';
-      storage.store[_lastAttemptKey] =
-          DateTime.now().subtract(const Duration(minutes: 6)).toIso8601String();
+    test(
+      're-verrouille immédiatement si échec dans la fenêtre de reset',
+      () async {
+        // 5 échecs déjà comptés, dernière tentative il y a 6 min :
+        // lockout (5 min) expiré mais fenêtre de reset (15 min) non écoulée.
+        storage.store[_countKey] = '5';
+        storage.store[_lastAttemptKey] = DateTime.now()
+            .subtract(const Duration(minutes: 6))
+            .toIso8601String();
 
-      final service = buildService(FakeVaultService()..shouldSucceed = false);
-      final (result, isNowLocked) = await service.attemptPasswordUnlock('wrong');
+        final service = buildService(FakeVaultService()..shouldSucceed = false);
+        final (result, isNowLocked) = await service.attemptPasswordUnlock(
+          'wrong',
+        );
 
-      expect(result, UnlockAttemptResult.invalidPassword);
-      expect(isNowLocked, isTrue, reason: 'comportement conservé : re-lock immédiat');
-      expect(storage.store.containsKey(_lockoutKey), isTrue);
-    });
+        expect(result, UnlockAttemptResult.invalidPassword);
+        expect(
+          isNowLocked,
+          isTrue,
+          reason: 'comportement conservé : re-lock immédiat',
+        );
+        expect(storage.store.containsKey(_lockoutKey), isTrue);
+      },
+    );
 
     test('réinitialise le compteur après la fenêtre d\'inactivité', () async {
       // 5 échecs, mais dernière tentative il y a 16 min (> fenêtre de 15 min).
       storage.store[_countKey] = '5';
-      storage.store[_lastAttemptKey] =
-          DateTime.now().subtract(const Duration(minutes: 16)).toIso8601String();
+      storage.store[_lastAttemptKey] = DateTime.now()
+          .subtract(const Duration(minutes: 16))
+          .toIso8601String();
 
       final service = buildService(FakeVaultService()..shouldSucceed = false);
-      final (result, isNowLocked) = await service.attemptPasswordUnlock('wrong');
+      final (result, isNowLocked) = await service.attemptPasswordUnlock(
+        'wrong',
+      );
 
       expect(result, UnlockAttemptResult.invalidPassword);
-      expect(isNowLocked, isFalse, reason: 'le compteur doit être reparti de zéro');
+      expect(
+        isNowLocked,
+        isFalse,
+        reason: 'le compteur doit être reparti de zéro',
+      );
       expect(storage.store[_countKey], '1');
     });
   });
 
   group('UnlockService - échecs biométriques (S7)', () {
-    test('un échec biométrique réel n\'alimente pas le lockout mot de passe', () async {
-      final service = buildService(
-        FakeVaultService()..biometricStatus = BiometricUnlockStatus.failed,
-      );
+    test(
+      'un échec biométrique réel n\'alimente pas le lockout mot de passe',
+      () async {
+        final service = buildService(
+          FakeVaultService()..biometricStatus = BiometricUnlockStatus.failed,
+        );
 
-      for (var i = 0; i < 6; i++) {
-        final (result, locked) = await service.attemptBiometricUnlock();
-        expect(result, UnlockAttemptResult.biometricFailed);
-        expect(locked, isFalse);
-      }
+        for (var i = 0; i < 6; i++) {
+          final (result, locked) = await service.attemptBiometricUnlock();
+          expect(result, UnlockAttemptResult.biometricFailed);
+          expect(locked, isFalse);
+        }
 
-      // Le compteur biométrique monte, mais le lockout mot de passe est intact.
-      expect(storage.store[_bioFailKey], '6');
-      expect(storage.store.containsKey(_countKey), isFalse);
-      expect(storage.store.containsKey(_lockoutKey), isFalse);
-    });
+        // Le compteur biométrique monte, mais le lockout mot de passe est intact.
+        expect(storage.store[_bioFailKey], '6');
+        expect(storage.store.containsKey(_countKey), isFalse);
+        expect(storage.store.containsKey(_lockoutKey), isFalse);
+      },
+    );
 
     test('une annulation biométrique n\'est pas comptée', () async {
       final service = buildService(
@@ -245,20 +271,23 @@ void main() {
   });
 
   group('UnlockService - cooldown / throttle (S9)', () {
-    test('un déverrouillage réussi n\'est pas retardé par le cooldown', () async {
-      final service = UnlockService(
-        biometricService: FakeBiometricStorageService(),
-        vaultService: FakeVaultService()..shouldSucceed = true,
-        attemptCooldown: const Duration(seconds: 2),
-      );
+    test(
+      'un déverrouillage réussi n\'est pas retardé par le cooldown',
+      () async {
+        final service = UnlockService(
+          biometricService: FakeBiometricStorageService(),
+          vaultService: FakeVaultService()..shouldSucceed = true,
+          attemptCooldown: const Duration(seconds: 2),
+        );
 
-      final stopwatch = Stopwatch()..start();
-      final (result, _) = await service.attemptPasswordUnlock('good');
-      stopwatch.stop();
+        final stopwatch = Stopwatch()..start();
+        final (result, _) = await service.attemptPasswordUnlock('good');
+        stopwatch.stop();
 
-      expect(result, UnlockAttemptResult.success);
-      expect(stopwatch.elapsed, lessThan(const Duration(seconds: 1)));
-    });
+        expect(result, UnlockAttemptResult.success);
+        expect(stopwatch.elapsed, lessThan(const Duration(seconds: 1)));
+      },
+    );
 
     test('deux tentatives rapprochées sont espacées par le throttle', () async {
       final service = UnlockService(

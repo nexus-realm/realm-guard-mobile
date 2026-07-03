@@ -63,7 +63,9 @@ class _DeleteProfileDialogState extends State<DeleteProfileDialog> {
                     contentPadding: EdgeInsets.zero,
                     value: ProfileDeletionStrategy.cascade,
                     title: Text('Supprimer les identifiants'),
-                    subtitle: Text('Les identifiants liés seront aussi effacés'),
+                    subtitle: Text(
+                      'Les identifiants liés seront aussi effacés',
+                    ),
                   ),
                 ],
               ),
@@ -77,9 +79,9 @@ class _DeleteProfileDialogState extends State<DeleteProfileDialog> {
           child: const Text('Annuler'),
         ),
         DestructiveButton(
-          onPressed: () => Navigator.of(context).pop(
-            _hasLinked ? _strategy : ProfileDeletionStrategy.dissociate,
-          ),
+          onPressed: () => Navigator.of(
+            context,
+          ).pop(_hasLinked ? _strategy : ProfileDeletionStrategy.dissociate),
           child: const Text('Supprimer'),
         ),
       ],

@@ -63,9 +63,10 @@ class KeystoreKeyGuard {
   /// Encrypts [keyBytes] with the Keystore public key. Does not require
   /// authentication. Creates the key pair on first use.
   Future<Uint8List> wrap(List<int> keyBytes) async {
-    final result = await _channel.invokeMethod<Uint8List>('wrap', <String, Object?>{
-      'key': Uint8List.fromList(keyBytes),
-    });
+    final result = await _channel.invokeMethod<Uint8List>(
+      'wrap',
+      <String, Object?>{'key': Uint8List.fromList(keyBytes)},
+    );
     if (result == null) {
       throw const KeystoreUnavailableException('wrap returned null');
     }
@@ -77,9 +78,10 @@ class KeystoreKeyGuard {
   /// [KeyInvalidatedException] otherwise.
   Future<Uint8List> unwrap(Uint8List blob) async {
     try {
-      final result = await _channel.invokeMethod<Uint8List>('unwrap', <String, Object?>{
-        'blob': blob,
-      });
+      final result = await _channel.invokeMethod<Uint8List>(
+        'unwrap',
+        <String, Object?>{'blob': blob},
+      );
       if (result == null) {
         throw const UserNotAuthenticatedException();
       }

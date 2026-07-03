@@ -28,10 +28,13 @@ class _AutofillFillPageState extends State<AutofillFillPage> {
   @override
   void initState() {
     super.initState();
-    _viewModel = AutofillFillViewModel(gateway: const PlatformAutofillGateway());
+    _viewModel = AutofillFillViewModel(
+      gateway: const PlatformAutofillGateway(),
+    );
     _viewModel.addListener(_onChanged);
     _searchController.addListener(
-      () => setState(() => _query = _searchController.text.trim().toLowerCase()),
+      () =>
+          setState(() => _query = _searchController.text.trim().toLowerCase()),
     );
     _viewModel.initialize();
   }
@@ -132,9 +135,7 @@ class _AutofillFillPageState extends State<AutofillFillPage> {
             autocorrect: false,
             enableSuggestions: false,
             onSubmitted: (_) => _submitPassword(),
-            decoration: const InputDecoration(
-              labelText: 'Mot de passe maître',
-            ),
+            decoration: const InputDecoration(labelText: 'Mot de passe maître'),
           ),
           if (_viewModel.errorMessage != null) ...[
             const SizedBox(height: AppSpacing.sm),
@@ -248,7 +249,11 @@ class _AutofillFillPageState extends State<AutofillFillPage> {
           children: [
             Icon(icon, size: 48, color: AppColors.secondaryText),
             const SizedBox(height: AppSpacing.md),
-            Text(title, style: textTheme.titleMedium, textAlign: TextAlign.center),
+            Text(
+              title,
+              style: textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               message,

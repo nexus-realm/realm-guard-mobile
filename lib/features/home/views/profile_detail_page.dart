@@ -100,7 +100,10 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
     final count = await _viewModel.linkedCredentialsCount();
     if (!mounted) return;
 
-    final strategy = await DeleteProfileDialog.show(context, linkedCount: count);
+    final strategy = await DeleteProfileDialog.show(
+      context,
+      linkedCount: count,
+    );
     if (strategy == null || !mounted) return;
 
     final ok = await _viewModel.delete(strategy);
@@ -174,9 +177,7 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
     final profile = _viewModel.current;
     if (profile == null) return const SizedBox.shrink();
 
-    return _viewModel.isEditing
-        ? _buildEditView()
-        : _buildReadView(profile);
+    return _viewModel.isEditing ? _buildEditView() : _buildReadView(profile);
   }
 
   // --- Mode édition ---
@@ -259,13 +260,13 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
           Icons.person_outline,
           _viewModel.usernames,
         ),
-        ..._section('Téléphones', Icons.phone_outlined, _viewModel.phoneNumbers),
+        ..._section(
+          'Téléphones',
+          Icons.phone_outlined,
+          _viewModel.phoneNumbers,
+        ),
         if ((profile.note ?? '').isNotEmpty)
-          DetailTile(
-            icon: Icons.notes,
-            label: 'Note',
-            value: profile.note!,
-          ),
+          DetailTile(icon: Icons.notes, label: 'Note', value: profile.note!),
 
         // --- Éléments liés ---
         _linkedHeader('Identifiants liés', _viewModel.linkedCredentials.length),
@@ -280,9 +281,8 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
             ),
             title: credential.title,
             subtitle: credential.username ?? credential.uri,
-            onTap: () => context.push(
-              '${AppRoutes.credentialDetail}/${credential.id}',
-            ),
+            onTap: () =>
+                context.push('${AppRoutes.credentialDetail}/${credential.id}'),
           ),
 
         if (widget.featureFlagsController.isEnabled(FeatureFlag.totp)) ...[

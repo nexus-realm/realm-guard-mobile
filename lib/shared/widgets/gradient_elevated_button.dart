@@ -11,8 +11,8 @@ class GradientElevatedButton extends StatelessWidget {
     required this.child,
     super.key,
     BorderRadius borderRadius = const BorderRadius.all(Radius.circular(12)),
-  })  : _icon = null,
-        _borderRadius = borderRadius;
+  }) : _icon = null,
+       _borderRadius = borderRadius;
 
   const GradientElevatedButton.icon({
     required this.onPressed,
@@ -20,9 +20,9 @@ class GradientElevatedButton extends StatelessWidget {
     required Widget label,
     super.key,
     BorderRadius borderRadius = const BorderRadius.all(Radius.circular(12)),
-  })  : child = label,
-        _icon = icon,
-        _borderRadius = borderRadius;
+  }) : child = label,
+       _icon = icon,
+       _borderRadius = borderRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -44,11 +44,7 @@ class GradientElevatedButton extends StatelessWidget {
         ? child
         : Row(
             mainAxisSize: MainAxisSize.min,
-            children: [
-              _icon,
-              const SizedBox(width: 8),
-              child,
-            ],
+            children: [_icon, const SizedBox(width: 8), child],
           );
 
     return ElevatedButton(
@@ -72,6 +68,3 @@ class GradientElevatedButton extends StatelessWidget {
     );
   }
 }
-
-
-

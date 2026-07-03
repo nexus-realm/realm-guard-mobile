@@ -77,27 +77,30 @@ Future<void> _settle() => Future<void>.delayed(Duration.zero);
 
 void main() {
   group('HomeViewModel', () {
-    test('isLoading reste vrai tant que les flux n\'ont pas tous émis', () async {
-      final repo = FakeHomeRepository();
-      final vm = HomeViewModel(SearchNotifier(), repo);
-      addTearDown(vm.dispose);
+    test(
+      'isLoading reste vrai tant que les flux n\'ont pas tous émis',
+      () async {
+        final repo = FakeHomeRepository();
+        final vm = HomeViewModel(SearchNotifier(), repo);
+        addTearDown(vm.dispose);
 
-      // Aucune émission : chargement en cours.
-      expect(vm.isLoading, isTrue);
+        // Aucune émission : chargement en cours.
+        expect(vm.isLoading, isTrue);
 
-      // Tous les flux n'ont pas émis : toujours en chargement.
-      repo.profiles.add([_profile(1, 'GitHub')]);
-      await _settle();
-      expect(vm.isLoading, isTrue);
-      repo.credentials.add(const []);
-      await _settle();
-      expect(vm.isLoading, isTrue);
+        // Tous les flux n'ont pas émis : toujours en chargement.
+        repo.profiles.add([_profile(1, 'GitHub')]);
+        await _settle();
+        expect(vm.isLoading, isTrue);
+        repo.credentials.add(const []);
+        await _settle();
+        expect(vm.isLoading, isTrue);
 
-      // Les trois flux ont émis : chargement terminé.
-      repo.totps.add(const []);
-      await _settle();
-      expect(vm.isLoading, isFalse);
-    });
+        // Les trois flux ont émis : chargement terminé.
+        repo.totps.add(const []);
+        await _settle();
+        expect(vm.isLoading, isFalse);
+      },
+    );
 
     test('isLoading se termine même pour un coffre vide', () async {
       final repo = FakeHomeRepository();
@@ -219,34 +222,39 @@ void main() {
       expect(vm.filteredCredentials, isEmpty);
     });
 
-    test('la recherche d\'identifiant porte sur titre, username et url', () async {
-      final repo = FakeHomeRepository();
-      final search = SearchNotifier();
-      final vm = HomeViewModel(
-        search,
-        repo,
-        searchDebounce: const Duration(milliseconds: 10),
-      );
-      addTearDown(vm.dispose);
+    test(
+      'la recherche d\'identifiant porte sur titre, username et url',
+      () async {
+        final repo = FakeHomeRepository();
+        final search = SearchNotifier();
+        final vm = HomeViewModel(
+          search,
+          repo,
+          searchDebounce: const Duration(milliseconds: 10),
+        );
+        addTearDown(vm.dispose);
 
-      repo.profiles.add(const []);
-      repo.credentials.add([
-        _credential(1, 'GitHub', username: 'octocat'),
-        _credential(2, 'Mail', uri: 'https://gmail.com'),
-        _credential(3, 'Autre'),
-      ]);
-      await _settle();
+        repo.profiles.add(const []);
+        repo.credentials.add([
+          _credential(1, 'GitHub', username: 'octocat'),
+          _credential(2, 'Mail', uri: 'https://gmail.com'),
+          _credential(3, 'Autre'),
+        ]);
+        await _settle();
 
-      // Match sur username.
-      search.updateQuery('octo');
-      await Future<void>.delayed(const Duration(milliseconds: 30));
-      expect(vm.filteredCredentials.map((c) => c.credential.title), ['GitHub']);
+        // Match sur username.
+        search.updateQuery('octo');
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+        expect(vm.filteredCredentials.map((c) => c.credential.title), [
+          'GitHub',
+        ]);
 
-      // Match sur l'url.
-      search.updateQuery('gmail');
-      await Future<void>.delayed(const Duration(milliseconds: 30));
-      expect(vm.filteredCredentials.map((c) => c.credential.title), ['Mail']);
-    });
+        // Match sur l'url.
+        search.updateQuery('gmail');
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+        expect(vm.filteredCredentials.map((c) => c.credential.title), ['Mail']);
+      },
+    );
 
     test('filtre par requête de recherche', () async {
       final repo = FakeHomeRepository();

@@ -57,7 +57,8 @@ class PlatformAutofillGateway implements AutofillGateway {
       AutofillService().fillRequestedInteractive;
 
   @override
-  Future<AutofillMetadata?> fillMetadata() => AutofillService().autofillMetadata;
+  Future<AutofillMetadata?> fillMetadata() =>
+      AutofillService().autofillMetadata;
 
   @override
   Future<void> submit(PwDataset dataset) => AutofillService().resultWithDataset(

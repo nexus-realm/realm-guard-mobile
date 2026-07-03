@@ -98,12 +98,12 @@ class ProfileDetailViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     });
-    _credentialsSub = _repository.watchCredentialsForProfile(_profileId).listen((
-      items,
-    ) {
-      _linkedCredentials = items;
-      notifyListeners();
-    });
+    _credentialsSub = _repository.watchCredentialsForProfile(_profileId).listen(
+      (items) {
+        _linkedCredentials = items;
+        notifyListeners();
+      },
+    );
     _totpsSub = _repository.watchTotpsForProfile(_profileId).listen((items) {
       _linkedTotps = items;
       notifyListeners();
