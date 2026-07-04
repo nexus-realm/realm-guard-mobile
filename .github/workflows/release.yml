@@ -54,13 +54,18 @@ jobs:
         env:
           RG_KEYSTORE_BASE64: ${{ secrets.RG_KEYSTORE_BASE64 }}
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          PLAY_ENABLED: ${{ vars.PLAY_ENABLED }}
         run: |
-          for name in RG_KEYSTORE_BASE64 PLAY_SERVICE_ACCOUNT_JSON; do
-            if [ -z "${!name}" ]; then
-              echo "::error::Secret $name absent (cf. docs/RELEASE.md)."
-              exit 1
-            fi
-          done
+          # Canal GitHub (A) : la signature est toujours requise.
+          if [ -z "$RG_KEYSTORE_BASE64" ]; then
+            echo "::error::Secret RG_KEYSTORE_BASE64 absent (cf. docs/RELEASE.md)."
+            exit 1
+          fi
+          # Canal Play (B) : actif seulement si la variable PLAY_ENABLED == true.
+          if [ "$PLAY_ENABLED" = "true" ] && [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::error::PLAY_ENABLED=true mais secret PLAY_SERVICE_ACCOUNT_JSON absent (cf. docs/RELEASE.md)."
+            exit 1
+          fi
 
       - uses: actions/checkout@v4
         with:
@@ -146,7 +151,9 @@ jobs:
   # ── Canal B — beta : AAB signé → test fermé Play ──────────────────────────
   play-aab:
     needs: prepare
-    if: needs.prepare.outputs.skipped != 'true'
+    # Canal Play désactivé par défaut : activer avec la variable de dépôt
+    # PLAY_ENABLED=true une fois le compte de service + 1er upload manuel en place.
+    if: needs.prepare.outputs.skipped != 'true' && vars.PLAY_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -252,7 +259,7 @@ jobs:
 
   # ── Canal B — promotion : test fermé → production (aucune reconstruction) ──
   promote-play:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && vars.PLAY_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
