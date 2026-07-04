@@ -170,7 +170,7 @@ flutter run                                                # run on Android devi
 dart run build_runner build --delete-conflicting-outputs  # regen Drift *.g.dart after schema edits
 flutter analyze                                            # static analysis (CI gate)
 flutter test                                               # unit tests (CI gate)
-flutter build apk --release                                # release APK (currently signed with DEBUG keys — TODO real signing)
+flutter build apk --release                                # signed release APK (key.properties / RG_* env; debug fallback — see docs/RELEASE.md)
 ```
 
 Local setup details (Windows toolchain): see `docs/INSTALL.md`.
@@ -189,8 +189,8 @@ Local setup details (Windows toolchain): see `docs/INSTALL.md`.
   - `develop` → `main`
   - `hotfix/rg-<N>` → `main`
   - `<N>` is numeric only. `rg-<N>` = the issue/ticket key.
-- PR CI: `flutter analyze` + `flutter test` (Flutter 3.44.4).
-- Release (`.github/workflows/release.yml`): on push to `home` or `release/*` → `conventional-changelog-action` bumps `pubspec.yaml` `version`, builds APK, publishes a GitHub release with `CHANGELOG.md`. (The `home` trigger is unusual — verify before relying on it.)
+- PR CI (`common-ci.yml`): branch-name check → `dart format --set-exit-if-changed` + `flutter analyze` + `flutter test` + `flutter build apk --debug` (Flutter 3.44.4; pub/Gradle cached, superseded runs auto-cancelled, least-privilege `permissions`).
+- Release CD (`.github/workflows/release.yml`): **two channels, build-once-then-promote.** A push to `staging` cuts the version once (`conventional-changelog` bump+tag) and ships beta to both channels — signed **APK** → GitHub pre-release, signed **AAB** → Play **closed testing** (`alpha`, via fastlane in `android/`). Merging `staging→main` (or a manual dispatch) promotes the **same** build with no rebuild: pre-release → full GitHub release, and closed testing → **production**. Signing comes from `RG_*` secrets (debug fallback locally); full flow + one-time setup in **`docs/RELEASE.md`**.
 
 ## 13. Known gaps / open questions (as of this writing)
 
@@ -200,7 +200,7 @@ Local setup details (Windows toolchain): see `docs/INSTALL.md`.
 4. `HomeShell.actions` has 1 entry but the `BottomNavigationBar` has 2 tabs (both routing to `/home`); selecting "Partage" (index 1) indexes `actions[1]` → `RangeError`. The "Partage" tab is unimplemented.
 5. `AppTransitions` exists but isn't wired into `appRouter`.
 6. Duplicate (unused) `CategoryFilter` enum in both `home_shell.dart` and `home_tab.dart`.
-7. Release build signs with **debug keys** (`android/app/build.gradle.kts` TODO).
+7. Release CD is signed + R8-enabled (`build.gradle.kts`, `proguard-rules.pro`) but **not yet device-tested**: smoke-test the release build — especially **autofill**, the R8-sensitive path — before the first store publish. Channel B also needs the one-time Play setup (`docs/RELEASE.md` §2).
 8. Toolchain pinned to Flutter **3.44.4** across CI, the release workflow, and INSTALL.md (aligned).
 
 ## 14. When you change X, do Y

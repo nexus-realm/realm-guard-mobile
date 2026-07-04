@@ -31,10 +31,11 @@ locked; repository **interfaces** + value-object **drafts** making ViewModels un
 The highest-impact items if/when work resumes (rationale in each entry):
 
 1. **UX-4** — No encrypted backup/export → permanent data loss if the device is lost (offline-first, no cloud).
-2. **SEC-4** — Release APK is signed with **debug keys** and ships without R8/obfuscation (publication blocker).
-3. **SEC-2** — Clipboard copies of secrets never auto-clear and aren't marked sensitive.
-4. **ARCH-1** — Drift `watch` streams have no `onError`; the DB closing under them on auto-lock can throw.
-5. **SEC-1** — Per-entry app-level encryption decision still open (defense-in-depth on top of SQLCipher).
+2. **SEC-2** — Clipboard copies of secrets never auto-clear and aren't marked sensitive.
+3. **ARCH-1** — Drift `watch` streams have no `onError`; the DB closing under them on auto-lock can throw.
+4. **SEC-1** — Per-entry app-level encryption decision still open (defense-in-depth on top of SQLCipher).
+
+> **SEC-4** (release signing + R8/obfuscation) — ✅ resolved in Lot B (see the entry below).
 
 ---
 
@@ -45,7 +46,7 @@ The highest-impact items if/when work resumes (rationale in each entry):
 | SEC-1 | Security | App-level per-entry encryption undecided | Medium | L | Open |
 | SEC-2 | Security | Clipboard: no auto-clear, not marked sensitive | Medium | S–M | Open |
 | SEC-3 | Security | Secret input fields don't disable autocorrect/suggestions | Low–Med | S | Open |
-| SEC-4 | Security | Release signed with debug keys; no R8/obfuscation | High | M | Open |
+| SEC-4 | Security | Release signed with debug keys; no R8/obfuscation | High | M | ✅ Resolved (Lot B) |
 | SEC-5 | Security | Biometric auth not bound to Keystore op via CryptoObject | Low | M | Open |
 | SEC-6 | Security | Derived key / secrets can't be wiped from memory (inherent) | Low | L | Open |
 | PERF-1 | Performance | TOTP recomputed every second + one Timer per tile | Low–Med | M | Open |
@@ -100,14 +101,17 @@ The highest-impact items if/when work resumes (rationale in each entry):
   where appropriate) on every secret field.
 
 ### SEC-4 — Release build signed with debug keys; no R8 / obfuscation
-- **Status:** Open · **Severity:** High · **Effort:** M
-- **Files:** `android/app/build.gradle.kts` (release `buildType`)
-- **Finding:** `signingConfig = signingConfigs.getByName("debug")` (TODO in file) — a debug-signed APK can't
-  be published to a store and weakens the trust chain. There is no `isMinifyEnabled` / `isShrinkResources`
-  / ProGuard config, so the release ships **un-shrunk and un-obfuscated** (readable symbols, larger APK).
-- **Direction:** create a real upload keystore + git-ignored `key.properties`, wire a proper release
-  `signingConfig`; enable R8 (`isMinifyEnabled = true`, `isShrinkResources = true`) with keep rules for
-  drift / sqlcipher / local_auth / the `secure_keystore` method channel. Release blocker before any publish.
+- **Status:** ✅ Resolved (Lot B / B1) · **Severity:** High · **Effort:** M
+- **Files:** `android/app/build.gradle.kts`, `android/app/proguard-rules.pro`
+- **Finding:** `signingConfig = signingConfigs.getByName("debug")` (original TODO) — a debug-signed APK can't
+  be published to a store and weakens the trust chain, and the release shipped un-shrunk / un-obfuscated.
+- **Resolution:** the release `signingConfig` now reads `android/key.properties` (local) or `RG_*` env (CI),
+  with a debug fallback so no-keystore builds still work. R8 shrinking + **obfuscation** enabled
+  (`isMinifyEnabled = true`) with keep rules in `proguard-rules.pro` — this also fixed a **latent R8 failure**
+  from `flutter_autofill_service` → kotlin-logging (missing logback/JNDI classes) that broke every
+  `flutter build apk --release` (CI only ran `--debug`). `isShrinkResources` intentionally left off for now.
+- **Remaining:** device smoke-test of the R8 release build (esp. autofill) before the first publish; see
+  `docs/RELEASE.md`.
 
 ### SEC-5 — Biometric auth not cryptographically bound to the Keystore op
 - **Status:** Open · **Severity:** Low · **Effort:** M
