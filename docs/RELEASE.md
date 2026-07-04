@@ -95,11 +95,29 @@ R8 (shrinking + obfuscation) is **on** for release builds; keep rules live in
 ## Versioning
 
 `versionName` comes from `pubspec.yaml` `version` (bumped by
-`conventional-changelog`). `versionCode` must strictly increase for every Play
-upload; CI passes it via `flutter build … --build-number=<n>`.
+`conventional-changelog` on the `staging` cut). `versionCode` must strictly
+increase for every Play upload; CI derives it from `git rev-list --count HEAD`
+(monotonic, stable across workflow re-creation, and identical between channels A
+and B for the same commit) and passes it via `flutter build … --build-number=<n>`.
+
+## Channel A — operating it (`.github/workflows/release.yml`)
+
+- **Cut a beta:** merge into `staging`. The workflow bumps the version + changelog
+  (Conventional Commits), builds a **signed APK**, and publishes a GitHub
+  **pre-release** `vX.Y.Z (beta)` with the APK attached.
+- **Promote to production:** merge `staging → main`, **or** run the *Release ·
+  GitHub + APK* workflow manually (`workflow_dispatch`, optional `tag` input).
+  The existing pre-release is flipped to a **full release** — same APK, no rebuild.
+- Requires the signing secrets (§1). Without `RG_KEYSTORE_BASE64` the beta job
+  fails fast (never ships a debug-signed APK).
+- The GitHub APK is a **universal** APK (all ABIs, ~85 MB) for one-tap sideloading.
+  For smaller per-ABI files, add `--split-per-abi` to the build step (users then
+  pick their architecture). Play/AAB (Channel B) delivers optimised sizes anyway.
+- ⚠️ `staging` must allow the `GITHUB_TOKEN` to push the `chore(release)` commit
+  (don't require PR review for Actions on `staging`, or use a PAT).
 
 ## Implementation status
 
-- [x] **B1** — signing foundation (this file, `build.gradle.kts`, `proguard-rules.pro`)
-- [ ] **B2** — Channel A workflow (GitHub Release + APK)
-- [ ] **B3** — Channel B workflow (Play Store + AAB)
+- [x] **B1** — signing foundation (`build.gradle.kts`, `proguard-rules.pro`)
+- [x] **B2** — Channel A workflow (GitHub Release + APK) — `release.yml`
+- [ ] **B3** — Channel B workflow (Play Store + AAB) — needs Play setup (§2)
