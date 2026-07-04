@@ -1,0 +1,4 @@
+source "https://rubygems.org"
+
+# Fastlane : téléversement et promotion Play Store (canal B). Voir docs/RELEASE.md.
+gem "fastlane"

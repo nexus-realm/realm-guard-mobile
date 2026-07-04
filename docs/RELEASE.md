@@ -70,7 +70,7 @@ The release workflow decodes the keystore into `android/app/` and exports the
 #   RG_STORE_PASSWORD / RG_KEY_ALIAS / RG_KEY_PASSWORD from Secrets
 ```
 
-### 2. Google Play — required for Channel B (set up before B3 is used)
+### 2. Google Play — required for Channel B
 
 - Create the app in the **Play Console** and **enrol in Play App Signing** (Google
   holds the app-signing key; your keystore above is only the *upload* key).
@@ -100,24 +100,47 @@ increase for every Play upload; CI derives it from `git rev-list --count HEAD`
 (monotonic, stable across workflow re-creation, and identical between channels A
 and B for the same commit) and passes it via `flutter build … --build-number=<n>`.
 
-## Channel A — operating it (`.github/workflows/release.yml`)
+## Operating the release (`.github/workflows/release.yml`)
 
-- **Cut a beta:** merge into `staging`. The workflow bumps the version + changelog
-  (Conventional Commits), builds a **signed APK**, and publishes a GitHub
-  **pre-release** `vX.Y.Z (beta)` with the APK attached.
-- **Promote to production:** merge `staging → main`, **or** run the *Release ·
-  GitHub + APK* workflow manually (`workflow_dispatch`, optional `tag` input).
-  The existing pre-release is flipped to a **full release** — same APK, no rebuild.
-- Requires the signing secrets (§1). Without `RG_KEYSTORE_BASE64` the beta job
-  fails fast (never ships a debug-signed APK).
-- The GitHub APK is a **universal** APK (all ABIs, ~85 MB) for one-tap sideloading.
-  For smaller per-ABI files, add `--split-per-abi` to the build step (users then
-  pick their architecture). Play/AAB (Channel B) delivers optimised sizes anyway.
-- ⚠️ `staging` must allow the `GITHUB_TOKEN` to push the `chore(release)` commit
-  (don't require PR review for Actions on `staging`, or use a PAT).
+One workflow drives **both** channels. The version is cut **once** in a shared
+`prepare` job (Conventional Commits bump + tag), then two channel jobs build the
+**same tag**, so the APK and AAB carry identical `versionName`/`versionCode`.
+(A single workflow is required here: two parallel workflows can't share one
+version bump without a race.)
+
+### Cut a beta — merge into `staging`
+- `prepare` bumps the version + changelog and tags `vX.Y.Z`.
+- **Channel A** (`github-apk`): signed **universal APK** → GitHub **pre-release**
+  `vX.Y.Z (beta)`.
+- **Channel B** (`play-aab`): signed **AAB** → Play **closed testing** (`alpha`)
+  via fastlane.
+
+### Promote to production — merge `staging → main`, or run the workflow manually
+`workflow_dispatch` inputs: `tag` (which release to promote; default = pubspec
+version, or the latest pre-release) and `rollout` (Play staged rollout, e.g. `0.2`).
+- **Channel A** (`promote-github`): flips the pre-release to a **full release** —
+  same APK, no rebuild.
+- **Channel B** (`promote-play`): promotes the closed-testing build to
+  **production** (fastlane `track_promote_to`) — same AAB, no rebuild. A `rollout`
+  fraction makes it a staged rollout.
+
+### Notes
+- Requires the signing **and** Play secrets (§1–§2). `prepare` fails fast if
+  either is missing (no tag/commit left behind).
+- The GitHub APK is **universal** (all ABIs, ~85 MB) for one-tap sideloading; add
+  `--split-per-abi` for smaller per-ABI files. Play/AAB delivers optimised sizes.
+- fastlane lives in `android/` (`Gemfile`, `fastlane/Appfile`, `fastlane/Fastfile`).
+  Run `bundle install` in `android/` once and commit `Gemfile.lock` for reproducible
+  fastlane versions. Closed-testing track = `alpha` (override with `PLAY_BETA_TRACK`).
+- ⚠️ `staging` must let the `GITHUB_TOKEN` push the `chore(release)` commit (don't
+  require PR review for Actions on `staging`, or use a PAT).
 
 ## Implementation status
 
 - [x] **B1** — signing foundation (`build.gradle.kts`, `proguard-rules.pro`)
-- [x] **B2** — Channel A workflow (GitHub Release + APK) — `release.yml`
-- [ ] **B3** — Channel B workflow (Play Store + AAB) — needs Play setup (§2)
+- [x] **B2** — Channel A (GitHub Release + APK)
+- [x] **B3** — Channel B (Play Store + AAB) — fastlane + `release.yml`
+
+Both channels are wired in `.github/workflows/release.yml`. Before the first real
+run: complete §1 (keystore + `RG_*` secrets) and §2 (Play App Signing, service
+account, first manual AAB upload).
