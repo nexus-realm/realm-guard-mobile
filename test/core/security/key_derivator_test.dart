@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/core/security/key_derivator.dart';
+import 'package:realmguard/core/security/key_derivator.dart';
 
 void main() {
   group('KeyDerivator Unit Tests', () {

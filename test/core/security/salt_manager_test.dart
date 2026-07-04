@@ -4,8 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:realm_guard_mobile/core/exceptions/security_exception.dart';
-import 'package:realm_guard_mobile/core/security/salt_manager.dart';
+import 'package:realmguard/core/exceptions/security_exception.dart';
+import 'package:realmguard/core/security/salt_manager.dart';
 
 /// Mock pour simuler path_provider
 class MockPathProviderPlatform extends Fake

@@ -1,8 +1,8 @@
 import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:realm_guard_mobile/core/feature_flags/feature_flag.dart';
-import 'package:realm_guard_mobile/core/feature_flags/feature_flags_service.dart';
+import 'package:realmguard/core/feature_flags/feature_flag.dart';
+import 'package:realmguard/core/feature_flags/feature_flags_service.dart';
 
 /// Secure storage en mémoire, branché sur la façade réelle [FlutterSecureStorage].
 class FakeSecureStoragePlatform extends FlutterSecureStoragePlatform

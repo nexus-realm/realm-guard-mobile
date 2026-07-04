@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/core/routes/app_routes.dart';
-import 'package:realm_guard_mobile/core/routes/route_guard.dart';
+import 'package:realmguard/core/routes/app_routes.dart';
+import 'package:realmguard/core/routes/route_guard.dart';
 
 void main() {
   group('vaultRouteGuard', () {

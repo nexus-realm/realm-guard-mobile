@@ -33,7 +33,7 @@ val hasReleaseSigning = releaseStoreFile != null &&
     releaseKeyPassword != null
 
 android {
-    namespace = "io.github.sachabarbet.realm_guard_mobile"
+    namespace = "fr.nexusrealm.realmguard"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -47,7 +47,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "io.github.sachabarbet.realm_guard_mobile"
+        applicationId = "fr.nexusrealm.realmguard"
         // Raised to 29 (Android 10): the flutter_autofill_service plugin
         // (autofill) requires minSdk 29. Above the Flutter default (24).
         minSdk = 29

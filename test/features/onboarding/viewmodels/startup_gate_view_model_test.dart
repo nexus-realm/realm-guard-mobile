@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/core/security/biometric_storage_service.dart';
-import 'package:realm_guard_mobile/features/onboarding/data/onboarding_step.dart';
-import 'package:realm_guard_mobile/features/onboarding/service/onboarding_progress.dart';
-import 'package:realm_guard_mobile/features/onboarding/service/onboarding_storage_service.dart';
-import 'package:realm_guard_mobile/features/onboarding/viewmodels/startup_gate_view_model.dart';
+import 'package:realmguard/core/security/biometric_storage_service.dart';
+import 'package:realmguard/features/onboarding/data/onboarding_step.dart';
+import 'package:realmguard/features/onboarding/service/onboarding_progress.dart';
+import 'package:realmguard/features/onboarding/service/onboarding_storage_service.dart';
+import 'package:realmguard/features/onboarding/viewmodels/startup_gate_view_model.dart';
 
 class InMemoryOnboardingStorageService extends OnboardingStorageService {
   OnboardingProgress _progress;

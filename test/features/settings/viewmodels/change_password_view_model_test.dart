@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/core/security/vault_service.dart';
-import 'package:realm_guard_mobile/features/settings/viewmodels/change_password_view_model.dart';
+import 'package:realmguard/core/security/vault_service.dart';
+import 'package:realmguard/features/settings/viewmodels/change_password_view_model.dart';
 
 class FakeVaultService extends VaultService {
   ChangePasswordResult result = ChangePasswordResult.success;

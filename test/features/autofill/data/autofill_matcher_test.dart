@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/core/database/app_database.dart';
-import 'package:realm_guard_mobile/features/autofill/data/autofill_matcher.dart';
+import 'package:realmguard/core/database/app_database.dart';
+import 'package:realmguard/features/autofill/data/autofill_matcher.dart';
 
 Credential _credential(int id, String title, String? uri) => Credential(
   id: id,

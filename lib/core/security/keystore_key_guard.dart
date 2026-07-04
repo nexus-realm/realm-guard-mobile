@@ -45,7 +45,7 @@ class KeystoreKeyGuard {
   const KeystoreKeyGuard();
 
   static const MethodChannel _channel = MethodChannel(
-    'io.github.sachabarbet.realm_guard_mobile/secure_keystore',
+    'fr.nexusrealm.realmguard/secure_keystore',
   );
 
   /// Whether an authentication-bound Keystore key can be used on this device

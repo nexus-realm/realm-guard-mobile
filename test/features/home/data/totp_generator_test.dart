@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/features/home/data/base32.dart';
-import 'package:realm_guard_mobile/features/home/data/totp_generator.dart';
+import 'package:realmguard/features/home/data/base32.dart';
+import 'package:realmguard/features/home/data/totp_generator.dart';
 
 // Secret de référence RFC 6238 : ASCII "12345678901234567890".
 // Base32 = GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ

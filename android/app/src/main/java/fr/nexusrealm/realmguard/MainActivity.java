@@ -1,4 +1,4 @@
-package io.github.sachabarbet.realm_guard_mobile;
+package fr.nexusrealm.realmguard;
 
 import android.os.Bundle;
 import android.view.WindowManager;

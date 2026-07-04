@@ -1,6 +1,6 @@
-import 'package:realm_guard_mobile/core/feature_flags/feature_flag.dart';
-import 'package:realm_guard_mobile/core/feature_flags/feature_flags_controller.dart';
-import 'package:realm_guard_mobile/core/feature_flags/feature_flags_service.dart';
+import 'package:realmguard/core/feature_flags/feature_flag.dart';
+import 'package:realmguard/core/feature_flags/feature_flags_controller.dart';
+import 'package:realmguard/core/feature_flags/feature_flags_service.dart';
 
 /// Service de feature flags en mémoire (aucun accès plateforme), pour les tests.
 class InMemoryFeatureFlagsService extends FeatureFlagsService {

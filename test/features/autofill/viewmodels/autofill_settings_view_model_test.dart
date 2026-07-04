@@ -1,7 +1,7 @@
 import 'package:flutter_autofill_service/flutter_autofill_service.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/features/autofill/service/autofill_gateway.dart';
-import 'package:realm_guard_mobile/features/autofill/viewmodels/autofill_settings_view_model.dart';
+import 'package:realmguard/features/autofill/service/autofill_gateway.dart';
+import 'package:realmguard/features/autofill/viewmodels/autofill_settings_view_model.dart';
 
 class FakeAutofillGateway implements AutofillGateway {
   FakeAutofillGateway(this.statusValue);

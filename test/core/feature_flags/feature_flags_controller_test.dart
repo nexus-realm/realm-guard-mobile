@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/core/feature_flags/feature_flag.dart';
-import 'package:realm_guard_mobile/core/feature_flags/feature_flags_controller.dart';
+import 'package:realmguard/core/feature_flags/feature_flag.dart';
+import 'package:realmguard/core/feature_flags/feature_flags_controller.dart';
 
 import '../../support/feature_flags_test_doubles.dart';
 

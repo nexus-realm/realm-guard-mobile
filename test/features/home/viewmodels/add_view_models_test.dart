@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/core/database/app_database.dart';
-import 'package:realm_guard_mobile/core/database/vault_repository.dart';
-import 'package:realm_guard_mobile/features/home/data/credential_draft.dart';
-import 'package:realm_guard_mobile/features/home/data/profile_draft.dart';
-import 'package:realm_guard_mobile/features/home/viewmodels/add_credential_view_model.dart';
-import 'package:realm_guard_mobile/features/home/viewmodels/add_profile_view_model.dart';
+import 'package:realmguard/core/database/app_database.dart';
+import 'package:realmguard/core/database/vault_repository.dart';
+import 'package:realmguard/features/home/data/credential_draft.dart';
+import 'package:realmguard/features/home/data/profile_draft.dart';
+import 'package:realmguard/features/home/viewmodels/add_credential_view_model.dart';
+import 'package:realmguard/features/home/viewmodels/add_profile_view_model.dart';
 
 class FakeVaultEditor implements VaultEditor {
   bool shouldThrow = false;

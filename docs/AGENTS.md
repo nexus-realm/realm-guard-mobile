@@ -9,7 +9,7 @@
 - Goals, in priority order: **maximum security**, then a **simple / uncluttered UX** adapted to how each user uses it.
 - "Offline-first" = no backend, no network sync. All data lives on-device in an **encrypted local database**.
 - **Platform: Android only** today. Only `android/` is generated. `.metadata` lists iOS as "unmanaged" but no `ios/` folder exists — do not assume iOS support.
-- App id / namespace: `io.github.sachabarbet.realm_guard_mobile`.
+- App id / namespace: `fr.nexusrealm.realmguard`.
 - Remote: `github.com/nexus-realm/realm-guard-mobile`.
 
 ## 2. Tech stack
