@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/shared/widgets/password_form.dart';
+import 'package:realmguard/shared/widgets/password_form.dart';
 
 void main() {
   testWidgets(

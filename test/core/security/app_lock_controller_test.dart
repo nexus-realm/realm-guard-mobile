@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/core/security/app_lock_controller.dart';
-import 'package:realm_guard_mobile/core/security/vault_service.dart';
+import 'package:realmguard/core/security/app_lock_controller.dart';
+import 'package:realmguard/core/security/vault_service.dart';
 
 class FakeVaultService extends VaultService {
   bool unlocked = false;

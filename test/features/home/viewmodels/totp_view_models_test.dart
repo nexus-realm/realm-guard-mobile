@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/core/database/app_database.dart';
-import 'package:realm_guard_mobile/core/database/vault_repository.dart';
-import 'package:realm_guard_mobile/features/home/data/totp_draft.dart';
-import 'package:realm_guard_mobile/features/home/viewmodels/add_totp_view_model.dart';
-import 'package:realm_guard_mobile/features/home/viewmodels/totp_detail_view_model.dart';
+import 'package:realmguard/core/database/app_database.dart';
+import 'package:realmguard/core/database/vault_repository.dart';
+import 'package:realmguard/features/home/data/totp_draft.dart';
+import 'package:realmguard/features/home/viewmodels/add_totp_view_model.dart';
+import 'package:realmguard/features/home/viewmodels/totp_detail_view_model.dart';
 
 class FakeTotpEditor implements TotpEditor {
   final StreamController<TotpWithProfile?> controller =

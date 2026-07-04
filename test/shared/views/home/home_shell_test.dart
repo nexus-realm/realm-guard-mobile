@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:realm_guard_mobile/shared/views/home/home_shell.dart';
+import 'package:realmguard/shared/views/home/home_shell.dart';
 
 Widget _harness() {
   final router = GoRouter(

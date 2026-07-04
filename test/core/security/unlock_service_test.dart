@@ -1,9 +1,9 @@
 import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:realm_guard_mobile/core/security/biometric_storage_service.dart';
-import 'package:realm_guard_mobile/core/security/unlock_service.dart';
-import 'package:realm_guard_mobile/core/security/vault_service.dart';
+import 'package:realmguard/core/security/biometric_storage_service.dart';
+import 'package:realmguard/core/security/unlock_service.dart';
+import 'package:realmguard/core/security/vault_service.dart';
 
 /// In-memory secure storage backing the real [FlutterSecureStorage] facade.
 class FakeSecureStoragePlatform extends FlutterSecureStoragePlatform

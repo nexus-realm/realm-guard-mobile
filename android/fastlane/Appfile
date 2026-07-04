@@ -1,5 +1,5 @@
 # Fastlane — compte de service Google Play. Voir docs/RELEASE.md (§2).
 # La CI écrit le JSON du compte de service dans un fichier temporaire et
 # exporte son chemin dans PLAY_JSON_KEY_FILE (le secret ne touche jamais le dépôt).
-package_name(ENV["PLAY_PACKAGE_NAME"] || "io.github.sachabarbet.realm_guard_mobile")
+package_name(ENV["PLAY_PACKAGE_NAME"] || "fr.nexusrealm.realmguard")
 json_key_file(ENV["PLAY_JSON_KEY_FILE"] || "play-service-account.json")

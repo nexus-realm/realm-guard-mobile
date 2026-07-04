@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/core/theme/app_theme.dart';
+import 'package:realmguard/core/theme/app_theme.dart';
 
 void main() {
   group('AppTheme', () {

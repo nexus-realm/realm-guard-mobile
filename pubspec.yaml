@@ -1,4 +1,4 @@
-name: realm_guard_mobile
+name: realmguard
 description: "A password manager mobile application."
 publish_to: 'none'
 version: 0.0.1

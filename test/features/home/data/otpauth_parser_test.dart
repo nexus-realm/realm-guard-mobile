@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/features/home/data/otpauth_parser.dart';
+import 'package:realmguard/features/home/data/otpauth_parser.dart';
 
 void main() {
   group('OtpauthParser.parse', () {

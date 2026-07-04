@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/core/security/unlock_service.dart';
-import 'package:realm_guard_mobile/features/unlock/viewmodels/unlock_view_model.dart';
+import 'package:realmguard/core/security/unlock_service.dart';
+import 'package:realmguard/features/unlock/viewmodels/unlock_view_model.dart';
 
 /// Fake qui compte les lectures du lockout et force la stratégie mot de passe
 /// (pas de tentative biométrique automatique au démarrage).

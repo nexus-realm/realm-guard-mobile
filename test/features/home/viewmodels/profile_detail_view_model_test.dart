@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/core/database/app_database.dart';
-import 'package:realm_guard_mobile/core/database/vault_repository.dart';
-import 'package:realm_guard_mobile/features/home/data/profile_deletion_strategy.dart';
-import 'package:realm_guard_mobile/features/home/data/profile_draft.dart';
-import 'package:realm_guard_mobile/features/home/viewmodels/profile_detail_view_model.dart';
+import 'package:realmguard/core/database/app_database.dart';
+import 'package:realmguard/core/database/vault_repository.dart';
+import 'package:realmguard/features/home/data/profile_deletion_strategy.dart';
+import 'package:realmguard/features/home/data/profile_draft.dart';
+import 'package:realmguard/features/home/viewmodels/profile_detail_view_model.dart';
 
 class FakeProfileEditor implements ProfileEditor {
   final StreamController<Profile?> controller =

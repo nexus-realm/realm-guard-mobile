@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/features/onboarding/service/onboarding_progress.dart';
-import 'package:realm_guard_mobile/features/onboarding/data/onboarding_step.dart';
+import 'package:realmguard/features/onboarding/service/onboarding_progress.dart';
+import 'package:realmguard/features/onboarding/data/onboarding_step.dart';
 
 void main() {
   group('OnboardingProgress', () {

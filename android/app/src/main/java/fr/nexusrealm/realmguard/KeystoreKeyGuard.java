@@ -1,4 +1,4 @@
-package io.github.sachabarbet.realm_guard_mobile;
+package fr.nexusrealm.realmguard;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
@@ -40,7 +40,7 @@ import io.flutter.plugin.common.MethodChannel;
 final class KeystoreKeyGuard implements MethodChannel.MethodCallHandler {
 
     private static final String CHANNEL =
-        "io.github.sachabarbet.realm_guard_mobile/secure_keystore";
+        "fr.nexusrealm.realmguard/secure_keystore";
     private static final String ANDROID_KEYSTORE = "AndroidKeyStore";
     private static final String KEY_ALIAS = "realm_guard_vault_key_wrapper";
     private static final String TRANSFORMATION =

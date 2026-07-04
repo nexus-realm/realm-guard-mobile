@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/core/database/app_database.dart';
-import 'package:realm_guard_mobile/core/database/vault_repository.dart';
-import 'package:realm_guard_mobile/shared/notifiers/search_notifier.dart';
-import 'package:realm_guard_mobile/shared/viewmodels/home_view_model.dart';
+import 'package:realmguard/core/database/app_database.dart';
+import 'package:realmguard/core/database/vault_repository.dart';
+import 'package:realmguard/shared/notifiers/search_notifier.dart';
+import 'package:realmguard/shared/viewmodels/home_view_model.dart';
 
 class FakeHomeRepository implements HomeRepository {
   final StreamController<List<Profile>> profiles =

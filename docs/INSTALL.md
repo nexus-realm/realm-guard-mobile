@@ -1,6 +1,6 @@
 # INSTALL
 
-Ce document décrit les prérequis et les étapes pour mettre en place l'environnement de développement de `realm_guard_mobile` sous Windows.
+Ce document décrit les prérequis et les étapes pour mettre en place l'environnement de développement de `realmguard` sous Windows.
 
 ## Prérequis (Windows)
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/features/home/data/password_strength.dart';
+import 'package:realmguard/features/home/data/password_strength.dart';
 
 void main() {
   group('PasswordStrength.evaluate', () {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realm_guard_mobile/core/exceptions/vault_unlock_exception.dart';
+import 'package:realmguard/core/exceptions/vault_unlock_exception.dart';
 
 void main() {
   group('VaultUnlockException', () {
