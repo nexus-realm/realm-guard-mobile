@@ -16,8 +16,6 @@ class Credentials extends Table {
 
   BoolColumn get favorite => boolean().withDefault(const Constant(false))();
   IntColumn get profileId => integer().nullable().references(Profiles, #id)();
-  DateTimeColumn get createdAt =>
-      dateTime().withDefault(currentDateAndTime)();
-  DateTimeColumn get updatedAt =>
-      dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }

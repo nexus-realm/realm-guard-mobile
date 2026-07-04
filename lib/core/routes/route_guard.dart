@@ -24,10 +24,7 @@ bool _isDebugLocation(String location) {
 /// La zone protégée (tout ce qui sort du flux d'auth et des écrans de debug)
 /// exige un coffre déverrouillé ; sinon l'utilisateur est renvoyé vers
 /// [AppRoutes.unlock].
-String? vaultRouteGuard({
-  required String location,
-  required bool isUnlocked,
-}) {
+String? vaultRouteGuard({required String location, required bool isUnlocked}) {
   if (_authRoutes.contains(location)) return null;
   if (_isDebugLocation(location)) return null;
   if (!isUnlocked) return AppRoutes.unlock;

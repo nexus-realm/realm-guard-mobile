@@ -87,7 +87,9 @@ void main() {
 
     test('combiné avec matchByDomain : une app native correspond', () {
       final creds = [_credential(1, 'GitHub', 'https://github.com/login')];
-      final domains = AutofillMatcher.domainsFromPackages({'com.github.android'});
+      final domains = AutofillMatcher.domainsFromPackages({
+        'com.github.android',
+      });
       expect(
         AutofillMatcher.matchByDomain(creds, domains).map((c) => c.title),
         ['GitHub'],

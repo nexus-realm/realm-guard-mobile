@@ -73,9 +73,7 @@ void main() {
     test('loads existing progress at initialization', () async {
       final storage = InMemoryOnboardingStorageService();
       await storage.saveProgress(
-        OnboardingProgress.initial().markStepCompleted(
-          OnboardingStep.welcome,
-        ),
+        OnboardingProgress.initial().markStepCompleted(OnboardingStep.welcome),
       );
 
       final controller = OnboardingFlowController(
@@ -117,105 +115,120 @@ void main() {
       expect(vault.lastPassword, 'Motdepasse1!');
       expect(vault.isLocked, isTrue);
       expect(
-        controller.progress.completedSteps.contains(OnboardingStep.masterPassword),
+        controller.progress.completedSteps.contains(
+          OnboardingStep.masterPassword,
+        ),
         isTrue,
       );
     });
 
-    test('TOTP choice step follows biometrics and completes onboarding', () async {
-      final storage = InMemoryOnboardingStorageService();
-      final vault = FakeVaultService();
-      final biometrics = FakeBiometricStorageService()..isAvailable = true;
+    test(
+      'TOTP choice step follows biometrics and completes onboarding',
+      () async {
+        final storage = InMemoryOnboardingStorageService();
+        final vault = FakeVaultService();
+        final biometrics = FakeBiometricStorageService()..isAvailable = true;
 
-      final controller = OnboardingFlowController(
-        onboardingStorageService: storage,
-        vaultService: vault,
-        biometricStorageService: biometrics,
-        featureFlagsController: featureFlagsControllerWith(),
-      );
+        final controller = OnboardingFlowController(
+          onboardingStorageService: storage,
+          vaultService: vault,
+          biometricStorageService: biometrics,
+          featureFlagsController: featureFlagsControllerWith(),
+        );
 
-      await controller.initialize();
-      await controller.completeWelcomeStep();
-      await controller.completeMasterPasswordStep(
-        'Motdepasse1!',
-        'Motdepasse1!',
-      );
-      await controller.completeBiometricStep(false);
+        await controller.initialize();
+        await controller.completeWelcomeStep();
+        await controller.completeMasterPasswordStep(
+          'Motdepasse1!',
+          'Motdepasse1!',
+        );
+        await controller.completeBiometricStep(false);
 
-      // La biométrie n'est plus la dernière étape : le choix TOTP la suit.
-      expect(biometrics.clearWasCalled, isTrue);
-      expect(biometrics.biometricEnabledValue, isFalse);
-      expect(controller.currentStep, OnboardingStep.totpChoice);
-      expect(controller.isCompleted, isFalse);
+        // La biométrie n'est plus la dernière étape : le choix TOTP la suit.
+        expect(biometrics.clearWasCalled, isTrue);
+        expect(biometrics.biometricEnabledValue, isFalse);
+        expect(controller.currentStep, OnboardingStep.totpChoice);
+        expect(controller.isCompleted, isFalse);
 
-      await controller.completeTotpChoiceStep(true);
+        await controller.completeTotpChoiceStep(true);
 
-      expect(controller.currentStep, isNull);
-      expect(controller.isCompleted, isTrue);
-      expect(controller.progress.biometricEnabled, isFalse);
-    });
+        expect(controller.currentStep, isNull);
+        expect(controller.isCompleted, isTrue);
+        expect(controller.progress.biometricEnabled, isFalse);
+      },
+    );
 
-    test('records the TOTP choice through the feature flags controller', () async {
-      final storage = InMemoryOnboardingStorageService();
-      final flags = featureFlagsControllerWith();
+    test(
+      'records the TOTP choice through the feature flags controller',
+      () async {
+        final storage = InMemoryOnboardingStorageService();
+        final flags = featureFlagsControllerWith();
 
-      final controller = OnboardingFlowController(
-        onboardingStorageService: storage,
-        vaultService: FakeVaultService(),
-        biometricStorageService: FakeBiometricStorageService(),
-        featureFlagsController: flags,
-      );
+        final controller = OnboardingFlowController(
+          onboardingStorageService: storage,
+          vaultService: FakeVaultService(),
+          biometricStorageService: FakeBiometricStorageService(),
+          featureFlagsController: flags,
+        );
 
-      await controller.initialize();
-      await controller.completeWelcomeStep();
-      await controller.completeMasterPasswordStep(
-        'Motdepasse1!',
-        'Motdepasse1!',
-      );
-      await controller.completeBiometricStep(true);
+        await controller.initialize();
+        await controller.completeWelcomeStep();
+        await controller.completeMasterPasswordStep(
+          'Motdepasse1!',
+          'Motdepasse1!',
+        );
+        await controller.completeBiometricStep(true);
 
-      await controller.completeTotpChoiceStep(false);
+        await controller.completeTotpChoiceStep(false);
 
-      expect(flags.isEnabled(FeatureFlag.totp), isFalse);
-      expect(controller.isCompleted, isTrue);
-      expect(
-        controller.progress.completedSteps.contains(OnboardingStep.totpChoice),
-        isTrue,
-      );
-    });
+        expect(flags.isEnabled(FeatureFlag.totp), isFalse);
+        expect(controller.isCompleted, isTrue);
+        expect(
+          controller.progress.completedSteps.contains(
+            OnboardingStep.totpChoice,
+          ),
+          isTrue,
+        );
+      },
+    );
 
-    test('shows the TOTP step (not completion) when biometrics are unavailable', () async {
-      final storage = InMemoryOnboardingStorageService();
-      final vault = FakeVaultService();
-      final biometrics = FakeBiometricStorageService()..isAvailable = false;
+    test(
+      'shows the TOTP step (not completion) when biometrics are unavailable',
+      () async {
+        final storage = InMemoryOnboardingStorageService();
+        final vault = FakeVaultService();
+        final biometrics = FakeBiometricStorageService()..isAvailable = false;
 
-      final controller = OnboardingFlowController(
-        onboardingStorageService: storage,
-        vaultService: vault,
-        biometricStorageService: biometrics,
-        featureFlagsController: featureFlagsControllerWith(),
-      );
+        final controller = OnboardingFlowController(
+          onboardingStorageService: storage,
+          vaultService: vault,
+          biometricStorageService: biometrics,
+          featureFlagsController: featureFlagsControllerWith(),
+        );
 
-      await controller.initialize();
-      await controller.completeWelcomeStep();
-      await controller.completeMasterPasswordStep(
-        'Motdepasse1!',
-        'Motdepasse1!',
-      );
+        await controller.initialize();
+        await controller.completeWelcomeStep();
+        await controller.completeMasterPasswordStep(
+          'Motdepasse1!',
+          'Motdepasse1!',
+        );
 
-      // Biométrie indisponible : welcome → masterPassword → totpChoice (3 étapes).
-      expect(controller.currentStep, OnboardingStep.totpChoice);
-      expect(controller.totalStepCount, 3);
-      expect(controller.isCompleted, isFalse);
+        // Biométrie indisponible : welcome → masterPassword → totpChoice (3 étapes).
+        expect(controller.currentStep, OnboardingStep.totpChoice);
+        expect(controller.totalStepCount, 3);
+        expect(controller.isCompleted, isFalse);
 
-      await controller.completeTotpChoiceStep(true);
+        await controller.completeTotpChoiceStep(true);
 
-      expect(controller.currentStep, isNull);
-      expect(controller.isCompleted, isTrue);
-      expect(
-        controller.progress.completedSteps.contains(OnboardingStep.biometricChoice),
-        isFalse,
-      );
-    });
+        expect(controller.currentStep, isNull);
+        expect(controller.isCompleted, isTrue);
+        expect(
+          controller.progress.completedSteps.contains(
+            OnboardingStep.biometricChoice,
+          ),
+          isFalse,
+        );
+      },
+    );
   });
 }

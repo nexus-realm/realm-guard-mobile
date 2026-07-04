@@ -50,7 +50,8 @@ class ProfileFormState extends State<ProfileForm> {
 
   List<TextEditingController> _seed(List<String>? values) {
     final list = [
-      for (final v in values ?? const <String>[]) TextEditingController(text: v),
+      for (final v in values ?? const <String>[])
+        TextEditingController(text: v),
     ];
     if (list.isEmpty) list.add(TextEditingController());
     return list;
@@ -81,10 +82,8 @@ class ProfileFormState extends State<ProfileForm> {
     );
   }
 
-  List<String> _values(List<TextEditingController> list) => list
-      .map((c) => c.text.trim())
-      .where((v) => v.isNotEmpty)
-      .toList();
+  List<String> _values(List<TextEditingController> list) =>
+      list.map((c) => c.text.trim()).where((v) => v.isNotEmpty).toList();
 
   @override
   Widget build(BuildContext context) {

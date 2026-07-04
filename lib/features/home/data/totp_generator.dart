@@ -43,7 +43,12 @@ abstract final class TotpGenerator {
 
     final seconds = (now ?? DateTime.now()).millisecondsSinceEpoch ~/ 1000;
     final counter = seconds ~/ period;
-    return _hotp(key: key, counter: counter, digits: digits, algorithm: algorithm);
+    return _hotp(
+      key: key,
+      counter: counter,
+      digits: digits,
+      algorithm: algorithm,
+    );
   }
 
   /// Secondes restantes avant l'expiration du code courant.
@@ -73,10 +78,9 @@ abstract final class TotpGenerator {
       value >>= 8;
     }
 
-    final mac = await _macAlgorithm(algorithm).calculateMac(
-      message,
-      secretKey: SecretKey(key),
-    );
+    final mac = await _macAlgorithm(
+      algorithm,
+    ).calculateMac(message, secretKey: SecretKey(key));
     final hash = mac.bytes;
 
     // Troncature dynamique (RFC 4226).
@@ -91,11 +95,12 @@ abstract final class TotpGenerator {
     return otp.toString().padLeft(digits, '0');
   }
 
-  static MacAlgorithm _macAlgorithm(TotpAlgorithm algorithm) => switch (algorithm) {
-    TotpAlgorithm.sha1 => Hmac.sha1(),
-    TotpAlgorithm.sha256 => Hmac.sha256(),
-    TotpAlgorithm.sha512 => Hmac(Sha512()),
-  };
+  static MacAlgorithm _macAlgorithm(TotpAlgorithm algorithm) =>
+      switch (algorithm) {
+        TotpAlgorithm.sha1 => Hmac.sha1(),
+        TotpAlgorithm.sha256 => Hmac.sha256(),
+        TotpAlgorithm.sha512 => Hmac(Sha512()),
+      };
 
   static int _pow10(int exp) {
     var result = 1;

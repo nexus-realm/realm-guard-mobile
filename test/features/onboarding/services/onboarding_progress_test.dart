@@ -31,10 +31,7 @@ void main() {
 
     test('serializes and deserializes completed steps', () {
       final progress = const OnboardingProgress(
-        completedSteps: {
-          OnboardingStep.welcome,
-          OnboardingStep.masterPassword,
-        },
+        completedSteps: {OnboardingStep.welcome, OnboardingStep.masterPassword},
         biometricEnabled: false,
       );
 

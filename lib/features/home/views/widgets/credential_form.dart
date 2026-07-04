@@ -161,9 +161,8 @@ class CredentialFormState extends State<CredentialForm> {
                           ? Icons.visibility
                           : Icons.visibility_off,
                     ),
-                    onPressed: () => setState(
-                      () => _passwordObscured = !_passwordObscured,
-                    ),
+                    onPressed: () =>
+                        setState(() => _passwordObscured = !_passwordObscured),
                   ),
                   _CopyButton(
                     value: _password.text,
@@ -219,10 +218,8 @@ class CredentialFormState extends State<CredentialForm> {
               items: [
                 const DropdownMenuItem<int?>(child: Text('Aucun profil')),
                 ...widget.profiles.map(
-                  (p) => DropdownMenuItem<int?>(
-                    value: p.id,
-                    child: Text(p.name),
-                  ),
+                  (p) =>
+                      DropdownMenuItem<int?>(value: p.id, child: Text(p.name)),
                 ),
               ],
               onChanged: widget.enabled

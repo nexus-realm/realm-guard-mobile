@@ -72,7 +72,8 @@ void main() {
 
   group('AddCredentialViewModel', () {
     test('initialize charge les profils', () async {
-      final editor = FakeVaultEditor()..profilesToReturn = [_profile(1, 'Perso')];
+      final editor = FakeVaultEditor()
+        ..profilesToReturn = [_profile(1, 'Perso')];
       final vm = AddCredentialViewModel(editor);
 
       await vm.initialize();

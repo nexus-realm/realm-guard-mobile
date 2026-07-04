@@ -10,10 +10,7 @@ Widget _harness() {
       ShellRoute(
         builder: (context, state, child) => HomeShell(child: child),
         routes: [
-          GoRoute(
-            path: '/home',
-            builder: (_, _) => const Text('VAULT_CHILD'),
-          ),
+          GoRoute(path: '/home', builder: (_, _) => const Text('VAULT_CHILD')),
         ],
       ),
     ],

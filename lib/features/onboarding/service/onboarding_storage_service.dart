@@ -42,4 +42,3 @@ class OnboardingStorageService {
     await _secureStorage.delete(key: _onboardingProgressKey);
   }
 }
-

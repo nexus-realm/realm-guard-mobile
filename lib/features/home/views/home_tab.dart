@@ -218,7 +218,8 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
       return _emptyState(
         emptyIcon: Icons.timer_outlined,
         emptyTitle: 'Aucun code TOTP',
-        emptyMessage: 'Appuyez sur + pour ajouter un code à validation en '
+        emptyMessage:
+            'Appuyez sur + pour ajouter un code à validation en '
             'deux étapes.',
       );
     }
@@ -275,7 +276,11 @@ class _EmptyState extends StatelessWidget {
           children: [
             Icon(icon, size: 48, color: AppColors.secondaryText),
             const SizedBox(height: 12),
-            Text(title, style: textTheme.titleMedium, textAlign: TextAlign.center),
+            Text(
+              title,
+              style: textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 4),
             Text(
               message,

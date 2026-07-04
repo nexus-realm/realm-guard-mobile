@@ -14,10 +14,7 @@ class ViewTitle extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            width: 4,
-            decoration: NeonBoxDecoration.neonBoxDecoration,
-          ),
+          Container(width: 4, decoration: NeonBoxDecoration.neonBoxDecoration),
           const SizedBox(width: 20),
           Expanded(
             child: Column(
@@ -25,10 +22,18 @@ class ViewTitle extends StatelessWidget {
               children: [
                 if (topTitle.trim().isNotEmpty) ...[
                   const SizedBox(height: 4),
-                  Text(topTitle.toUpperCase(), semanticsLabel: topTitle, style: Theme.of(context).textTheme.titleSmall),
+                  Text(
+                    topTitle.toUpperCase(),
+                    semanticsLabel: topTitle,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                   const SizedBox(height: 4),
                 ],
-                Text(title.toUpperCase(), semanticsLabel: title, style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  title.toUpperCase(),
+                  semanticsLabel: title,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
               ],
             ),
           ),

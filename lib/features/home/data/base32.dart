@@ -7,9 +7,7 @@ abstract final class Base32 {
   /// Décode une chaîne Base32 en octets. Tolère les espaces, le padding `=` et
   /// la casse. Lève [FormatException] sur un caractère invalide.
   static Uint8List decode(String input) {
-    final cleaned = input
-        .replaceAll(RegExp(r'[\s=]'), '')
-        .toUpperCase();
+    final cleaned = input.replaceAll(RegExp(r'[\s=]'), '').toUpperCase();
     if (cleaned.isEmpty) return Uint8List(0);
 
     final output = <int>[];

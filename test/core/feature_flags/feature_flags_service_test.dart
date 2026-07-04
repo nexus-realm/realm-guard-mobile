@@ -60,12 +60,15 @@ void main() {
   });
 
   group('FeatureFlagsService', () {
-    test('renvoie la valeur par défaut du flag quand rien n\'est enregistré', () async {
-      expect(
-        await service.isEnabled(FeatureFlag.totp),
-        FeatureFlag.totp.defaultEnabled,
-      );
-    });
+    test(
+      'renvoie la valeur par défaut du flag quand rien n\'est enregistré',
+      () async {
+        expect(
+          await service.isEnabled(FeatureFlag.totp),
+          FeatureFlag.totp.defaultEnabled,
+        );
+      },
+    );
 
     test('persiste la désactivation sous la clé du flag', () async {
       await service.setEnabled(FeatureFlag.totp, false);

@@ -91,11 +91,14 @@ class VaultRepository
 
   @override
   Future<bool> updateProfile(int id, ProfileDraft draft) =>
-      (_db.profiles.update()..where((tbl) => tbl.id.equals(id))).write(
-        _profileCompanion(draft, updatedAt: DateTime.now()),
-      ).then((rows) => rows > 0);
+      (_db.profiles.update()..where((tbl) => tbl.id.equals(id)))
+          .write(_profileCompanion(draft, updatedAt: DateTime.now()))
+          .then((rows) => rows > 0);
 
-  ProfilesCompanion _profileCompanion(ProfileDraft draft, {DateTime? updatedAt}) {
+  ProfilesCompanion _profileCompanion(
+    ProfileDraft draft, {
+    DateTime? updatedAt,
+  }) {
     return ProfilesCompanion(
       name: Value(draft.name),
       emails: Value(jsonEncode(draft.emails)),
@@ -162,9 +165,9 @@ class VaultRepository
 
   @override
   Future<bool> updateCredential(int id, CredentialDraft draft) =>
-      (_db.credentials.update()..where((tbl) => tbl.id.equals(id))).write(
-        _credentialCompanion(draft, updatedAt: DateTime.now()),
-      ).then((rows) => rows > 0);
+      (_db.credentials.update()..where((tbl) => tbl.id.equals(id)))
+          .write(_credentialCompanion(draft, updatedAt: DateTime.now()))
+          .then((rows) => rows > 0);
 
   CredentialsCompanion _credentialCompanion(
     CredentialDraft draft, {
@@ -260,9 +263,9 @@ class VaultRepository
 
   @override
   Future<bool> updateTotp(int id, TotpDraft draft) =>
-      (_db.totps.update()..where((tbl) => tbl.id.equals(id))).write(
-        _totpCompanion(draft, updatedAt: DateTime.now()),
-      ).then((rows) => rows > 0);
+      (_db.totps.update()..where((tbl) => tbl.id.equals(id)))
+          .write(_totpCompanion(draft, updatedAt: DateTime.now()))
+          .then((rows) => rows > 0);
 
   @override
   Future<int> deleteTotp(int id) =>

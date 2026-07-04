@@ -21,8 +21,7 @@ class Totps extends Table {
   IntColumn get period => integer().withDefault(const Constant(30))();
 
   /// Algorithme HMAC : 'SHA1' (défaut), 'SHA256' ou 'SHA512'.
-  TextColumn get algorithm =>
-      text().withDefault(const Constant('SHA1'))();
+  TextColumn get algorithm => text().withDefault(const Constant('SHA1'))();
 
   IntColumn get profileId => integer().nullable().references(Profiles, #id)();
   BoolColumn get favorite => boolean().withDefault(const Constant(false))();

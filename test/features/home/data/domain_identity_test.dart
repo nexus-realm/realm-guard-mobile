@@ -23,7 +23,10 @@ void main() {
 
   group('DomainIdentity.from', () {
     test('utilise l\'initiale du domaine de l\'URL', () {
-      final id = DomainIdentity.from(uri: 'https://amazon.fr', title: 'Courses');
+      final id = DomainIdentity.from(
+        uri: 'https://amazon.fr',
+        title: 'Courses',
+      );
       expect(id.initial, 'A');
     });
 

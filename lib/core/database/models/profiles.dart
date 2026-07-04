@@ -12,8 +12,6 @@ class Profiles extends Table {
   /// Repère visuel : valeur ARGB d'une couleur d'une palette fixe.
   IntColumn get color => integer().nullable()();
   TextColumn get note => text().nullable()();
-  DateTimeColumn get createdAt =>
-      dateTime().withDefault(currentDateAndTime)();
-  DateTimeColumn get updatedAt =>
-      dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }

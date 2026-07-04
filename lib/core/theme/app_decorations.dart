@@ -8,11 +8,7 @@ import 'app_spacing.dart';
 abstract final class AppDecorations {
   /// Ombre douce pour décoller une carte du fond (décollement discret).
   static const List<BoxShadow> cardShadow = [
-    BoxShadow(
-      color: Color(0x33000000),
-      blurRadius: 8,
-      offset: Offset(0, 2),
-    ),
+    BoxShadow(color: Color(0x33000000), blurRadius: 8, offset: Offset(0, 2)),
   ];
 
   /// Décoration d'une carte « surface » avec coins arrondis + ombre douce.

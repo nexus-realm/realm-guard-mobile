@@ -262,7 +262,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
         GradientElevatedButton(
           onPressed: _canSubmitMasterPassword ? _submitMasterPassword : null,
           child: _viewModel.isSubmitting
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Text('Valider le mot de passe'),
         ),
       ],

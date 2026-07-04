@@ -146,7 +146,10 @@ class _HomeShellState extends State<HomeShell> {
             unselectedItemColor: AppColors.secondaryText,
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Vault'),
-              BottomNavigationBarItem(icon: Icon(Icons.share), label: 'Partage'),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.share),
+                label: 'Partage',
+              ),
             ],
           ),
         ),

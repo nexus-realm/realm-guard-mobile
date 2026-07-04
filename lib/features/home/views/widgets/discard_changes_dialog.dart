@@ -7,9 +7,7 @@ Future<bool> confirmDiscardChanges(BuildContext context) async {
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: const Text('Abandonner les modifications ?'),
-      content: const Text(
-        'Vos modifications non enregistrées seront perdues.',
-      ),
+      content: const Text('Vos modifications non enregistrées seront perdues.'),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(false),

@@ -29,7 +29,9 @@ class _AutofillDispatcherState extends State<AutofillDispatcher> {
     _AutofillMode mode;
     try {
       final metadata = await const PlatformAutofillGateway().fillMetadata();
-      mode = metadata?.saveInfo != null ? _AutofillMode.save : _AutofillMode.fill;
+      mode = metadata?.saveInfo != null
+          ? _AutofillMode.save
+          : _AutofillMode.fill;
     } catch (_) {
       mode = _AutofillMode.fill;
     }

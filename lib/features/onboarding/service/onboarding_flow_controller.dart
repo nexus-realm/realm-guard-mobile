@@ -37,7 +37,8 @@ class OnboardingFlowController extends ChangeNotifier {
   bool get isSubmitting => _isSubmitting;
   bool get isCompleted => _progress.isCompletedFor(_effectiveSteps);
   OnboardingProgress get progress => _progress;
-  OnboardingStep? get currentStep => _progress.nextMissingStepFor(_effectiveSteps);
+  OnboardingStep? get currentStep =>
+      _progress.nextMissingStepFor(_effectiveSteps);
   String? get errorMessage => _errorMessage;
   int get totalStepCount => _effectiveSteps.length;
 
@@ -64,7 +65,8 @@ class OnboardingFlowController extends ChangeNotifier {
     notifyListeners();
 
     _progress = await _onboardingStorageService.loadProgress();
-    _isBiometricStepAvailable = await _biometricStorageService.isBiometricAvailable();
+    _isBiometricStepAvailable = await _biometricStorageService
+        .isBiometricAvailable();
     _errorMessage = null;
     _isLoading = false;
     notifyListeners();
