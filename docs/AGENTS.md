@@ -186,7 +186,8 @@ Local setup details (Windows toolchain): see `docs/INSTALL.md`.
 
 - **GitFlow**, branch names enforced by `.github/workflows/common-ci.yml`:
   - `feature|fix|chore/rg-<N>` → `develop`
-  - `develop` → `main`
+  - `develop` → `staging`
+  - `staging` → `main`
   - `hotfix/rg-<N>` → `main`
   - `<N>` is numeric only. `rg-<N>` = the issue/ticket key.
 - PR CI (`common-ci.yml`): branch-name check → `dart format --set-exit-if-changed` + `flutter analyze` + `flutter test` + `flutter build apk --debug` (Flutter 3.44.4; pub/Gradle cached, superseded runs auto-cancelled, least-privilege `permissions`).

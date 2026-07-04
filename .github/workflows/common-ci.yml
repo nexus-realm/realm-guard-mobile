@@ -29,19 +29,25 @@ jobs:
         run: |
           echo "Vérification : $SOURCE_BRANCH -> $TARGET_BRANCH"
 
-          # Condition 1: develop -> main
-          if [[ "$SOURCE_BRANCH" == "develop" && "$TARGET_BRANCH" == "main" ]]; then
-            echo "✅ Validation : Workflow de release autorisé."
+          # Condition 1: develop -> staging (coupe d'une beta)
+          if [[ "$SOURCE_BRANCH" == "develop" && "$TARGET_BRANCH" == "staging" ]]; then
+            echo "✅ Validation : coupe de beta autorisée (develop -> staging)."
             exit 0
           fi
 
-          # Condition 2: hotfix/rg-* (uniquement des chiffres à la fin) -> main
+          # Condition 2: staging -> main (promotion en production)
+          if [[ "$SOURCE_BRANCH" == "staging" && "$TARGET_BRANCH" == "main" ]]; then
+            echo "✅ Validation : promotion en production autorisée (staging -> main)."
+            exit 0
+          fi
+
+          # Condition 3: hotfix/rg-* (uniquement des chiffres à la fin) -> main
           if [[ "$SOURCE_BRANCH" =~ ^hotfix/rg-[0-9]+$ && "$TARGET_BRANCH" == "main" ]]; then
             echo "✅ Validation : Hotfix autorisé vers main."
             exit 0
           fi
 
-          # Condition 3: feature|fix|chore/rg-* (uniquement des chiffres à la fin) -> develop
+          # Condition 4: feature|fix|chore/rg-* (uniquement des chiffres à la fin) -> develop
           if [[ "$SOURCE_BRANCH" =~ ^(feature|fix|chore)/rg-[0-9]+$ && "$TARGET_BRANCH" == "develop" ]]; then
             echo "✅ Validation : Développement autorisé vers develop."
             exit 0
@@ -50,9 +56,10 @@ jobs:
           # Si aucune condition n'est remplie
           echo "❌ ERREUR : Le nommage de la branche source ou le choix de la branche cible est invalide."
           echo "Règles autorisées :"
-          echo "- develop -> main"
-          echo "- hotfix/rg-[numéro] -> main"
           echo "- (feature|fix|chore)/rg-[numéro] -> develop"
+          echo "- develop -> staging"
+          echo "- staging -> main"
+          echo "- hotfix/rg-[numéro] -> main"
           exit 1
 
   build-and-test:
