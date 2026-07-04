@@ -70,14 +70,25 @@ The release workflow decodes the keystore into `android/app/` and exports the
 #   RG_STORE_PASSWORD / RG_KEY_ALIAS / RG_KEY_PASSWORD from Secrets
 ```
 
-### 2. Google Play — required for Channel B
+### 2. Google Play — Channel B (OFF by default)
+
+The Play channel is **disabled** until the repo variable `PLAY_ENABLED=true` is set.
+Until then a `staging` release runs **Channel A (GitHub APK) only**, and the Play
+jobs are **skipped** (green runs — no red failures). Enable it once the steps below
+are done:
 
 - Create the app in the **Play Console** and **enrol in Play App Signing** (Google
   holds the app-signing key; your keystore above is only the *upload* key).
 - Create a **Google Cloud service account** with Play Console access (release
   manager), generate a JSON key → store as secret `PLAY_SERVICE_ACCOUNT_JSON`.
-- **Upload the very first AAB manually** in the Console. The Play Developer API
-  (used by CI) can only publish once the app already has an initial release.
+- **Upload the very first AAB manually** in the Console — build it locally with
+  `flutter build appbundle --release` (signed with your upload keystore via
+  `android/key.properties`). ⚠️ The **GitHub APK can't be reused**: a new app
+  requires an **AAB**, and the Play Developer API (used by CI) can only publish
+  once an initial release exists. Keep this first `versionCode` low (the default)
+  so the CI's `git rev-list --count` numbers stay above it.
+- Turn the channel on:
+  `gh variable set PLAY_ENABLED --body true --repo nexus-realm/realm-guard-mobile`.
 
 ## Signing internals
 
@@ -125,8 +136,11 @@ version, or the latest pre-release) and `rollout` (Play staged rollout, e.g. `0.
   fraction makes it a staged rollout.
 
 ### Notes
-- Requires the signing **and** Play secrets (§1–§2). `prepare` fails fast if
-  either is missing (no tag/commit left behind).
+- **Channel toggle:** Channel A (GitHub) always runs; Channel B (Play) runs only
+  when the repo variable `PLAY_ENABLED=true`. With it off, `play-aab`/`promote-play`
+  are skipped (green) and `prepare` only requires `RG_KEYSTORE_BASE64`; with it on,
+  `PLAY_SERVICE_ACCOUNT_JSON` becomes required too. `prepare` fails fast on a missing
+  required secret **before** the bump (no tag/commit left behind).
 - The GitHub APK is **universal** (all ABIs, ~85 MB) for one-tap sideloading; add
   `--split-per-abi` for smaller per-ABI files. Play/AAB delivers optimised sizes.
 - fastlane lives in `android/` (`Gemfile`, `fastlane/Appfile`, `fastlane/Fastfile`).
