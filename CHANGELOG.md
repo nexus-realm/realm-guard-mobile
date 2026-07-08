@@ -1,4 +1,16 @@
-# 0.2.0 (2026-07-04)
+# [1.0.0](https://github.com/nexus-realm/realm-guard-mobile/compare/v0.2.0...v1.0.0) (2026-07-08)
+
+
+* feat!: first stable release ([eeab6e4](https://github.com/nexus-realm/realm-guard-mobile/commit/eeab6e46959dcde66d5379bbc069927c5f5a3a85))
+
+
+### BREAKING CHANGES
+
+* first public stable release (1.0.0).
+
+
+
+# [0.2.0](https://github.com/nexus-realm/realm-guard-mobile/compare/3e8531a849f4154f50ac985a3521680355eb1c1c...v0.2.0) (2026-07-04)
 
 
 ### Bug Fixes
