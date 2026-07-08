@@ -222,6 +222,8 @@ jobs:
 
       - name: Upload AAB to closed testing (beta)
         working-directory: android
+        env:
+          PLAY_BETA_TRACK: ${{ vars.PLAY_BETA_TRACK }}
         run: bundle exec fastlane beta
 
   # ── Canal A — promotion : pré-release → release complète (même APK) ────────
@@ -304,5 +306,6 @@ jobs:
       - name: Promote closed testing to production
         working-directory: android
         env:
+          PLAY_BETA_TRACK: ${{ vars.PLAY_BETA_TRACK }}
           PLAY_ROLLOUT: ${{ github.event.inputs.rollout }}
         run: bundle exec fastlane promote
