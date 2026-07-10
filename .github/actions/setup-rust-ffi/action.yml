@@ -1,0 +1,34 @@
+name: Setup Rust + realm-guard-core access
+description: >
+  Installe Rust et configure l'accès au dépôt privé realm-guard-core
+  (dépendance git du crate FFI `rust/`) via une deploy key SSH en lecture.
+  Les targets Android NDK sont installées par cargokit lors du build.
+inputs:
+  deploy-key:
+    description: Clé SSH privée (deploy key, lecture seule) de realm-guard-core.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache Rust
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: rust
+
+    - name: Load realm-guard-core deploy key
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ inputs.deploy-key }}
+
+    - name: Route the private core dependency over SSH
+      shell: bash
+      run: |
+        # Réécrit UNIQUEMENT l'URL du core en SSH (les autres accès github
+        # restent en HTTPS). Cargo fetch via le git CLI + la deploy key.
+        git config --global \
+          url."ssh://git@github.com/nexus-realm/realm-guard-core".insteadOf \
+          "https://github.com/nexus-realm/realm-guard-core"
+        echo "CARGO_NET_GIT_FETCH_WITH_CLI=true" >> "$GITHUB_ENV"
