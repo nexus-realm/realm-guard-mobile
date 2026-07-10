@@ -11,9 +11,19 @@ import 'core/routes/app_router.dart';
 import 'core/routes/app_routes.dart';
 import 'core/theme/app_theme.dart';
 import 'features/autofill/views/autofill_app.dart';
+import 'src/rust/api/simple.dart';
+import 'src/rust/frb_generated.dart';
 
 void main() async {
   final WidgetsBinding binding = WidgetsFlutterBinding.ensureInitialized();
+
+  // FFI : charge le cœur Rust (realm-guard-core) avant tout usage. Spike P0.5 :
+  // on valide l'intégration en lisant la version du cœur via le pont.
+  await RustLib.init();
+  if (kDebugMode) {
+    debugPrint('realm-guard-core (FFI) version : ${coreVersion()}');
+  }
+
   FlutterNativeSplash.preserve(widgetsBinding: binding);
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
