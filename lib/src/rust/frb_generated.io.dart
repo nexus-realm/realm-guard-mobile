@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/opaque.dart';
 import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -22,7 +23,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  OpaqueClientStart dco_decode_opaque_client_start(dynamic raw);
+
+  @protected
+  OpaqueLoginFinish dco_decode_opaque_login_finish(dynamic raw);
+
+  @protected
+  OpaqueRegisterFinish dco_decode_opaque_register_finish(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -34,7 +47,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  OpaqueClientStart sse_decode_opaque_client_start(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  OpaqueLoginFinish sse_decode_opaque_login_finish(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  OpaqueRegisterFinish sse_decode_opaque_register_finish(
+    SseDeserializer deserializer,
+  );
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -52,8 +83,29 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opaque_client_start(
+    OpaqueClientStart self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opaque_login_finish(
+    OpaqueLoginFinish self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opaque_register_finish(
+    OpaqueRegisterFinish self,
     SseSerializer serializer,
   );
 

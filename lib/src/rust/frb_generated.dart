@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/opaque.dart';
 import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -66,7 +67,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 1146501824;
+  int get rustContentHash => 1827207555;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -81,6 +82,26 @@ abstract class RustLibApi extends BaseApi {
   String crateApiSimpleCoreVersion();
 
   Future<void> crateApiSimpleInitApp();
+
+  Future<OpaqueLoginFinish> crateApiOpaqueOpaqueLoginFinish({
+    required List<int> state,
+    required String password,
+    required List<int> response,
+  });
+
+  Future<OpaqueClientStart> crateApiOpaqueOpaqueLoginStart({
+    required String password,
+  });
+
+  Future<OpaqueRegisterFinish> crateApiOpaqueOpaqueRegisterFinish({
+    required List<int> state,
+    required String password,
+    required List<int> response,
+  });
+
+  Future<OpaqueClientStart> crateApiOpaqueOpaqueRegisterStart({
+    required String password,
+  });
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -140,6 +161,146 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiSimpleInitAppConstMeta =>
       const TaskConstMeta(debugName: "init_app", argNames: []);
 
+  @override
+  Future<OpaqueLoginFinish> crateApiOpaqueOpaqueLoginFinish({
+    required List<int> state,
+    required String password,
+    required List<int> response,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(state, serializer);
+          sse_encode_String(password, serializer);
+          sse_encode_list_prim_u_8_loose(response, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opaque_login_finish,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiOpaqueOpaqueLoginFinishConstMeta,
+        argValues: [state, password, response],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOpaqueOpaqueLoginFinishConstMeta =>
+      const TaskConstMeta(
+        debugName: "opaque_login_finish",
+        argNames: ["state", "password", "response"],
+      );
+
+  @override
+  Future<OpaqueClientStart> crateApiOpaqueOpaqueLoginStart({
+    required String password,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(password, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 4,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opaque_client_start,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiOpaqueOpaqueLoginStartConstMeta,
+        argValues: [password],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOpaqueOpaqueLoginStartConstMeta =>
+      const TaskConstMeta(
+        debugName: "opaque_login_start",
+        argNames: ["password"],
+      );
+
+  @override
+  Future<OpaqueRegisterFinish> crateApiOpaqueOpaqueRegisterFinish({
+    required List<int> state,
+    required String password,
+    required List<int> response,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(state, serializer);
+          sse_encode_String(password, serializer);
+          sse_encode_list_prim_u_8_loose(response, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opaque_register_finish,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiOpaqueOpaqueRegisterFinishConstMeta,
+        argValues: [state, password, response],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOpaqueOpaqueRegisterFinishConstMeta =>
+      const TaskConstMeta(
+        debugName: "opaque_register_finish",
+        argNames: ["state", "password", "response"],
+      );
+
+  @override
+  Future<OpaqueClientStart> crateApiOpaqueOpaqueRegisterStart({
+    required String password,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(password, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opaque_client_start,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiOpaqueOpaqueRegisterStartConstMeta,
+        argValues: [password],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOpaqueOpaqueRegisterStartConstMeta =>
+      const TaskConstMeta(
+        debugName: "opaque_register_start",
+        argNames: ["password"],
+      );
+
   @protected
   String dco_decode_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -147,9 +308,52 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as List<int>;
+  }
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  OpaqueClientStart dco_decode_opaque_client_start(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return OpaqueClientStart(
+      state: dco_decode_list_prim_u_8_strict(arr[0]),
+      message: dco_decode_list_prim_u_8_strict(arr[1]),
+    );
+  }
+
+  @protected
+  OpaqueLoginFinish dco_decode_opaque_login_finish(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return OpaqueLoginFinish(
+      finalization: dco_decode_list_prim_u_8_strict(arr[0]),
+      sessionKey: dco_decode_list_prim_u_8_strict(arr[1]),
+      exportKey: dco_decode_list_prim_u_8_strict(arr[2]),
+    );
+  }
+
+  @protected
+  OpaqueRegisterFinish dco_decode_opaque_register_finish(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return OpaqueRegisterFinish(
+      upload: dco_decode_list_prim_u_8_strict(arr[0]),
+      exportKey: dco_decode_list_prim_u_8_strict(arr[1]),
+    );
   }
 
   @protected
@@ -167,15 +371,57 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   String sse_decode_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final inner = sse_decode_list_prim_u_8_strict(deserializer);
+    var inner = sse_decode_list_prim_u_8_strict(deserializer);
     return utf8.decoder.convert(inner);
+  }
+
+  @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint8List(len_);
   }
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final len_ = sse_decode_i_32(deserializer);
+    var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  OpaqueClientStart sse_decode_opaque_client_start(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_state = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_message = sse_decode_list_prim_u_8_strict(deserializer);
+    return OpaqueClientStart(state: var_state, message: var_message);
+  }
+
+  @protected
+  OpaqueLoginFinish sse_decode_opaque_login_finish(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_finalization = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_sessionKey = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_exportKey = sse_decode_list_prim_u_8_strict(deserializer);
+    return OpaqueLoginFinish(
+      finalization: var_finalization,
+      sessionKey: var_sessionKey,
+      exportKey: var_exportKey,
+    );
+  }
+
+  @protected
+  OpaqueRegisterFinish sse_decode_opaque_register_finish(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_upload = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_exportKey = sse_decode_list_prim_u_8_strict(deserializer);
+    return OpaqueRegisterFinish(upload: var_upload, exportKey: var_exportKey);
   }
 
   @protected
@@ -208,6 +454,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_prim_u_8_loose(
+    List<int> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putUint8List(
+      self is Uint8List ? self : Uint8List.fromList(self),
+    );
+  }
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -215,6 +473,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_opaque_client_start(
+    OpaqueClientStart self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.state, serializer);
+    sse_encode_list_prim_u_8_strict(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_opaque_login_finish(
+    OpaqueLoginFinish self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.finalization, serializer);
+    sse_encode_list_prim_u_8_strict(self.sessionKey, serializer);
+    sse_encode_list_prim_u_8_strict(self.exportKey, serializer);
+  }
+
+  @protected
+  void sse_encode_opaque_register_finish(
+    OpaqueRegisterFinish self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.upload, serializer);
+    sse_encode_list_prim_u_8_strict(self.exportKey, serializer);
   }
 
   @protected
