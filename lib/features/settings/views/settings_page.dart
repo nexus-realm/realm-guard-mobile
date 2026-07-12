@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -106,6 +107,7 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 _buildGeneralSection(),
                 _buildFeaturesSection(),
+                if (kDebugMode) _buildSyncSection(),
                 _buildSecuritySection(),
                 _buildAboutSection(),
                 _buildDangerSection(),
@@ -161,6 +163,21 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildSyncSection() {
+    return SettingsSection(
+      title: 'Synchronisation',
+      children: [
+        ListTile(
+          leading: const Icon(Icons.sync),
+          title: const Text('Synchronisation multi-appareils'),
+          subtitle: const Text('Chiffrée de bout en bout (bêta)'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(AppRoutes.settingsSync),
+        ),
+      ],
     );
   }
 
