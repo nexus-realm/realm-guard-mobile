@@ -1,7 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 
+import '../../features/auth/data/server_config.dart';
+import '../../features/auth/service/auth_service.dart';
+import '../../features/auth/service/opaque_client.dart';
+import '../../features/auth/service/session_store.dart';
+import '../../features/auth/service/vault_key_cipher.dart';
+import '../../features/auth/views/sync_page.dart';
 import '../../features/debug/views/security_debug_page.dart';
 import '../../features/debug/views/vault_debug_page.dart';
 import '../../features/home/views/add_credential_page.dart';
@@ -43,6 +51,15 @@ final AppLockController appLockController = AppLockController(
 /// Préférences de fonctionnalités (ex. activation de la gestion des TOTP).
 /// Chargé au démarrage dans `main()`, consommé par l'accueil et les paramètres.
 final FeatureFlagsController featureFlagsController = FeatureFlagsController();
+
+/// Service d'authentification / synchronisation (v2, OPAQUE) — opt-in via Réglages.
+final AuthService _authService = AuthService(
+  opaque: const FrbOpaqueClient(),
+  vaultKey: const FrbVaultKeyCipher(),
+  httpClient: http.Client(),
+  session: const SecureSessionStore(FlutterSecureStorage()),
+  config: const ServerConfig.dev(),
+);
 
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.startup,
@@ -160,6 +177,11 @@ final GoRouter appRouter = GoRouter(
           name: 'settingsChangePassword',
           builder: (context, state) =>
               ChangePasswordPage(vaultService: _vaultService),
+        ),
+        GoRoute(
+          path: 'sync',
+          name: 'settingsSync',
+          builder: (context, state) => SyncPage(authService: _authService),
         ),
         GoRoute(
           path: 'about',
