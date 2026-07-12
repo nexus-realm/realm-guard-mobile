@@ -8,6 +8,7 @@ import '../../features/auth/data/server_config.dart';
 import '../../features/auth/service/auth_service.dart';
 import '../../features/auth/service/opaque_client.dart';
 import '../../features/auth/service/session_store.dart';
+import '../../features/auth/service/vault_key_cipher.dart';
 import '../../features/auth/views/sync_page.dart';
 import '../../features/debug/views/security_debug_page.dart';
 import '../../features/debug/views/vault_debug_page.dart';
@@ -54,6 +55,7 @@ final FeatureFlagsController featureFlagsController = FeatureFlagsController();
 /// Service d'authentification / synchronisation (v2, OPAQUE) — opt-in via Réglages.
 final AuthService _authService = AuthService(
   opaque: const FrbOpaqueClient(),
+  vaultKey: const FrbVaultKeyCipher(),
   httpClient: http.Client(),
   session: const SecureSessionStore(FlutterSecureStorage()),
   config: const ServerConfig.dev(),

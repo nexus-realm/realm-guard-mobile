@@ -5,6 +5,7 @@
 
 import 'api/opaque.dart';
 import 'api/simple.dart';
+import 'api/vault_key.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -67,7 +68,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 1827207555;
+  int get rustContentHash => 1353450068;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -101,6 +102,16 @@ abstract class RustLibApi extends BaseApi {
 
   Future<OpaqueClientStart> crateApiOpaqueOpaqueRegisterStart({
     required String password,
+  });
+
+  Uint8List crateApiVaultKeyOpenVaultKey({
+    required List<int> exportKey,
+    required List<int> sealed,
+  });
+
+  Uint8List crateApiVaultKeySealVaultKey({
+    required List<int> exportKey,
+    required List<int> wrappedVaultKey,
   });
 }
 
@@ -299,6 +310,66 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(
         debugName: "opaque_register_start",
         argNames: ["password"],
+      );
+
+  @override
+  Uint8List crateApiVaultKeyOpenVaultKey({
+    required List<int> exportKey,
+    required List<int> sealed,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(exportKey, serializer);
+          sse_encode_list_prim_u_8_loose(sealed, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiVaultKeyOpenVaultKeyConstMeta,
+        argValues: [exportKey, sealed],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultKeyOpenVaultKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "open_vault_key",
+        argNames: ["exportKey", "sealed"],
+      );
+
+  @override
+  Uint8List crateApiVaultKeySealVaultKey({
+    required List<int> exportKey,
+    required List<int> wrappedVaultKey,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(exportKey, serializer);
+          sse_encode_list_prim_u_8_loose(wrappedVaultKey, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiVaultKeySealVaultKeyConstMeta,
+        argValues: [exportKey, wrappedVaultKey],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultKeySealVaultKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "seal_vault_key",
+        argNames: ["exportKey", "wrappedVaultKey"],
       );
 
   @protected

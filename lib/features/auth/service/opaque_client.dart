@@ -34,7 +34,11 @@ class FrbOpaqueClient implements OpaqueClient {
     Uint8List state,
     String password,
     Uint8List response,
-  ) => opaqueRegisterFinish(state: state, password: password, response: response);
+  ) => opaqueRegisterFinish(
+    state: state,
+    password: password,
+    response: response,
+  );
 
   @override
   Future<OpaqueClientStart> loginStart(String password) =>

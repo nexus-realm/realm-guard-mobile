@@ -104,7 +104,10 @@ class _SyncPageState extends State<SyncPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const ViewTitle(title: 'Synchroniser', topTitle: 'Chiffré de bout en bout'),
+            const ViewTitle(
+              title: 'Synchroniser',
+              topTitle: 'Chiffré de bout en bout',
+            ),
             const SizedBox(height: 12),
             const Text(
               'Le serveur ne voit jamais votre mot de passe maître. Le coffre '
@@ -139,8 +142,9 @@ class _SyncPageState extends State<SyncPage> {
                 labelText: "Nom d'utilisateur",
                 prefixIcon: Icon(Icons.person_outline),
               ),
-              validator: (value) =>
-                  (value == null || value.trim().isEmpty) ? 'Champ requis' : null,
+              validator: (value) => (value == null || value.trim().isEmpty)
+                  ? 'Champ requis'
+                  : null,
             ),
             const SizedBox(height: 16),
             TextFormField(

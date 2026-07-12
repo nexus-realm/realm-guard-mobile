@@ -11,7 +11,8 @@ enum AuthMode { login, register }
 class SyncViewModel extends ChangeNotifier {
   final AuthService _authService;
 
-  SyncViewModel({required AuthService authService}) : _authService = authService;
+  SyncViewModel({required AuthService authService})
+    : _authService = authService;
 
   AuthMode _mode = AuthMode.login;
   bool _isLoggedIn = false;
@@ -38,7 +39,10 @@ class SyncViewModel extends ChangeNotifier {
   }
 
   /// Soumet le formulaire (inscription puis connexion, ou connexion directe).
-  Future<void> submit({required String username, required String password}) async {
+  Future<void> submit({
+    required String username,
+    required String password,
+  }) async {
     if (_isLoading) return;
     _isLoading = true;
     _error = null;

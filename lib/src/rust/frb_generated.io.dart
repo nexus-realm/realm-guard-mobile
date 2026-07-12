@@ -5,6 +5,7 @@
 
 import 'api/opaque.dart';
 import 'api/simple.dart';
+import 'api/vault_key.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;

@@ -9,6 +9,7 @@ import 'package:realmguard/features/auth/data/server_config.dart';
 import 'package:realmguard/features/auth/service/auth_service.dart';
 import 'package:realmguard/features/auth/service/opaque_client.dart';
 import 'package:realmguard/features/auth/service/session_store.dart';
+import 'package:realmguard/features/auth/service/vault_key_cipher.dart';
 import 'package:realmguard/src/rust/api/opaque.dart';
 
 /// Faux client OPAQUE : renvoie des octets factices ; peut simuler l'échec du
@@ -62,6 +63,27 @@ class _FakeSession implements SessionStore {
   Future<void> write(String value) async => token = value;
 }
 
+/// Faux chiffreur de VaultKey : "scelle" en préfixant `0xAA` (réversible) et peut
+/// simuler l'échec du désenrobage. Enregistre la dernière clé exportée reçue.
+class _FakeVaultKey implements VaultKeyCipher {
+  bool failOpen = false;
+  Uint8List? lastSealExportKey;
+  Uint8List? lastOpenExportKey;
+
+  @override
+  Uint8List seal(Uint8List exportKey, Uint8List wrappedVaultKey) {
+    lastSealExportKey = exportKey;
+    return Uint8List.fromList([0xAA, ...wrappedVaultKey]);
+  }
+
+  @override
+  Uint8List open(Uint8List exportKey, Uint8List sealed) {
+    if (failOpen) throw Exception('blob altéré');
+    lastOpenExportKey = exportKey;
+    return Uint8List.fromList(sealed.sublist(1));
+  }
+}
+
 void main() {
   const config = ServerConfig(baseUrl: 'http://test.local');
 
@@ -69,8 +91,10 @@ void main() {
     MockClient client, {
     _FakeOpaque? opaque,
     _FakeSession? session,
+    _FakeVaultKey? vaultKey,
   }) => AuthService(
     opaque: opaque ?? _FakeOpaque(),
+    vaultKey: vaultKey ?? _FakeVaultKey(),
     httpClient: client,
     session: session ?? _FakeSession(),
     config: config,
@@ -82,7 +106,12 @@ void main() {
     final client = MockClient((req) async {
       switch (req.url.path) {
         case '/auth/register/start':
-          return http.Response(jsonEncode({'response': b64([1, 2, 3])}), 200);
+          return http.Response(
+            jsonEncode({
+              'response': b64([1, 2, 3]),
+            }),
+            200,
+          );
         case '/auth/register/finish':
           return http.Response('', 201);
       }
@@ -113,7 +142,10 @@ void main() {
       switch (req.url.path) {
         case '/auth/login/start':
           return http.Response(
-            jsonEncode({'response': b64([1, 2, 3]), 'flow_id': 'flow-1'}),
+            jsonEncode({
+              'response': b64([1, 2, 3]),
+              'flow_id': 'flow-1',
+            }),
             200,
           );
         case '/auth/login/finish':
@@ -131,7 +163,10 @@ void main() {
     final client = MockClient((req) async {
       if (req.url.path == '/auth/login/start') {
         return http.Response(
-          jsonEncode({'response': b64([1, 2, 3]), 'flow_id': 'flow-1'}),
+          jsonEncode({
+            'response': b64([1, 2, 3]),
+            'flow_id': 'flow-1',
+          }),
           200,
         );
       }
@@ -154,7 +189,10 @@ void main() {
     final client = MockClient((req) async {
       if (req.url.path == '/auth/login/start') {
         return http.Response(
-          jsonEncode({'response': b64([1, 2, 3]), 'flow_id': 'flow-1'}),
+          jsonEncode({
+            'response': b64([1, 2, 3]),
+            'flow_id': 'flow-1',
+          }),
           200,
         );
       }
@@ -174,7 +212,9 @@ void main() {
   });
 
   test('serveur injoignable → network', () async {
-    final client = MockClient((req) async => throw http.ClientException('boom'));
+    final client = MockClient(
+      (req) async => throw http.ClientException('boom'),
+    );
 
     expect(
       () => build(client).register('alice', 'pw'),
@@ -183,6 +223,141 @@ void main() {
           (e) => e.kind,
           'kind',
           AuthErrorKind.network,
+        ),
+      ),
+    );
+  });
+
+  test('uploadVaultKey scelle puis PUT avec le token (204)', () async {
+    final session = _FakeSession()..token = 'tok-xyz';
+    final vaultKey = _FakeVaultKey();
+    Map<String, dynamic>? sentBody;
+    String? authHeader;
+    final client = MockClient((req) async {
+      if (req.method == 'PUT' && req.url.path == '/vault/key') {
+        sentBody = jsonDecode(req.body) as Map<String, dynamic>;
+        authHeader = req.headers['authorization'];
+        return http.Response('', 204);
+      }
+      return http.Response('not found', 404);
+    });
+
+    await build(client, session: session, vaultKey: vaultKey).uploadVaultKey(
+      exportKey: Uint8List.fromList([1, 2, 3]),
+      wrappedVaultKey: Uint8List.fromList([9, 8, 7]),
+      salt: Uint8List.fromList([4, 5]),
+    );
+
+    expect(authHeader, 'Bearer tok-xyz');
+    // Le wrapped_key envoyé est la sortie du scellement (préfixe 0xAA).
+    expect(base64.decode(sentBody!['wrapped_key'] as String), [0xAA, 9, 8, 7]);
+    expect(base64.decode(sentBody!['salt'] as String), [4, 5]);
+    expect(vaultKey.lastSealExportKey, [1, 2, 3]);
+  });
+
+  test('uploadVaultKey sans session → sessionExpired', () async {
+    final client = MockClient((req) async => http.Response('', 204));
+
+    expect(
+      () => build(client).uploadVaultKey(
+        exportKey: Uint8List.fromList([1]),
+        wrappedVaultKey: Uint8List.fromList([2]),
+        salt: Uint8List.fromList([3]),
+      ),
+      throwsA(
+        isA<AuthException>().having(
+          (e) => e.kind,
+          'kind',
+          AuthErrorKind.sessionExpired,
+        ),
+      ),
+    );
+  });
+
+  test('uploadVaultKey rejeté (401) → sessionExpired', () async {
+    final session = _FakeSession()..token = 'tok';
+    final client = MockClient((req) async => http.Response('', 401));
+
+    expect(
+      () => build(client, session: session).uploadVaultKey(
+        exportKey: Uint8List.fromList([1]),
+        wrappedVaultKey: Uint8List.fromList([2]),
+        salt: Uint8List.fromList([3]),
+      ),
+      throwsA(
+        isA<AuthException>().having(
+          (e) => e.kind,
+          'kind',
+          AuthErrorKind.sessionExpired,
+        ),
+      ),
+    );
+  });
+
+  test('fetchVaultKey désenrobe le blob et renvoie la clé + le sel', () async {
+    final session = _FakeSession()..token = 'tok';
+    final vaultKey = _FakeVaultKey();
+    final client = MockClient((req) async {
+      if (req.method == 'GET' && req.url.path == '/vault/key') {
+        return http.Response(
+          jsonEncode({
+            'wrapped_key': b64([0xAA, 9, 8, 7]),
+            'salt': b64([4, 5]),
+          }),
+          200,
+        );
+      }
+      return http.Response('not found', 404);
+    });
+
+    final result = await build(
+      client,
+      session: session,
+      vaultKey: vaultKey,
+    ).fetchVaultKey(Uint8List.fromList([1, 2, 3]));
+
+    expect(result, isNotNull);
+    expect(result!.wrappedVaultKey, [9, 8, 7]); // préfixe 0xAA retiré
+    expect(result.salt, [4, 5]);
+    expect(vaultKey.lastOpenExportKey, [1, 2, 3]);
+  });
+
+  test('fetchVaultKey renvoie null si aucune clé stockée (404)', () async {
+    final session = _FakeSession()..token = 'tok';
+    final client = MockClient((req) async => http.Response('', 404));
+
+    final result = await build(
+      client,
+      session: session,
+    ).fetchVaultKey(Uint8List.fromList([1]));
+
+    expect(result, isNull);
+  });
+
+  test('fetchVaultKey blob illisible → corruptedVaultKey', () async {
+    final session = _FakeSession()..token = 'tok';
+    final vaultKey = _FakeVaultKey()..failOpen = true;
+    final client = MockClient(
+      (req) async => http.Response(
+        jsonEncode({
+          'wrapped_key': b64([1, 2]),
+          'salt': b64([3]),
+        }),
+        200,
+      ),
+    );
+
+    expect(
+      () => build(
+        client,
+        session: session,
+        vaultKey: vaultKey,
+      ).fetchVaultKey(Uint8List.fromList([1])),
+      throwsA(
+        isA<AuthException>().having(
+          (e) => e.kind,
+          'kind',
+          AuthErrorKind.corruptedVaultKey,
         ),
       ),
     );
