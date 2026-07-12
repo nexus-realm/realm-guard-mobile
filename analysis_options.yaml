@@ -1,5 +1,15 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    # cargokit : outil de build tiers (vendored) avec ses propres dépendances
+    # (github, ed25519_edwards) — non résolues quand l'analyzer de l'app le scanne.
+    - "rust_builder/**"
+    # Bindings flutter_rust_bridge (générés) + autres codes générés.
+    - "lib/src/rust/**"
+    - "**/*.g.dart"
+    - "build/**"
+
 linter:
   rules:
     - prefer_final_locals

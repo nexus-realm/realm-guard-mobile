@@ -23,6 +23,9 @@ dependencies:
   mobile_scanner: ^5.2.3
   flutter_native_splash: ^2.4.8
   flutter_autofill_service: ^0.21.0
+  rust_lib_realmguard:
+    path: rust_builder
+  flutter_rust_bridge: 2.12.0
 
 dev_dependencies:
   flutter_test:

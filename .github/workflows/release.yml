@@ -97,13 +97,18 @@ jobs:
     needs: prepare
     if: needs.prepare.outputs.skipped != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     permissions:
       contents: write # crée la pré-release
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.tag }}
+
+      # Rust + accès au dépôt privé realm-guard-core (le build compile rust/).
+      - uses: ./.github/actions/setup-rust-ffi
+        with:
+          deploy-key: ${{ secrets.CORE_REPO_DEPLOY_KEY }}
 
       - uses: subosito/flutter-action@v2
         with:
@@ -167,11 +172,16 @@ jobs:
     # PLAY_ENABLED=true une fois le compte de service + 1er upload manuel en place.
     if: needs.prepare.outputs.skipped != 'true' && vars.PLAY_ENABLED == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.tag }}
+
+      # Rust + accès au dépôt privé realm-guard-core (le build compile rust/).
+      - uses: ./.github/actions/setup-rust-ffi
+        with:
+          deploy-key: ${{ secrets.CORE_REPO_DEPLOY_KEY }}
 
       - uses: subosito/flutter-action@v2
         with:

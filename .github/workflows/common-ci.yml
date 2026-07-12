@@ -67,10 +67,16 @@ jobs:
     # Inutile de tout reconstruire sur une simple édition de titre / description.
     if: github.event.action != 'edited'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
 
     steps:
       - uses: actions/checkout@v4
+
+      # Rust + accès au dépôt privé realm-guard-core : le build APK compile le
+      # crate FFI rust/ (cargokit). cargokit installe les targets NDK.
+      - uses: ./.github/actions/setup-rust-ffi
+        with:
+          deploy-key: ${{ secrets.CORE_REPO_DEPLOY_KEY }}
 
       - uses: subosito/flutter-action@v2
         with:
