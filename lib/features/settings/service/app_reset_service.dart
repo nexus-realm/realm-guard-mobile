@@ -27,6 +27,7 @@ class AppResetService {
     'realm_guard_vault.sqlite-shm',
     'realm_guard_vault.sqlite-wal',
     'realm_guard_vault.sqlite-journal',
+    'realm_guard_vault.sqlite.bak',
     'realmguard_security_metadata.salt',
   ];
 

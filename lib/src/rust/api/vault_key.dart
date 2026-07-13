@@ -30,3 +30,25 @@ Uint8List openVaultKey({
   exportKey: exportKey,
   sealed: sealed,
 );
+
+/// Génère une **VaultKey** aléatoire (32 octets) — la clé racine du coffre local.
+Uint8List generateVaultKey() =>
+    RustLib.instance.api.crateApiVaultKeyGenerateVaultKey();
+
+/// Enrobe la VaultKey sous la **KEK** (dérivée du mot de passe maître) pour le
+/// stockage **local**. Renvoie le blob sérialisé (postcard).
+Uint8List wrapVaultKey({required List<int> kek, required List<int> vaultKey}) =>
+    RustLib.instance.api.crateApiVaultKeyWrapVaultKey(
+      kek: kek,
+      vaultKey: vaultKey,
+    );
+
+/// Désenrobe la VaultKey locale avec la KEK. **Échoue** si la KEK est fausse
+/// (mauvais mot de passe) ou si le blob a été altéré.
+Uint8List unwrapVaultKey({
+  required List<int> kek,
+  required List<int> wrapped,
+}) => RustLib.instance.api.crateApiVaultKeyUnwrapVaultKey(
+  kek: kek,
+  wrapped: wrapped,
+);

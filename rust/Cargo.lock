@@ -1006,7 +1006,7 @@ dependencies = [
 [[package]]
 name = "realm-guard-core"
 version = "0.1.0"
-source = "git+https://github.com/nexus-realm/realm-guard-core?branch=develop#02a2eec094110df11666cad9dfee736cf14806c0"
+source = "git+https://github.com/nexus-realm/realm-guard-core?branch=develop#703073805371181ed981f4568b795e27f628c405"
 dependencies = [
  "argon2",
  "bip39",

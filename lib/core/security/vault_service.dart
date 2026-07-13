@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:cryptography/cryptography.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../database/app_database.dart';
 import '../exceptions/vault_unlock_exception.dart';
 import 'biometric_storage_service.dart';
 import 'key_derivator.dart';
 import 'salt_manager.dart';
+import 'vault_key_crypto.dart';
+import 'vault_migrator.dart';
+import 'wrapped_vault_key_store.dart';
 
 /// Issue d'un changement de mot de passe maître.
 enum ChangePasswordResult {
@@ -25,28 +28,59 @@ enum ChangePasswordResult {
 }
 
 class VaultService {
-  AppDatabase? _database;
-  // Clé qui a ouvert la session courante. Conservée en mémoire le temps du
-  // déverrouillage pour vérifier l'ancien mot de passe sans rouvrir la base.
-  List<int>? _currentKey;
-  final BiometricStorageService _biometricService = BiometricStorageService();
+  /// Constructeur **génératif** (sous-classable pour les tests). Les défauts sont
+  /// des `const` canoniques : les expressions répétées désignent la même instance,
+  /// et le migrateur partage donc le même chiffreur/store que les champs.
+  VaultService({
+    VaultKeyCrypto? vaultKeyCrypto,
+    WrappedVaultKeyStore? wrappedKeyStore,
+    BiometricStorageService? biometricService,
+  }) : _vaultKeyCrypto = vaultKeyCrypto ?? const FrbVaultKeyCrypto(),
+       _wrappedKeyStore =
+           wrappedKeyStore ??
+           const SecureWrappedVaultKeyStore(FlutterSecureStorage()),
+       _biometricService = biometricService ?? BiometricStorageService(),
+       _migrator = VaultMigrator(
+         vaultKeyCrypto ?? const FrbVaultKeyCrypto(),
+         wrappedKeyStore ??
+             const SecureWrappedVaultKeyStore(FlutterSecureStorage()),
+       );
 
-  /// Ouverture initiale ou manuelle avec le mot de passe maître
+  AppDatabase? _database;
+  // Clé qui a ouvert la session courante (la VaultKey une fois le coffre migré).
+  List<int>? _currentKey;
+  final VaultKeyCrypto _vaultKeyCrypto;
+  final WrappedVaultKeyStore _wrappedKeyStore;
+  final BiometricStorageService _biometricService;
+  final VaultMigrator _migrator;
+
+  /// Ouverture initiale ou manuelle avec le mot de passe maître. Migre le coffre
+  /// vers le modèle VaultKey au premier déverrouillage (cf. [VaultMigrator]).
   Future<void> unlockWithMasterPassword(String masterPassword) async {
     try {
+      final files = await VaultFiles.resolve();
+      await _migrator.heal(files);
+
       final salt = await SaltManager.getOrGenerateSalt();
-      final SecretKey secretKey = await KeyDerivator.deriveKeyFromPassword(
-        masterPassword,
-        salt,
-      );
-      final List<int> keyBytes = await secretKey.extractBytes();
+      final kek = await _deriveKeyBytes(masterPassword, salt);
 
-      await openDatabaseWithKey(keyBytes);
-
-      // Sauvegarde la clé pour la biométrie uniquement si l'utilisateur l'a
-      // activée. Best-effort : un échec ici ne doit jamais bloquer un
-      // déverrouillage valide.
-      await _persistKeyForBiometricsIfEnabled(keyBytes);
+      final wrapped = await _wrappedKeyStore.read();
+      if (wrapped == null) {
+        // Coffre v1 non migré : la KEK est encore la clé du coffre.
+        await openDatabaseWithKey(kek);
+        final vaultKey = await _migrator.migrate(
+          kek,
+          DriftMigrationDb(_database!),
+          files,
+        );
+        _currentKey = List<int>.unmodifiable(vaultKey);
+        await _persistKeyForBiometricsIfEnabled(vaultKey);
+      } else {
+        // Coffre migré : désenrober la VaultKey (échoue si mot de passe faux).
+        final vaultKey = _vaultKeyCrypto.unwrap(kek, wrapped);
+        await openDatabaseWithKey(vaultKey);
+        await _persistKeyForBiometricsIfEnabled(vaultKey);
+      }
     } catch (e) {
       if (e is VaultUnlockException) rethrow;
       throw VaultUnlockException(e);
@@ -71,6 +105,9 @@ class VaultService {
   /// Ouverture rapide via biométrie. Retourne l'issue précise pour que
   /// l'appelant distingue un échec réel d'une annulation / indisponibilité.
   Future<BiometricUnlockStatus> unlockWithBiometrics() async {
+    final files = await VaultFiles.resolve();
+    await _migrator.heal(files);
+
     final (status, keyBytes) = await _biometricService
         .getDerivedKeyWithBiometrics("Déverrouillez Realm Guard");
 
@@ -79,7 +116,21 @@ class VaultService {
     }
 
     try {
-      await openDatabaseWithKey(keyBytes);
+      final wrapped = await _wrappedKeyStore.read();
+      if (wrapped == null) {
+        // Cache pré-migration = KEK = clé du coffre v1 : ouvrir puis migrer.
+        await openDatabaseWithKey(keyBytes);
+        final vaultKey = await _migrator.migrate(
+          keyBytes,
+          DriftMigrationDb(_database!),
+          files,
+        );
+        _currentKey = List<int>.unmodifiable(vaultKey);
+        await _persistKeyForBiometricsIfEnabled(vaultKey);
+      } else {
+        // Cache post-migration = VaultKey = clé du coffre.
+        await openDatabaseWithKey(keyBytes);
+      }
       return BiometricUnlockStatus.success;
     } catch (_) {
       return BiometricUnlockStatus.failed; // Demande le mot de passe
@@ -99,41 +150,38 @@ class VaultService {
     }
   }
 
-  /// Change le mot de passe maître : re-chiffre la base via `PRAGMA rekey`
-  /// (toutes les données sont conservées) puis re-protège la clé biométrique.
+  /// Change le mot de passe maître en **ré-enrobant la VaultKey** sous la nouvelle
+  /// KEK. La clé du coffre ne change pas → aucun re-chiffrement de la base, le cache
+  /// biométrique reste valide, et un futur appareil pairé n'est pas affecté.
   ///
-  /// Le coffre doit être déverrouillé. L'[currentPassword] est vérifié avant
-  /// tout re-chiffrement. En cas d'échec du rekey, la base reste lisible avec
-  /// l'ancien mot de passe (opération SQLCipher atomique).
+  /// Le coffre doit être déverrouillé. L'[currentPassword] est vérifié en tentant
+  /// de désenrober la VaultKey stockée.
   Future<ChangePasswordResult> changeMasterPassword({
     required String currentPassword,
     required String newPassword,
   }) async {
-    final db = _database;
-    final currentKey = _currentKey;
-    if (db == null || currentKey == null) {
+    if (_database == null || _currentKey == null) {
       return ChangePasswordResult.vaultLocked;
     }
 
     try {
+      final wrapped = await _wrappedKeyStore.read();
+      if (wrapped == null) return ChangePasswordResult.failure;
+
       final salt = await SaltManager.getOrGenerateSalt();
 
-      // 1. Vérifier l'ancien mot de passe : sa clé dérivée doit être identique
-      //    à celle qui a ouvert la session courante. Aucune 2e connexion à la
-      //    base (qui provoquerait une course / corruption SQLCipher).
-      final derivedCurrent = await _deriveKeyBytes(currentPassword, salt);
-      if (!_constantTimeEquals(derivedCurrent, currentKey)) {
+      // Vérifie l'ancien mot de passe : sa KEK doit désenrober la VaultKey stockée.
+      final currentKek = await _deriveKeyBytes(currentPassword, salt);
+      final List<int> vaultKey;
+      try {
+        vaultKey = _vaultKeyCrypto.unwrap(currentKek, wrapped);
+      } catch (_) {
         return ChangePasswordResult.wrongCurrentPassword;
       }
 
-      // 2. Dériver la nouvelle clé (même sel : non secret, pas besoin de
-      //    rotation) et re-chiffrer la base en place via la connexion ouverte.
-      final newKey = await _deriveKeyBytes(newPassword, salt);
-      await db.customStatement('PRAGMA rekey = "x\'${_toHex(newKey)}\'";');
-      _currentKey = List<int>.unmodifiable(newKey);
-
-      // 3. Re-protéger la clé de déverrouillage biométrique (best-effort).
-      await _persistKeyForBiometricsIfEnabled(newKey);
+      // Ré-enrobe la VaultKey sous la nouvelle KEK (même sel : non secret).
+      final newKek = await _deriveKeyBytes(newPassword, salt);
+      await _wrappedKeyStore.write(_vaultKeyCrypto.wrap(newKek, vaultKey));
 
       return ChangePasswordResult.success;
     } catch (_) {
@@ -145,20 +193,6 @@ class VaultService {
     final secretKey = await KeyDerivator.deriveKeyFromPassword(password, salt);
     return secretKey.extractBytes();
   }
-
-  /// Comparaison à temps constant (évite une fuite par timing même si l'enjeu
-  /// est faible ici : les deux clés sont déjà en mémoire).
-  bool _constantTimeEquals(List<int> a, List<int> b) {
-    if (a.length != b.length) return false;
-    var diff = 0;
-    for (var i = 0; i < a.length; i++) {
-      diff |= a[i] ^ b[i];
-    }
-    return diff == 0;
-  }
-
-  String _toHex(List<int> bytes) =>
-      bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
   /// Ferme la base et oublie la clé en mémoire. **Attendable** : à utiliser
   /// avant toute suppression des fichiers du coffre, pour garantir que la
