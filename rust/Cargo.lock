@@ -1006,7 +1006,7 @@ dependencies = [
 [[package]]
 name = "realm-guard-core"
 version = "0.1.0"
-source = "git+https://github.com/nexus-realm/realm-guard-core?branch=develop#703073805371181ed981f4568b795e27f628c405"
+source = "git+https://github.com/nexus-realm/realm-guard-core?branch=develop#a4ef030e3cc5a8c207eca84dc39a54fd888d9927"
 dependencies = [
  "argon2",
  "bip39",
@@ -1019,6 +1019,7 @@ dependencies = [
  "serde",
  "sha2",
  "thiserror",
+ "x25519-dalek",
  "zeroize",
 ]
 
@@ -1426,6 +1427,18 @@ name = "windows-link"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
+
+[[package]]
+name = "x25519-dalek"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7e468321c81fb07fa7f4c636c3972b9100f0346e5b6a9f2bd0603a52f7ed277"
+dependencies = [
+ "curve25519-dalek",
+ "rand_core",
+ "serde",
+ "zeroize",
+]
 
 [[package]]
 name = "zeroize"

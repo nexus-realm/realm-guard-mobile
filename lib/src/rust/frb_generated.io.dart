@@ -4,6 +4,7 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api/opaque.dart';
+import 'api/pairing.dart';
 import 'api/simple.dart';
 import 'api/vault_key.dart';
 import 'dart:async';
@@ -39,6 +40,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   OpaqueRegisterFinish dco_decode_opaque_register_finish(dynamic raw);
 
   @protected
+  PairingOpened dco_decode_pairing_opened(dynamic raw);
+
+  @protected
+  PairingSealed dco_decode_pairing_sealed(dynamic raw);
+
+  @protected
+  PairingStart dco_decode_pairing_start(dynamic raw);
+
+  @protected
   int dco_decode_u_8(dynamic raw);
 
   @protected
@@ -67,6 +77,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   OpaqueRegisterFinish sse_decode_opaque_register_finish(
     SseDeserializer deserializer,
   );
+
+  @protected
+  PairingOpened sse_decode_pairing_opened(SseDeserializer deserializer);
+
+  @protected
+  PairingSealed sse_decode_pairing_sealed(SseDeserializer deserializer);
+
+  @protected
+  PairingStart sse_decode_pairing_start(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -109,6 +128,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     OpaqueRegisterFinish self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_pairing_opened(PairingOpened self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_pairing_sealed(PairingSealed self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_pairing_start(PairingStart self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
