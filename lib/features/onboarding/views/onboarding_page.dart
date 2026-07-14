@@ -223,11 +223,23 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
           ],
         ),
-        GradientElevatedButton(
-          onPressed: _viewModel.isSubmitting
-              ? null
-              : _viewModel.completeWelcomeStep,
-          child: const Text('Commencer'),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GradientElevatedButton(
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : _viewModel.completeWelcomeStep,
+              child: const Text('Commencer'),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : () => context.push(AppRoutes.pairedSetup),
+              child: const Text("J'ai déjà un compte — lier cet appareil"),
+            ),
+          ],
         ),
       ],
     );

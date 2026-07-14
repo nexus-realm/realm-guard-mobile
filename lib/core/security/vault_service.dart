@@ -137,6 +137,44 @@ class VaultService {
     }
   }
 
+  /// Installe une **VaultKey reçue par pairing** sur ce nouvel appareil : protège la
+  /// clé au repos sous une KEK dérivée d'un **secret local** ([localPassword], propre
+  /// à cet appareil — ce n'est pas le mot de passe maître du compte), puis crée le
+  /// coffre chiffré avec elle.
+  ///
+  /// **Ordre critique** : la wrapped-VK est écrite **avant** la création de la base.
+  /// Un crash entre les deux laisse la VaultKey **récupérable** (au prochain
+  /// lancement, le mot de passe local la désenrobe et la base est créée). L'ordre
+  /// inverse perdrait définitivement la clé du coffre.
+  ///
+  /// **Refuse d'écraser un coffre existant** (wrapped-VK ou fichier de base présent).
+  Future<void> installPairedVaultKey({
+    required List<int> vaultKey,
+    required String localPassword,
+  }) async {
+    try {
+      final files = await VaultFiles.resolve();
+      if (await _wrappedKeyStore.read() != null || await files.vaultExists()) {
+        throw StateError('Un coffre existe déjà sur cet appareil.');
+      }
+
+      final salt = await SaltManager.getOrGenerateSalt();
+      final kek = await _deriveKeyBytes(localPassword, salt);
+
+      // 1. Durabiliser d'abord : la VaultKey doit rester récupérable en cas de crash.
+      await _wrappedKeyStore.write(_vaultKeyCrypto.wrap(kek, vaultKey));
+
+      // 2. Créer le coffre chiffré avec la VaultKey reçue.
+      await openDatabaseWithKey(vaultKey);
+
+      // 3. Cache biométrique (best-effort, selon la préférence utilisateur).
+      await _persistKeyForBiometricsIfEnabled(vaultKey);
+    } catch (e) {
+      if (e is VaultUnlockException) rethrow;
+      throw VaultUnlockException(e);
+    }
+  }
+
   Future<void> openDatabaseWithKey(List<int> keyBytes) async {
     try {
       _database = AppDatabase(keyBytes);

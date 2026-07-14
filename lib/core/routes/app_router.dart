@@ -26,6 +26,7 @@ import '../../features/onboarding/views/startup_gate_page.dart';
 import '../../features/pairing/service/pairing_ffi.dart';
 import '../../features/pairing/service/pairing_service.dart';
 import '../../features/pairing/views/add_device_page.dart';
+import '../../features/pairing/views/paired_setup_page.dart';
 import '../../features/pairing/views/receive_device_page.dart';
 import '../../features/settings/data/legal_documents.dart';
 import '../../features/settings/service/app_reset_service.dart';
@@ -93,6 +94,15 @@ final GoRouter appRouter = GoRouter(
         onboardingStorageService: _onboardingStorageService,
         vaultService: _vaultService,
         featureFlagsController: featureFlagsController,
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.pairedSetup,
+      name: 'pairedSetup',
+      builder: (context, state) => PairedSetupPage(
+        pairingService: _pairingService,
+        vaultService: _vaultService,
+        onboardingStorageService: _onboardingStorageService,
       ),
     ),
     GoRoute(

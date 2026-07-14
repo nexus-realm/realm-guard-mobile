@@ -118,6 +118,10 @@ class VaultFiles implements VaultBackupFiles {
   @override
   Future<bool> backupExists() => File(_backupPath).exists();
 
+  /// Un coffre existe-t-il déjà sur cet appareil ? Garde-fou avant une installation
+  /// par pairing : on ne doit **jamais** écraser un coffre existant.
+  Future<bool> vaultExists() => File(_dbPath).exists();
+
   @override
   Future<void> backup() async {
     await File(_dbPath).copy(_backupPath);

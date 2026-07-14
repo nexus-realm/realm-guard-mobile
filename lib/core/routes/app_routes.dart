@@ -3,6 +3,10 @@ class AppRoutes {
   static const String onboarding = '/onboarding';
   static const String unlock = '/unlock';
 
+  /// Onboarding « lier cet appareil » : reçoit la VaultKey par pairing puis installe
+  /// le coffre sous un code local.
+  static const String pairedSetup = '/paired-setup';
+
   static const String home = '/home';
   static const String profiles = '/profiles';
   static const String addProfile = '/add-profile';
