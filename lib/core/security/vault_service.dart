@@ -214,6 +214,11 @@ class VaultService {
   /// Indique si le coffre est actuellement déverrouillé (DB ouverte en mémoire).
   bool get isUnlocked => _database != null;
 
+  /// La **VaultKey** de la session courante (clé racine du coffre), exposée pour le
+  /// pairing d'appareil (l'appareil source la scelle vers le nouvel appareil).
+  /// `null` si le coffre est verrouillé.
+  List<int>? get vaultKey => _currentKey;
+
   AppDatabase get db {
     if (_database == null) throw Exception("Vault is locked!");
     return _database!;

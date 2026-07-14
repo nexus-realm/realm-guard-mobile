@@ -108,6 +108,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildGeneralSection(),
                 _buildFeaturesSection(),
                 if (kDebugMode) _buildSyncSection(),
+                if (kDebugMode) _buildPairingSection(),
                 _buildSecuritySection(),
                 _buildAboutSection(),
                 _buildDangerSection(),
@@ -176,6 +177,28 @@ class _SettingsPageState extends State<SettingsPage> {
           subtitle: const Text('Chiffrée de bout en bout (bêta)'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push(AppRoutes.settingsSync),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPairingSection() {
+    return SettingsSection(
+      title: 'Appareils',
+      children: [
+        ListTile(
+          leading: const Icon(Icons.devices),
+          title: const Text('Ajouter un appareil'),
+          subtitle: const Text("Scanner le QR d'un nouvel appareil"),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(AppRoutes.settingsPairingAdd),
+        ),
+        ListTile(
+          leading: const Icon(Icons.qr_code_2),
+          title: const Text('Lier cet appareil'),
+          subtitle: const Text('Recevoir le coffre depuis un autre appareil'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(AppRoutes.settingsPairingReceive),
         ),
       ],
     );

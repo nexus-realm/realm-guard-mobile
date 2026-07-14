@@ -23,6 +23,10 @@ import '../../features/home/views/totp_detail_page.dart';
 import '../../features/onboarding/service/onboarding_storage_service.dart';
 import '../../features/onboarding/views/onboarding_page.dart';
 import '../../features/onboarding/views/startup_gate_page.dart';
+import '../../features/pairing/service/pairing_ffi.dart';
+import '../../features/pairing/service/pairing_service.dart';
+import '../../features/pairing/views/add_device_page.dart';
+import '../../features/pairing/views/receive_device_page.dart';
 import '../../features/settings/data/legal_documents.dart';
 import '../../features/settings/service/app_reset_service.dart';
 import '../../features/settings/views/about_page.dart';
@@ -56,6 +60,14 @@ final FeatureFlagsController featureFlagsController = FeatureFlagsController();
 final AuthService _authService = AuthService(
   opaque: const FrbOpaqueClient(),
   vaultKey: const FrbVaultKeyCipher(),
+  httpClient: http.Client(),
+  session: const SecureSessionStore(FlutterSecureStorage()),
+  config: const ServerConfig.dev(),
+);
+
+/// Service de pairing d'appareil (v2) — opt-in via Réglages.
+final PairingService _pairingService = PairingService(
+  ffi: const FrbPairingFfi(),
   httpClient: http.Client(),
   session: const SecureSessionStore(FlutterSecureStorage()),
   config: const ServerConfig.dev(),
@@ -182,6 +194,20 @@ final GoRouter appRouter = GoRouter(
           path: 'sync',
           name: 'settingsSync',
           builder: (context, state) => SyncPage(authService: _authService),
+        ),
+        GoRoute(
+          path: 'pairing-add',
+          name: 'settingsPairingAdd',
+          builder: (context, state) => AddDevicePage(
+            pairingService: _pairingService,
+            vaultService: _vaultService,
+          ),
+        ),
+        GoRoute(
+          path: 'pairing-receive',
+          name: 'settingsPairingReceive',
+          builder: (context, state) =>
+              ReceiveDevicePage(pairingService: _pairingService),
         ),
         GoRoute(
           path: 'about',

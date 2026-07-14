@@ -41,12 +41,31 @@ class PairingReceipt {
   const PairingReceipt({required this.vaultKey, required this.sas});
 }
 
+/// Contrat du service de pairing (abstrait pour la testabilité des ViewModels).
+abstract interface class PairingApi {
+  /// Nouvel appareil : démarre le pairing (QR + session).
+  PairingSession startNewDevice();
+
+  /// Nouvel appareil : attend puis ouvre la réponse → VaultKey + SAS.
+  Future<PairingReceipt> receiveVaultKey(
+    PairingSession session, {
+    Duration timeout,
+    Duration interval,
+  });
+
+  /// Appareil source : scanne, scelle, dépose → SAS.
+  Future<String> pairScannedDevice({
+    required String qrPayload,
+    required Uint8List vaultKey,
+  });
+}
+
 /// Orchestration du **pairing d'appareil** : combine le FFI cœur (X25519 + scellage)
 /// et le relais serveur (`/pairing/{id}`).
 ///
 /// Le `relay_id` est une **enveloppe transport** (JSON `{i, q}` dans le QR) : le
 /// serveur ne voit qu'un blob opaque, scellé vers la clé éphémère du nouvel appareil.
-class PairingService {
+class PairingService implements PairingApi {
   final PairingFfi _ffi;
   final http.Client _http;
   final SessionStore _session;
@@ -64,6 +83,7 @@ class PairingService {
 
   /// **Nouvel appareil** — démarre le pairing : renvoie le QR à afficher + la session
   /// à conserver jusqu'à la réception.
+  @override
   PairingSession startNewDevice() {
     final start = _ffi.start();
     final relayId = _randomRelayId();
@@ -77,6 +97,7 @@ class PairingService {
 
   /// **Nouvel appareil** — attend (poll) la réponse déposée par la source puis
   /// l'ouvre. Renvoie la VaultKey + le SAS à comparer.
+  @override
   Future<PairingReceipt> receiveVaultKey(
     PairingSession session, {
     Duration timeout = const Duration(minutes: 3),
@@ -96,6 +117,7 @@ class PairingService {
   /// **Appareil source** — scanne le QR, scelle la VaultKey et dépose la réponse.
   /// Renvoie le SAS à afficher (à comparer avec le nouvel appareil). Nécessite une
   /// session active.
+  @override
   Future<String> pairScannedDevice({
     required String qrPayload,
     required Uint8List vaultKey,
