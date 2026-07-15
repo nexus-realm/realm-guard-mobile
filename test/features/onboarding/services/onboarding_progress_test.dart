@@ -15,17 +15,18 @@ void main() {
       final step1 = OnboardingProgress.initial().markStepCompleted(
         OnboardingStep.welcome,
       );
-      final step2 = step1.markStepCompleted(OnboardingStep.masterPassword);
-      final step3 = step2.markStepCompleted(
+      final step2 = step1.markStepCompleted(OnboardingStep.syncChoice);
+      final step3 = step2.markStepCompleted(OnboardingStep.masterPassword);
+      final step4 = step3.markStepCompleted(
         OnboardingStep.biometricChoice,
         biometricEnabled: true,
       );
-      final step4 = step3.markStepCompleted(OnboardingStep.totpChoice);
-      final step5 = step4.markStepCompleted(OnboardingStep.syncChoice);
+      final step5 = step4.markStepCompleted(OnboardingStep.totpChoice);
 
-      expect(step2.nextMissingStep, OnboardingStep.biometricChoice);
-      expect(step3.nextMissingStep, OnboardingStep.totpChoice);
-      expect(step4.nextMissingStep, OnboardingStep.syncChoice);
+      expect(step1.nextMissingStep, OnboardingStep.syncChoice);
+      expect(step2.nextMissingStep, OnboardingStep.masterPassword);
+      expect(step3.nextMissingStep, OnboardingStep.biometricChoice);
+      expect(step4.nextMissingStep, OnboardingStep.totpChoice);
       expect(step5.nextMissingStep, isNull);
       expect(step5.isCompleted, isTrue);
       expect(step5.biometricEnabled, isTrue);
@@ -41,7 +42,7 @@ void main() {
 
       expect(decoded.completedSteps, progress.completedSteps);
       expect(decoded.biometricEnabled, isFalse);
-      expect(decoded.nextMissingStep, OnboardingStep.biometricChoice);
+      expect(decoded.nextMissingStep, OnboardingStep.syncChoice);
     });
 
     test('computes completion on a reduced set of active steps', () {
@@ -92,7 +93,7 @@ void main() {
         migrated.completedSteps.contains(OnboardingStep.totpChoice),
         isFalse,
       );
-      expect(migrated.nextMissingStep, OnboardingStep.masterPassword);
+      expect(migrated.nextMissingStep, OnboardingStep.syncChoice);
     });
   });
 }

@@ -71,7 +71,11 @@ void main() {
     expect(installedPassword, 'motdepasse-long');
     expect(
       storage.progress.completedSteps,
-      containsAll([OnboardingStep.welcome, OnboardingStep.masterPassword]),
+      containsAll([
+        OnboardingStep.welcome,
+        OnboardingStep.syncChoice,
+        OnboardingStep.masterPassword,
+      ]),
     );
   });
 

@@ -120,11 +120,14 @@ class PairedSetupViewModel extends ChangeNotifier {
     }
   }
 
-  /// Le pairing satisfait les étapes « accueil » et « mot de passe » : l'onboarding
-  /// reprendra à la biométrie.
+  /// Le pairing résout le choix de synchronisation (« lier un appareil ») **et**
+  /// fournit le coffre : il satisfait donc « accueil », « synchronisation » et
+  /// « mot de passe maître » (remplacé par le mot de passe local du pairing).
+  /// L'onboarding reprend à la biométrie.
   Future<void> _markOnboardingSteps() async {
     var progress = await _onboardingStorage.loadProgress();
     progress = progress.markStepCompleted(OnboardingStep.welcome);
+    progress = progress.markStepCompleted(OnboardingStep.syncChoice);
     progress = progress.markStepCompleted(OnboardingStep.masterPassword);
     await _onboardingStorage.saveProgress(progress);
   }

@@ -237,23 +237,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
           ],
         ),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            GradientElevatedButton(
-              onPressed: _viewModel.isSubmitting
-                  ? null
-                  : _viewModel.completeWelcomeStep,
-              child: const Text('Commencer'),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: _viewModel.isSubmitting
-                  ? null
-                  : () => context.push(AppRoutes.pairedSetup),
-              child: const Text("J'ai déjà un compte — lier cet appareil"),
-            ),
-          ],
+        GradientElevatedButton(
+          onPressed: _viewModel.isSubmitting
+              ? null
+              : _viewModel.completeWelcomeStep,
+          child: const Text('Commencer'),
         ),
       ],
     );
@@ -439,18 +427,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
               spacing: 12,
               children: [
                 Text(
-                  'Realm Guard fonctionne parfaitement hors-ligne. Vous pouvez '
-                  'aussi créer un compte chiffré pour synchroniser vos appareils.',
+                  'Realm Guard fonctionne parfaitement hors-ligne. Créez un '
+                  'compte chiffré pour synchroniser, ou liez cet appareil à un '
+                  'compte existant.',
                   style: textTheme.bodyLarge,
                 ),
                 Text(
-                  'Le compte utilise un mot de passe distinct de votre mot de '
-                  'passe maître ; le serveur ne le voit jamais.',
-                  style: textTheme.bodyLarge,
-                ),
-                Text(
-                  'Vous pourrez activer ou gérer la synchronisation plus tard '
-                  'dans les paramètres.',
+                  'Le mot de passe du compte est distinct du mot de passe maître '
+                  'que vous définirez ensuite ; le serveur ne le voit jamais.',
                   style: textTheme.bodyLarge,
                 ),
               ],
@@ -465,10 +449,17 @@ class _OnboardingPageState extends State<OnboardingPage> {
               onPressed: _viewModel.isSubmitting
                   ? null
                   : () => setState(() => _syncStage = _SyncStage.register),
-              icon: const Icon(Icons.cloud_sync_outlined),
-              label: const Text('Activer la synchronisation'),
+              icon: const Icon(Icons.person_add_alt),
+              label: const Text('Créer un compte'),
             ),
-            OutlinedButton(
+            OutlinedButton.icon(
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : () => context.push(AppRoutes.pairedSetup),
+              icon: const Icon(Icons.qr_code_2),
+              label: const Text('J\'ai déjà un compte — lier cet appareil'),
+            ),
+            TextButton(
               onPressed: _viewModel.isSubmitting
                   ? null
                   : _viewModel.completeSyncStep,
