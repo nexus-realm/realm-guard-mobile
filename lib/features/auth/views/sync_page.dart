@@ -110,8 +110,9 @@ class _SyncPageState extends State<SyncPage> {
             ),
             const SizedBox(height: 12),
             const Text(
-              'Le serveur ne voit jamais votre mot de passe maître. Le coffre '
-              'reste déchiffrable hors-ligne.',
+              'Le mot de passe du compte est distinct de votre mot de passe '
+              'maître. Le serveur ne le voit jamais (OPAQUE) et le coffre reste '
+              'déchiffrable hors-ligne.',
             ),
             const SizedBox(height: 24),
             SegmentedButton<AuthMode>(
@@ -152,7 +153,7 @@ class _SyncPageState extends State<SyncPage> {
               enabled: !busy,
               obscureText: true,
               decoration: const InputDecoration(
-                labelText: 'Mot de passe maître',
+                labelText: 'Mot de passe du compte',
                 prefixIcon: Icon(Icons.lock_outline),
               ),
               validator: (value) =>

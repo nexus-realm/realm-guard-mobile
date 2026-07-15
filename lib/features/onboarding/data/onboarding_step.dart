@@ -2,7 +2,8 @@ enum OnboardingStep {
   welcome,
   masterPassword,
   biometricChoice,
-  totpChoice;
+  totpChoice,
+  syncChoice;
 
   String get storageKey {
     switch (this) {
@@ -14,6 +15,8 @@ enum OnboardingStep {
         return 'biometric_choice';
       case OnboardingStep.totpChoice:
         return 'totp_choice';
+      case OnboardingStep.syncChoice:
+        return 'sync_choice';
     }
   }
 

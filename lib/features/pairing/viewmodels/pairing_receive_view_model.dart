@@ -36,6 +36,11 @@ class PairingReceiveViewModel extends ChangeNotifier {
   Future<void> start() async {
     if (_waiting || _sas != null) return;
     _session = _service.startNewDevice();
+    if (kDebugMode) {
+      // Permet de récupérer le payload depuis la console de l'hôte quand le
+      // presse-papiers ne traverse pas entre deux émulateurs.
+      debugPrint('[pairing] QR payload: ${_session!.qrPayload}');
+    }
     _waiting = true;
     _error = null;
     notifyListeners();
@@ -45,7 +50,10 @@ class PairingReceiveViewModel extends ChangeNotifier {
       _sas = receipt.sas;
     } on PairingException catch (error) {
       _error = error.message;
-    } catch (_) {
+    } catch (error, stack) {
+      if (kDebugMode) {
+        debugPrint('[pairing] échec (réception) : $error\n$stack');
+      }
       _error = 'Une erreur inattendue est survenue.';
     } finally {
       _waiting = false;

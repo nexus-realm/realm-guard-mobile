@@ -49,6 +49,11 @@ class PairedSetupViewModel extends ChangeNotifier {
   Future<void> startPairing() async {
     if (_waiting || _sas != null) return;
     _session = _pairing.startNewDevice();
+    if (kDebugMode) {
+      // Permet de récupérer le payload depuis la console de l'hôte quand le
+      // presse-papiers ne traverse pas entre deux émulateurs.
+      debugPrint('[pairing] QR payload: ${_session!.qrPayload}');
+    }
     _waiting = true;
     _error = null;
     notifyListeners();
@@ -58,7 +63,10 @@ class PairedSetupViewModel extends ChangeNotifier {
       _sas = receipt.sas;
     } on PairingException catch (error) {
       _error = error.message;
-    } catch (_) {
+    } catch (error, stack) {
+      if (kDebugMode) {
+        debugPrint('[pairing] échec (réception) : $error\n$stack');
+      }
       _error = 'Une erreur inattendue est survenue.';
     } finally {
       _waiting = false;
@@ -100,7 +108,10 @@ class PairedSetupViewModel extends ChangeNotifier {
       await _markOnboardingSteps();
       _installed = true;
       return true;
-    } catch (_) {
+    } catch (error, stack) {
+      if (kDebugMode) {
+        debugPrint('[pairing] échec (installation) : $error\n$stack');
+      }
       _error = "Impossible d'installer le coffre sur cet appareil. Réessayez.";
       return false;
     } finally {

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -107,8 +106,7 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 _buildGeneralSection(),
                 _buildFeaturesSection(),
-                if (kDebugMode) _buildSyncSection(),
-                if (kDebugMode) _buildPairingSection(),
+                _buildSyncSection(),
                 _buildSecuritySection(),
                 _buildAboutSection(),
                 _buildDangerSection(),
@@ -167,25 +165,20 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  /// Section unique regroupant le **compte de synchronisation** (OPAQUE) et la
+  /// gestion des **appareils** (pairing) : deux facettes de la même
+  /// fonctionnalité multi-appareils.
   Widget _buildSyncSection() {
     return SettingsSection(
-      title: 'Synchronisation',
+      title: 'Synchronisation & appareils',
       children: [
         ListTile(
           leading: const Icon(Icons.sync),
-          title: const Text('Synchronisation multi-appareils'),
-          subtitle: const Text('Chiffrée de bout en bout (bêta)'),
+          title: const Text('Compte de synchronisation'),
+          subtitle: const Text('Créer un compte ou se connecter (chiffré E2E)'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push(AppRoutes.settingsSync),
         ),
-      ],
-    );
-  }
-
-  Widget _buildPairingSection() {
-    return SettingsSection(
-      title: 'Appareils',
-      children: [
         ListTile(
           leading: const Icon(Icons.devices),
           title: const Text('Ajouter un appareil'),

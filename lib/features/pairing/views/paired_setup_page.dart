@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/vault_service.dart';
@@ -9,6 +8,7 @@ import '../../../shared/widgets/password_form.dart';
 import '../../onboarding/service/onboarding_storage_service.dart';
 import '../service/pairing_service.dart';
 import '../viewmodels/paired_setup_view_model.dart';
+import 'pairing_qr_view.dart';
 import 'pairing_result_views.dart';
 
 /// Onboarding « **lier cet appareil** » : affiche un QR, reçoit la VaultKey depuis un
@@ -97,39 +97,9 @@ class _PairedSetupPageState extends State<PairedSetupPage> {
   }
 
   Widget _qrStep(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Faites scanner ce code depuis un appareil déjà connecté à votre compte.',
-        ),
-        const SizedBox(height: 24),
-        if (_viewModel.qrPayload != null)
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: QrImageView(data: _viewModel.qrPayload!, size: 240),
-            ),
-          ),
-        const SizedBox(height: 28),
-        if (_viewModel.waiting)
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              SizedBox(width: 12),
-              Text("En attente de l'autre appareil…"),
-            ],
-          ),
-      ],
+    return PairingQrView(
+      qrPayload: _viewModel.qrPayload,
+      waiting: _viewModel.waiting,
     );
   }
 

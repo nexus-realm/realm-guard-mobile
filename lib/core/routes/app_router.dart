@@ -94,6 +94,7 @@ final GoRouter appRouter = GoRouter(
         onboardingStorageService: _onboardingStorageService,
         vaultService: _vaultService,
         featureFlagsController: featureFlagsController,
+        authService: _authService,
       ),
     ),
     GoRoute(

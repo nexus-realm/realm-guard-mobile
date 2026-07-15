@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../service/pairing_service.dart';
 import '../viewmodels/pairing_receive_view_model.dart';
+import 'pairing_qr_view.dart';
 import 'pairing_result_views.dart';
 
 /// Écran **nouvel appareil** : affiche un QR à faire scanner par un appareil déjà
@@ -39,8 +39,10 @@ class _ReceiveDevicePageState extends State<ReceiveDevicePage> {
       body: SafeArea(
         child: ListenableBuilder(
           listenable: _viewModel,
-          builder: (context, _) =>
-              Padding(padding: const EdgeInsets.all(24), child: _body(context)),
+          builder: (context, _) => SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: _body(context),
+          ),
         ),
       ),
     );
@@ -55,6 +57,7 @@ class _ReceiveDevicePageState extends State<ReceiveDevicePage> {
         message: error,
       );
     }
+
     final sas = _viewModel.sas;
     if (sas != null) {
       return PairingSasView(
@@ -62,39 +65,10 @@ class _ReceiveDevicePageState extends State<ReceiveDevicePage> {
         footer: 'Coffre reçu. (Installation sur cet appareil : à venir.)',
       );
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Faites scanner ce code depuis un appareil déjà connecté à votre compte.',
-        ),
-        const SizedBox(height: 24),
-        if (_viewModel.qrPayload != null)
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: QrImageView(data: _viewModel.qrPayload!, size: 240),
-            ),
-          ),
-        const SizedBox(height: 28),
-        if (_viewModel.waiting)
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              SizedBox(width: 12),
-              Text("En attente de l'autre appareil…"),
-            ],
-          ),
-      ],
+
+    return PairingQrView(
+      qrPayload: _viewModel.qrPayload,
+      waiting: _viewModel.waiting,
     );
   }
 }

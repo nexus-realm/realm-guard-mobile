@@ -4,8 +4,8 @@ import '../data/pairing_exception.dart';
 import '../service/pairing_service.dart';
 
 /// État de l'écran « ajouter un appareil » (**appareil source**) : sur un QR scanné,
-/// demande une **confirmation biométrique**, scelle la VaultKey et la dépose, puis
-/// expose le SAS à comparer.
+/// demande une **confirmation d'identité** (biométrie, ou code de l'appareil en
+/// repli), scelle la VaultKey et la dépose, puis expose le SAS à comparer.
 class PairingSourceViewModel extends ChangeNotifier {
   PairingSourceViewModel({
     required PairingApi service,
@@ -40,21 +40,44 @@ class PairingSourceViewModel extends ChangeNotifier {
         _error = 'Coffre verrouillé.';
         return;
       }
-      if (!await _authorize()) {
-        _error = 'Autorisation biométrique refusée.';
+
+      // L'authentification peut **lever** (aucun verrouillage configuré, biométrie
+      // indisponible…) : on distingue ce cas d'un simple refus de l'utilisateur.
+      final bool authorized;
+      try {
+        authorized = await _authorize();
+      } catch (error, stack) {
+        _logFailure('authentification', error, stack);
+        _error =
+            "Authentification impossible : configurez un verrouillage de l'appareil "
+            '(code ou empreinte), puis réessayez.';
         return;
       }
+      if (!authorized) {
+        _error = 'Autorisation refusée.';
+        return;
+      }
+
       _sas = await _service.pairScannedDevice(
         qrPayload: qrPayload,
         vaultKey: vaultKey,
       );
     } on PairingException catch (error) {
       _error = error.message;
-    } catch (_) {
+    } catch (error, stack) {
+      _logFailure('pairing', error, stack);
       _error = 'Une erreur inattendue est survenue.';
     } finally {
       _busy = false;
       notifyListeners();
+    }
+  }
+
+  /// Ne jamais avaler une erreur en silence : en debug on la trace, sinon on reste
+  /// aveugle sur l'écran (« erreur inattendue » sans aucun log).
+  void _logFailure(String stage, Object error, StackTrace stack) {
+    if (kDebugMode) {
+      debugPrint('[pairing] échec ($stage) : $error\n$stack');
     }
   }
 }

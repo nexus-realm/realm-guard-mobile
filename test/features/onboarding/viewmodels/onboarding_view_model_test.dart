@@ -5,6 +5,7 @@ import 'package:realmguard/features/onboarding/service/onboarding_storage_servic
 import 'package:realmguard/core/security/vault_service.dart';
 import 'package:realmguard/features/onboarding/viewmodels/onboarding_view_model.dart';
 
+import '../../../support/auth_test_doubles.dart';
 import '../../../support/feature_flags_test_doubles.dart';
 
 class InMemoryOnboardingStorageService extends OnboardingStorageService {
@@ -35,6 +36,7 @@ OnboardingViewModel _buildViewModel() => OnboardingViewModel(
   onboardingStorageService: InMemoryOnboardingStorageService(),
   vaultService: FakeVaultService(),
   featureFlagsController: featureFlagsControllerWith(),
+  authService: FakeAuthService(),
 );
 
 void main() {
@@ -65,7 +67,13 @@ void main() {
       await viewModel.completeBiometricStep(true);
       await viewModel.completeTotpChoiceStep(true);
 
+      // La synchronisation est la dernière étape : l'onboarding se termine après.
       expect(success, isTrue);
+      expect(viewModel.currentStep, OnboardingStep.syncChoice);
+      expect(viewModel.isCompleted, isFalse);
+
+      await viewModel.completeSyncStep();
+
       expect(viewModel.currentStep, isNull);
       expect(viewModel.isCompleted, isTrue);
       viewModel.dispose();

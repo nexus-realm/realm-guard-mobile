@@ -21,12 +21,14 @@ void main() {
         biometricEnabled: true,
       );
       final step4 = step3.markStepCompleted(OnboardingStep.totpChoice);
+      final step5 = step4.markStepCompleted(OnboardingStep.syncChoice);
 
       expect(step2.nextMissingStep, OnboardingStep.biometricChoice);
       expect(step3.nextMissingStep, OnboardingStep.totpChoice);
-      expect(step4.nextMissingStep, isNull);
-      expect(step4.isCompleted, isTrue);
-      expect(step4.biometricEnabled, isTrue);
+      expect(step4.nextMissingStep, OnboardingStep.syncChoice);
+      expect(step5.nextMissingStep, isNull);
+      expect(step5.isCompleted, isTrue);
+      expect(step5.biometricEnabled, isTrue);
     });
 
     test('serializes and deserializes completed steps', () {
@@ -46,7 +48,8 @@ void main() {
       final progress = OnboardingProgress.initial()
           .markStepCompleted(OnboardingStep.welcome)
           .markStepCompleted(OnboardingStep.masterPassword)
-          .markStepCompleted(OnboardingStep.totpChoice);
+          .markStepCompleted(OnboardingStep.totpChoice)
+          .markStepCompleted(OnboardingStep.syncChoice);
       final activeSteps = OnboardingStep.values
           .where((step) => step != OnboardingStep.biometricChoice)
           .toList(growable: false);
@@ -69,6 +72,10 @@ void main() {
 
       expect(
         migrated.completedSteps.contains(OnboardingStep.totpChoice),
+        isTrue,
+      );
+      expect(
+        migrated.completedSteps.contains(OnboardingStep.syncChoice),
         isTrue,
       );
       expect(migrated.isCompleted, isTrue);
