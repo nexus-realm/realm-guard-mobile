@@ -21,6 +21,7 @@ class AppRoutes {
   static const String settingsSync = '/settings/sync';
   static const String settingsPairingAdd = '/settings/pairing-add';
   static const String settingsPairingReceive = '/settings/pairing-receive';
+  static const String settingsDevices = '/settings/devices';
   static const String settingsAbout = '/settings/about';
   static const String settingsPrivacy = '/settings/about/privacy';
   static const String settingsCgu = '/settings/about/cgu';

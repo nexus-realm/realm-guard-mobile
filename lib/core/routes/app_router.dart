@@ -25,9 +25,11 @@ import '../../features/onboarding/views/onboarding_page.dart';
 import '../../features/onboarding/views/startup_gate_page.dart';
 import '../../features/pairing/service/device_key_ffi.dart';
 import '../../features/pairing/service/device_key_store.dart';
+import '../../features/pairing/service/devices_service.dart';
 import '../../features/pairing/service/pairing_ffi.dart';
 import '../../features/pairing/service/pairing_service.dart';
 import '../../features/pairing/views/add_device_page.dart';
+import '../../features/pairing/views/devices_page.dart';
 import '../../features/pairing/views/paired_setup_page.dart';
 import '../../features/pairing/views/receive_device_page.dart';
 import '../../features/settings/data/legal_documents.dart';
@@ -66,6 +68,17 @@ final AuthService _authService = AuthService(
   httpClient: http.Client(),
   session: const SecureSessionStore(FlutterSecureStorage()),
   config: const ServerConfig.dev(),
+);
+
+/// Gestion du registre d'appareils (liste / renommage / révocation). Retente une
+/// auth par clé d'appareil si la session manque (cas d'un appareil fraîchement
+/// appairé, inscrit par la source seulement après confirmation du SAS).
+final DevicesService _devicesService = DevicesService(
+  httpClient: http.Client(),
+  session: const SecureSessionStore(FlutterSecureStorage()),
+  config: const ServerConfig.dev(),
+  deviceKeyStore: const SecureDeviceKeyStore(FlutterSecureStorage()),
+  ensureSession: () => _pairingService.authenticateDevice(),
 );
 
 /// Service de pairing d'appareil (v2) — opt-in via Réglages.
@@ -224,6 +237,12 @@ final GoRouter appRouter = GoRouter(
           name: 'settingsPairingReceive',
           builder: (context, state) =>
               ReceiveDevicePage(pairingService: _pairingService),
+        ),
+        GoRoute(
+          path: 'devices',
+          name: 'settingsDevices',
+          builder: (context, state) =>
+              DevicesPage(devicesService: _devicesService),
         ),
         GoRoute(
           path: 'about',

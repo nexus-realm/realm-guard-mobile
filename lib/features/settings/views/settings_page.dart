@@ -193,6 +193,13 @@ class _SettingsPageState extends State<SettingsPage> {
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push(AppRoutes.settingsPairingReceive),
         ),
+        ListTile(
+          leading: const Icon(Icons.phonelink_setup),
+          title: const Text('Appareils inscrits'),
+          subtitle: const Text('Renommer ou révoquer un appareil'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(AppRoutes.settingsDevices),
+        ),
       ],
     );
   }
