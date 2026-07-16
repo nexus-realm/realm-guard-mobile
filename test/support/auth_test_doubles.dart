@@ -78,6 +78,22 @@ class FakeAuthService extends AuthService {
   final List<String> registeredUsernames = [];
   final List<String> loggedInUsernames = [];
 
+  /// État de session simulé (pilote [isLoggedIn]).
+  bool loggedIn = false;
+
+  /// Le serveur détient-il déjà un backup de VaultKey ? (pilote
+  /// [hasVaultKeyBackup]).
+  bool hasBackup = false;
+
+  @override
+  Future<bool> isLoggedIn() async => loggedIn;
+
+  @override
+  Future<bool> hasVaultKeyBackup() async => hasBackup;
+
+  @override
+  Future<void> logout() async => loggedIn = false;
+
   @override
   Future<void> register(String username, String password) async {
     final pendingFailure = failure;
@@ -85,8 +101,13 @@ class FakeAuthService extends AuthService {
     registeredUsernames.add(username);
   }
 
+  /// Clé exportée factice renvoyée par [login] (sert au backup de la VaultKey).
+  final exportKey = Uint8List.fromList(List<int>.filled(32, 6));
+
   @override
-  Future<void> login(String username, String password) async {
+  Future<Uint8List> login(String username, String password) async {
     loggedInUsernames.add(username);
+    loggedIn = true;
+    return exportKey;
   }
 }

@@ -44,8 +44,10 @@ import '../../core/database/vault_repository.dart';
 import '../feature_flags/feature_flags_controller.dart';
 import '../security/app_lock_controller.dart';
 import '../security/biometric_storage_service.dart';
+import '../security/salt_manager.dart';
 import '../security/unlock_service.dart';
 import '../security/vault_service.dart';
+import '../security/wrapped_vault_key_store.dart';
 import 'app_routes.dart';
 import 'route_guard.dart';
 
@@ -69,6 +71,24 @@ final AuthService _authService = AuthService(
   session: const SecureSessionStore(FlutterSecureStorage()),
   config: const ServerConfig.dev(),
 );
+
+/// Sauvegarde la VaultKey **déjà enrobée par la KEK** sur le serveur, re-scellée
+/// sous la clé exportée OPAQUE : sans le mot de passe du compte **et** le mot de
+/// passe maître, une fuite de la base serveur reste inexploitable.
+///
+/// Renvoie `false` si le coffre n'existe pas encore (compte créé à l'onboarding
+/// **avant** le mot de passe maître) : il n'y a alors rien à sauvegarder.
+Future<bool> _backupWrappedVaultKey(Uint8List exportKey) async {
+  const store = SecureWrappedVaultKeyStore(FlutterSecureStorage());
+  final wrapped = await store.read();
+  if (wrapped == null) return false;
+  await _authService.uploadVaultKey(
+    exportKey: exportKey,
+    wrappedVaultKey: wrapped,
+    salt: await SaltManager.getOrGenerateSalt(),
+  );
+  return true;
+}
 
 /// Gestion du registre d'appareils (liste / renommage / révocation). Retente une
 /// auth par clé d'appareil si la session manque (cas d'un appareil fraîchement
@@ -221,7 +241,10 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: 'sync',
           name: 'settingsSync',
-          builder: (context, state) => SyncPage(authService: _authService),
+          builder: (context, state) => SyncPage(
+            authService: _authService,
+            backupVaultKey: _backupWrappedVaultKey,
+          ),
         ),
         GoRoute(
           path: 'pairing-add',
