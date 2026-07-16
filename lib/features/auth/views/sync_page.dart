@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/gradient_elevated_button.dart';
@@ -9,9 +11,17 @@ import '../viewmodels/sync_view_model.dart';
 /// se connecter (OPAQUE zero-knowledge). L'app reste pleinement utilisable
 /// hors-ligne sans compte.
 class SyncPage extends StatefulWidget {
-  const SyncPage({required this.authService, super.key});
+  const SyncPage({
+    required this.authService,
+    required this.backupVaultKey,
+    super.key,
+  });
 
   final AuthService authService;
+
+  /// Sauvegarde la VaultKey enrobée avec la clé exportée du login (`false` si le
+  /// coffre n'existe pas encore).
+  final Future<bool> Function(Uint8List exportKey) backupVaultKey;
 
   @override
   State<SyncPage> createState() => _SyncPageState();
@@ -26,7 +36,10 @@ class _SyncPageState extends State<SyncPage> {
   @override
   void initState() {
     super.initState();
-    _viewModel = SyncViewModel(authService: widget.authService);
+    _viewModel = SyncViewModel(
+      authService: widget.authService,
+      backupVaultKey: widget.backupVaultKey,
+    );
     _viewModel.initialize();
   }
 
@@ -82,6 +95,28 @@ class _SyncPageState extends State<SyncPage> {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                _viewModel.vaultKeyBackedUp
+                    ? Icons.backup_outlined
+                    : Icons.info_outline,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _viewModel.vaultKeyBackedUp
+                      ? 'Clé du coffre sauvegardée sur le serveur, scellée par votre '
+                            'mot de passe de compte. Le serveur ne peut pas la lire.'
+                      : "Clé du coffre non sauvegardée. Reconnectez-vous une fois le "
+                            'coffre créé pour activer la sauvegarde.',
+                ),
+              ),
+            ],
+          ),
           const Spacer(),
           OutlinedButton.icon(
             onPressed: _viewModel.isLoading ? null : _viewModel.logout,
@@ -110,8 +145,9 @@ class _SyncPageState extends State<SyncPage> {
             ),
             const SizedBox(height: 12),
             const Text(
-              'Le serveur ne voit jamais votre mot de passe maître. Le coffre '
-              'reste déchiffrable hors-ligne.',
+              'Le mot de passe du compte est distinct de votre mot de passe '
+              'maître. Le serveur ne le voit jamais (OPAQUE) et le coffre reste '
+              'déchiffrable hors-ligne.',
             ),
             const SizedBox(height: 24),
             SegmentedButton<AuthMode>(
@@ -152,7 +188,7 @@ class _SyncPageState extends State<SyncPage> {
               enabled: !busy,
               obscureText: true,
               decoration: const InputDecoration(
-                labelText: 'Mot de passe maître',
+                labelText: 'Mot de passe du compte',
                 prefixIcon: Icon(Icons.lock_outline),
               ),
               validator: (value) =>

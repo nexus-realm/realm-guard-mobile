@@ -62,7 +62,12 @@ class AuthService {
 
   /// Se connecte. Lève [AuthException.invalidCredentials] si le mot de passe est
   /// faux (l'échec est détecté **côté client**). Stocke le token en cas de succès.
-  Future<void> login(String username, String password) async {
+  ///
+  /// Renvoie la **clé exportée** OPAQUE : elle dérive du mot de passe du compte et
+  /// n'existe qu'ici. C'est elle qui scelle la VaultKey pour le backup serveur
+  /// ([uploadVaultKey]) — d'où l'intérêt de l'exploiter dans la foulée du login
+  /// plutôt que de redemander le mot de passe.
+  Future<Uint8List> login(String username, String password) async {
     final start = await _opaque.loginStart(password);
     final startResp = await _post('/auth/login/start', {
       'username': username,
@@ -85,6 +90,17 @@ class AuthService {
     if (finishResp.statusCode != 200) throw const AuthException.server();
 
     await _session.write(_json(finishResp)['session_token'] as String);
+    return finish.exportKey;
+  }
+
+  /// Le serveur détient-il déjà une VaultKey pour ce compte ? Nécessite une session.
+  Future<bool> hasVaultKeyBackup() async {
+    final token = await _requireToken();
+    final resp = await _get('/vault/key', token);
+    if (resp.statusCode == 200) return true;
+    if (resp.statusCode == 404) return false;
+    if (resp.statusCode == 401) throw const AuthException.sessionExpired();
+    throw const AuthException.server();
   }
 
   /// Un token de session est-il stocké localement ?
@@ -92,6 +108,17 @@ class AuthService {
 
   /// Efface la session locale.
   Future<void> logout() => _session.clear();
+
+  /// Identifiant (UUID) du compte de la session courante, via `/auth/me`.
+  /// L'appareil **source** en a besoin pour sceller le blob de pairing (le nouvel
+  /// appareil apprend ainsi quel compte il rejoint). Nécessite une session active.
+  Future<String> currentAccountId() async {
+    final token = await _requireToken();
+    final resp = await _get('/auth/me', token);
+    if (resp.statusCode == 401) throw const AuthException.sessionExpired();
+    if (resp.statusCode != 200) throw const AuthException.server();
+    return _json(resp)['account_id'] as String;
+  }
 
   /// Téléverse la VaultKey pour la synchro multi-appareils. [wrappedVaultKey]
   /// (déjà enrobée par la KEK) est **ré-enrobée** sous la clé exportée OPAQUE

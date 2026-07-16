@@ -10,6 +10,7 @@ import '../../features/auth/service/opaque_client.dart';
 import '../../features/auth/service/session_store.dart';
 import '../../features/auth/service/vault_key_cipher.dart';
 import '../../features/auth/views/sync_page.dart';
+import '../../features/auth/views/vault_recovery_page.dart';
 import '../../features/debug/views/security_debug_page.dart';
 import '../../features/debug/views/vault_debug_page.dart';
 import '../../features/home/views/add_credential_page.dart';
@@ -23,6 +24,15 @@ import '../../features/home/views/totp_detail_page.dart';
 import '../../features/onboarding/service/onboarding_storage_service.dart';
 import '../../features/onboarding/views/onboarding_page.dart';
 import '../../features/onboarding/views/startup_gate_page.dart';
+import '../../features/pairing/service/device_key_ffi.dart';
+import '../../features/pairing/service/device_key_store.dart';
+import '../../features/pairing/service/devices_service.dart';
+import '../../features/pairing/service/pairing_ffi.dart';
+import '../../features/pairing/service/pairing_service.dart';
+import '../../features/pairing/views/add_device_page.dart';
+import '../../features/pairing/views/devices_page.dart';
+import '../../features/pairing/views/paired_setup_page.dart';
+import '../../features/pairing/views/receive_device_page.dart';
 import '../../features/settings/data/legal_documents.dart';
 import '../../features/settings/service/app_reset_service.dart';
 import '../../features/settings/views/about_page.dart';
@@ -35,8 +45,10 @@ import '../../core/database/vault_repository.dart';
 import '../feature_flags/feature_flags_controller.dart';
 import '../security/app_lock_controller.dart';
 import '../security/biometric_storage_service.dart';
+import '../security/salt_manager.dart';
 import '../security/unlock_service.dart';
 import '../security/vault_service.dart';
+import '../security/wrapped_vault_key_store.dart';
 import 'app_routes.dart';
 import 'route_guard.dart';
 
@@ -56,6 +68,45 @@ final FeatureFlagsController featureFlagsController = FeatureFlagsController();
 final AuthService _authService = AuthService(
   opaque: const FrbOpaqueClient(),
   vaultKey: const FrbVaultKeyCipher(),
+  httpClient: http.Client(),
+  session: const SecureSessionStore(FlutterSecureStorage()),
+  config: const ServerConfig.dev(),
+);
+
+/// Sauvegarde la VaultKey **déjà enrobée par la KEK** sur le serveur, re-scellée
+/// sous la clé exportée OPAQUE : sans le mot de passe du compte **et** le mot de
+/// passe maître, une fuite de la base serveur reste inexploitable.
+///
+/// Renvoie `false` si le coffre n'existe pas encore (compte créé à l'onboarding
+/// **avant** le mot de passe maître) : il n'y a alors rien à sauvegarder.
+Future<bool> _backupWrappedVaultKey(Uint8List exportKey) async {
+  const store = SecureWrappedVaultKeyStore(FlutterSecureStorage());
+  final wrapped = await store.read();
+  if (wrapped == null) return false;
+  await _authService.uploadVaultKey(
+    exportKey: exportKey,
+    wrappedVaultKey: wrapped,
+    salt: await SaltManager.getOrGenerateSalt(),
+  );
+  return true;
+}
+
+/// Gestion du registre d'appareils (liste / renommage / révocation). Retente une
+/// auth par clé d'appareil si la session manque (cas d'un appareil fraîchement
+/// appairé, inscrit par la source seulement après confirmation du SAS).
+final DevicesService _devicesService = DevicesService(
+  httpClient: http.Client(),
+  session: const SecureSessionStore(FlutterSecureStorage()),
+  config: const ServerConfig.dev(),
+  deviceKeyStore: const SecureDeviceKeyStore(FlutterSecureStorage()),
+  ensureSession: () => _pairingService.authenticateDevice(),
+);
+
+/// Service de pairing d'appareil (v2) — opt-in via Réglages.
+final PairingService _pairingService = PairingService(
+  ffi: const FrbPairingFfi(),
+  deviceKeyFfi: const FrbDeviceKeyFfi(),
+  deviceKeyStore: const SecureDeviceKeyStore(FlutterSecureStorage()),
   httpClient: http.Client(),
   session: const SecureSessionStore(FlutterSecureStorage()),
   config: const ServerConfig.dev(),
@@ -81,6 +132,25 @@ final GoRouter appRouter = GoRouter(
         onboardingStorageService: _onboardingStorageService,
         vaultService: _vaultService,
         featureFlagsController: featureFlagsController,
+        authService: _authService,
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.pairedSetup,
+      name: 'pairedSetup',
+      builder: (context, state) => PairedSetupPage(
+        pairingService: _pairingService,
+        vaultService: _vaultService,
+        onboardingStorageService: _onboardingStorageService,
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.vaultRecovery,
+      name: 'vaultRecovery',
+      builder: (context, state) => VaultRecoveryPage(
+        authService: _authService,
+        vaultService: _vaultService,
+        onboardingStorageService: _onboardingStorageService,
       ),
     ),
     GoRoute(
@@ -181,7 +251,31 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: 'sync',
           name: 'settingsSync',
-          builder: (context, state) => SyncPage(authService: _authService),
+          builder: (context, state) => SyncPage(
+            authService: _authService,
+            backupVaultKey: _backupWrappedVaultKey,
+          ),
+        ),
+        GoRoute(
+          path: 'pairing-add',
+          name: 'settingsPairingAdd',
+          builder: (context, state) => AddDevicePage(
+            pairingService: _pairingService,
+            vaultService: _vaultService,
+            authService: _authService,
+          ),
+        ),
+        GoRoute(
+          path: 'pairing-receive',
+          name: 'settingsPairingReceive',
+          builder: (context, state) =>
+              ReceiveDevicePage(pairingService: _pairingService),
+        ),
+        GoRoute(
+          path: 'devices',
+          name: 'settingsDevices',
+          builder: (context, state) =>
+              DevicesPage(devicesService: _devicesService),
         ),
         GoRoute(
           path: 'about',

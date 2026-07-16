@@ -1,5 +1,9 @@
 enum OnboardingStep {
   welcome,
+  // La synchronisation vient **avant** le mot de passe maître : le parcours
+  // « lier un appareil existant » reçoit un coffre par pairing et ne doit donc
+  // pas être précédé de la création d'un coffre local.
+  syncChoice,
   masterPassword,
   biometricChoice,
   totpChoice;
@@ -14,6 +18,8 @@ enum OnboardingStep {
         return 'biometric_choice';
       case OnboardingStep.totpChoice:
         return 'totp_choice';
+      case OnboardingStep.syncChoice:
+        return 'sync_choice';
     }
   }
 

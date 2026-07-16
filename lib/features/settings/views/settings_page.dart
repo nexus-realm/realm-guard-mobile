@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -107,7 +106,7 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 _buildGeneralSection(),
                 _buildFeaturesSection(),
-                if (kDebugMode) _buildSyncSection(),
+                _buildSyncSection(),
                 _buildSecuritySection(),
                 _buildAboutSection(),
                 _buildDangerSection(),
@@ -166,16 +165,40 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  /// Section unique regroupant le **compte de synchronisation** (OPAQUE) et la
+  /// gestion des **appareils** (pairing) : deux facettes de la même
+  /// fonctionnalité multi-appareils.
   Widget _buildSyncSection() {
     return SettingsSection(
-      title: 'Synchronisation',
+      title: 'Synchronisation & appareils',
       children: [
         ListTile(
           leading: const Icon(Icons.sync),
-          title: const Text('Synchronisation multi-appareils'),
-          subtitle: const Text('Chiffrée de bout en bout (bêta)'),
+          title: const Text('Compte de synchronisation'),
+          subtitle: const Text('Créer un compte ou se connecter (chiffré E2E)'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push(AppRoutes.settingsSync),
+        ),
+        ListTile(
+          leading: const Icon(Icons.devices),
+          title: const Text('Ajouter un appareil'),
+          subtitle: const Text("Scanner le QR d'un nouvel appareil"),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(AppRoutes.settingsPairingAdd),
+        ),
+        ListTile(
+          leading: const Icon(Icons.qr_code_2),
+          title: const Text('Lier cet appareil'),
+          subtitle: const Text('Recevoir le coffre depuis un autre appareil'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(AppRoutes.settingsPairingReceive),
+        ),
+        ListTile(
+          leading: const Icon(Icons.phonelink_setup),
+          title: const Text('Appareils inscrits'),
+          subtitle: const Text('Renommer ou révoquer un appareil'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(AppRoutes.settingsDevices),
         ),
       ],
     );

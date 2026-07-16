@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:realmguard/core/feature_flags/feature_flag.dart';
+import 'package:realmguard/features/auth/data/auth_exception.dart';
 import 'package:realmguard/features/onboarding/service/onboarding_flow_controller.dart';
 import 'package:realmguard/features/onboarding/service/onboarding_progress.dart';
 import 'package:realmguard/features/onboarding/data/onboarding_step.dart';
@@ -7,6 +8,7 @@ import 'package:realmguard/features/onboarding/service/onboarding_storage_servic
 import 'package:realmguard/core/security/biometric_storage_service.dart';
 import 'package:realmguard/core/security/vault_service.dart';
 
+import '../../../support/auth_test_doubles.dart';
 import '../../../support/feature_flags_test_doubles.dart';
 
 class InMemoryOnboardingStorageService extends OnboardingStorageService {
@@ -81,11 +83,12 @@ void main() {
         vaultService: FakeVaultService(),
         biometricStorageService: FakeBiometricStorageService(),
         featureFlagsController: featureFlagsControllerWith(),
+        authService: FakeAuthService(),
       );
 
       await controller.initialize();
 
-      expect(controller.currentStep, OnboardingStep.masterPassword);
+      expect(controller.currentStep, OnboardingStep.syncChoice);
       expect(
         controller.progress.completedSteps.contains(OnboardingStep.welcome),
         isTrue,
@@ -101,6 +104,7 @@ void main() {
         vaultService: vault,
         biometricStorageService: FakeBiometricStorageService(),
         featureFlagsController: featureFlagsControllerWith(),
+        authService: FakeAuthService(),
       );
 
       await controller.initialize();
@@ -123,40 +127,58 @@ void main() {
     });
 
     test(
-      'TOTP choice step follows biometrics and completes onboarding',
+      'sync choice comes right after welcome, before master password',
       () async {
-        final storage = InMemoryOnboardingStorageService();
-        final vault = FakeVaultService();
-        final biometrics = FakeBiometricStorageService()..isAvailable = true;
-
         final controller = OnboardingFlowController(
-          onboardingStorageService: storage,
-          vaultService: vault,
-          biometricStorageService: biometrics,
+          onboardingStorageService: InMemoryOnboardingStorageService(),
+          vaultService: FakeVaultService(),
+          biometricStorageService: FakeBiometricStorageService(),
           featureFlagsController: featureFlagsControllerWith(),
+          authService: FakeAuthService(),
         );
 
         await controller.initialize();
+        expect(controller.currentStep, OnboardingStep.welcome);
+
         await controller.completeWelcomeStep();
-        await controller.completeMasterPasswordStep(
-          'Motdepasse1!',
-          'Motdepasse1!',
-        );
-        await controller.completeBiometricStep(false);
+        expect(controller.currentStep, OnboardingStep.syncChoice);
 
-        // La biométrie n'est plus la dernière étape : le choix TOTP la suit.
-        expect(biometrics.clearWasCalled, isTrue);
-        expect(biometrics.biometricEnabledValue, isFalse);
-        expect(controller.currentStep, OnboardingStep.totpChoice);
-        expect(controller.isCompleted, isFalse);
-
-        await controller.completeTotpChoiceStep(true);
-
-        expect(controller.currentStep, isNull);
-        expect(controller.isCompleted, isTrue);
-        expect(controller.progress.biometricEnabled, isFalse);
+        await controller.completeSyncStep();
+        expect(controller.currentStep, OnboardingStep.masterPassword);
       },
     );
+
+    test('full flow (welcome→sync→master→biometrics→totp) completes', () async {
+      final vault = FakeVaultService();
+      final biometrics = FakeBiometricStorageService()..isAvailable = true;
+
+      final controller = OnboardingFlowController(
+        onboardingStorageService: InMemoryOnboardingStorageService(),
+        vaultService: vault,
+        biometricStorageService: biometrics,
+        featureFlagsController: featureFlagsControllerWith(),
+        authService: FakeAuthService(),
+      );
+
+      await controller.initialize();
+      await controller.completeWelcomeStep();
+      await controller.completeSyncStep();
+      await controller.completeMasterPasswordStep(
+        'Motdepasse1!',
+        'Motdepasse1!',
+      );
+      expect(controller.currentStep, OnboardingStep.biometricChoice);
+
+      await controller.completeBiometricStep(false);
+      expect(controller.currentStep, OnboardingStep.totpChoice);
+
+      await controller.completeTotpChoiceStep(true);
+
+      expect(controller.currentStep, isNull);
+      expect(controller.isCompleted, isTrue);
+      expect(controller.progress.biometricEnabled, isFalse);
+      expect(vault.lastPassword, 'Motdepasse1!');
+    });
 
     test(
       'records the TOTP choice through the feature flags controller',
@@ -169,6 +191,7 @@ void main() {
           vaultService: FakeVaultService(),
           biometricStorageService: FakeBiometricStorageService(),
           featureFlagsController: flags,
+          authService: FakeAuthService(),
         );
 
         await controller.initialize();
@@ -178,44 +201,51 @@ void main() {
           'Motdepasse1!',
         );
         await controller.completeBiometricStep(true);
-
         await controller.completeTotpChoiceStep(false);
 
         expect(flags.isEnabled(FeatureFlag.totp), isFalse);
-        expect(controller.isCompleted, isTrue);
         expect(
           controller.progress.completedSteps.contains(
             OnboardingStep.totpChoice,
           ),
           isTrue,
         );
+
+        // Onboarding non terminé tant que le choix de synchronisation n'est pas fait.
+        expect(controller.isCompleted, isFalse);
+        await controller.completeSyncStep();
+        expect(controller.isCompleted, isTrue);
       },
     );
 
     test(
-      'shows the TOTP step (not completion) when biometrics are unavailable',
+      'skips only biometrics when unavailable (welcome→sync→master→totp)',
       () async {
-        final storage = InMemoryOnboardingStorageService();
         final vault = FakeVaultService();
         final biometrics = FakeBiometricStorageService()..isAvailable = false;
 
         final controller = OnboardingFlowController(
-          onboardingStorageService: storage,
+          onboardingStorageService: InMemoryOnboardingStorageService(),
           vaultService: vault,
           biometricStorageService: biometrics,
           featureFlagsController: featureFlagsControllerWith(),
+          authService: FakeAuthService(),
         );
 
         await controller.initialize();
         await controller.completeWelcomeStep();
+        await controller.completeSyncStep();
+
+        // Biométrie indisponible : welcome → sync → master → totp (4 étapes).
+        expect(controller.totalStepCount, 4);
+        expect(controller.currentStep, OnboardingStep.masterPassword);
+
         await controller.completeMasterPasswordStep(
           'Motdepasse1!',
           'Motdepasse1!',
         );
 
-        // Biométrie indisponible : welcome → masterPassword → totpChoice (3 étapes).
         expect(controller.currentStep, OnboardingStep.totpChoice);
-        expect(controller.totalStepCount, 3);
         expect(controller.isCompleted, isFalse);
 
         await controller.completeTotpChoiceStep(true);
@@ -230,5 +260,80 @@ void main() {
         );
       },
     );
+
+    test(
+      'registerSyncAccount opens a session and can complete the step',
+      () async {
+        final auth = FakeAuthService();
+        final controller = OnboardingFlowController(
+          onboardingStorageService: InMemoryOnboardingStorageService(),
+          vaultService: FakeVaultService(),
+          biometricStorageService: FakeBiometricStorageService(),
+          featureFlagsController: featureFlagsControllerWith(),
+          authService: auth,
+        );
+
+        await controller.initialize();
+
+        final created = await controller.registerSyncAccount(
+          username: 'alice',
+          password: 'Motdepasse1!',
+        );
+
+        expect(created, isTrue);
+        expect(auth.registeredUsernames, ['alice']);
+        expect(auth.loggedInUsernames, ['alice']);
+        expect(controller.errorMessage, isNull);
+
+        await controller.completeSyncStep();
+        expect(
+          controller.progress.completedSteps.contains(
+            OnboardingStep.syncChoice,
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test('registerSyncAccount rejects a too-short account password', () async {
+      final auth = FakeAuthService();
+      final controller = OnboardingFlowController(
+        onboardingStorageService: InMemoryOnboardingStorageService(),
+        vaultService: FakeVaultService(),
+        biometricStorageService: FakeBiometricStorageService(),
+        featureFlagsController: featureFlagsControllerWith(),
+        authService: auth,
+      );
+
+      final created = await controller.registerSyncAccount(
+        username: 'alice',
+        password: 'court',
+      );
+
+      expect(created, isFalse);
+      expect(auth.registeredUsernames, isEmpty);
+      expect(controller.errorMessage, isNotNull);
+    });
+
+    test('registerSyncAccount surfaces the auth error message', () async {
+      final auth = FakeAuthService()
+        ..failure = const AuthException.usernameTaken();
+      final controller = OnboardingFlowController(
+        onboardingStorageService: InMemoryOnboardingStorageService(),
+        vaultService: FakeVaultService(),
+        biometricStorageService: FakeBiometricStorageService(),
+        featureFlagsController: featureFlagsControllerWith(),
+        authService: auth,
+      );
+
+      final created = await controller.registerSyncAccount(
+        username: 'alice',
+        password: 'Motdepasse1!',
+      );
+
+      expect(created, isFalse);
+      expect(controller.errorMessage, "Ce nom d'utilisateur est déjà pris.");
+      expect(auth.loggedInUsernames, isEmpty);
+    });
   });
 }

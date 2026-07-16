@@ -18,3 +18,11 @@
 -dontwarn javax.naming.NameNotFoundException
 -dontwarn javax.naming.NamingException
 -dontwarn sun.reflect.Reflection
+
+# flutter_autofill_service : son provider de log tinylog personnalisé
+# (DynamicLevelLoggingProvider) est résolu à l'exécution par ServiceLoader
+# (META-INF/services) + tinylog.properties. R8 ne doit ni le supprimer ni le
+# renommer, sinon tinylog retombe sur le provider par défaut → ClassCastException
+# au setPreferences (chemin autofill sensible à R8).
+-keep class com.keevault.flutter_autofill_service.DynamicLevelLoggingProvider { *; }
+-keep class org.tinylog.** { *; }

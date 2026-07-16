@@ -440,6 +440,7 @@ version = "2.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "115531babc129696a58c64a4fef0a8bf9e9698629fb97e9e40767d235cfbcd53"
 dependencies = [
+ "pkcs8",
  "serde",
  "signature",
 ]
@@ -456,6 +457,7 @@ dependencies = [
  "sha2",
  "signature",
  "subtle",
+ "zeroize",
 ]
 
 [[package]]
@@ -1006,11 +1008,12 @@ dependencies = [
 [[package]]
 name = "realm-guard-core"
 version = "0.1.0"
-source = "git+https://github.com/nexus-realm/realm-guard-core?branch=develop#02a2eec094110df11666cad9dfee736cf14806c0"
+source = "git+https://github.com/nexus-realm/realm-guard-core?branch=develop#8eeb4e27b031b744369a90b2a5c75b634f95901d"
 dependencies = [
  "argon2",
  "bip39",
  "chacha20poly1305",
+ "ed25519-dalek",
  "getrandom",
  "hkdf",
  "opaque-ke",
@@ -1019,6 +1022,7 @@ dependencies = [
  "serde",
  "sha2",
  "thiserror",
+ "x25519-dalek",
  "zeroize",
 ]
 
@@ -1426,6 +1430,18 @@ name = "windows-link"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
+
+[[package]]
+name = "x25519-dalek"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7e468321c81fb07fa7f4c636c3972b9100f0346e5b6a9f2bd0603a52f7ed277"
+dependencies = [
+ "curve25519-dalek",
+ "rand_core",
+ "serde",
+ "zeroize",
+]
 
 [[package]]
 name = "zeroize"

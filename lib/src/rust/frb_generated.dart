@@ -3,7 +3,9 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/device_key.dart';
 import 'api/opaque.dart';
+import 'api/pairing.dart';
 import 'api/simple.dart';
 import 'api/vault_key.dart';
 import 'dart:async';
@@ -68,7 +70,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 1353450068;
+  int get rustContentHash => -1690116021;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -81,6 +83,15 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 
 abstract class RustLibApi extends BaseApi {
   String crateApiSimpleCoreVersion();
+
+  DeviceKeypair crateApiDeviceKeyDeviceGenerateKeypair();
+
+  Uint8List crateApiDeviceKeyDeviceSignChallenge({
+    required List<int> secret,
+    required List<int> challenge,
+  });
+
+  Uint8List crateApiVaultKeyGenerateVaultKey();
 
   Future<void> crateApiSimpleInitApp();
 
@@ -109,9 +120,43 @@ abstract class RustLibApi extends BaseApi {
     required List<int> sealed,
   });
 
+  PairingConfirm crateApiPairingPairingNewDeviceConfirmRound({
+    required List<int> state,
+    required List<int> hello,
+  });
+
+  PairingOpened crateApiPairingPairingNewDeviceOpen({
+    required List<int> state,
+    required List<int> sealed,
+  });
+
+  PairingStart crateApiPairingPairingNewDeviceStart({
+    required List<int> devicePublicKey,
+  });
+
+  PairingSourceBegin crateApiPairingPairingSourceBeginRound({
+    required List<int> qr,
+  });
+
+  Uint8List crateApiPairingPairingSourceSealRound({
+    required List<int> state,
+    required List<int> accountId,
+    required List<int> vaultKey,
+  });
+
   Uint8List crateApiVaultKeySealVaultKey({
     required List<int> exportKey,
     required List<int> wrappedVaultKey,
+  });
+
+  Uint8List crateApiVaultKeyUnwrapVaultKey({
+    required List<int> kek,
+    required List<int> wrapped,
+  });
+
+  Uint8List crateApiVaultKeyWrapVaultKey({
+    required List<int> kek,
+    required List<int> vaultKey,
   });
 }
 
@@ -146,6 +191,80 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "core_version", argNames: []);
 
   @override
+  DeviceKeypair crateApiDeviceKeyDeviceGenerateKeypair() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_device_keypair,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDeviceKeyDeviceGenerateKeypairConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDeviceKeyDeviceGenerateKeypairConstMeta =>
+      const TaskConstMeta(debugName: "device_generate_keypair", argNames: []);
+
+  @override
+  Uint8List crateApiDeviceKeyDeviceSignChallenge({
+    required List<int> secret,
+    required List<int> challenge,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(secret, serializer);
+          sse_encode_list_prim_u_8_loose(challenge, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDeviceKeyDeviceSignChallengeConstMeta,
+        argValues: [secret, challenge],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDeviceKeyDeviceSignChallengeConstMeta =>
+      const TaskConstMeta(
+        debugName: "device_sign_challenge",
+        argNames: ["secret", "challenge"],
+      );
+
+  @override
+  Uint8List crateApiVaultKeyGenerateVaultKey() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiVaultKeyGenerateVaultKeyConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultKeyGenerateVaultKeyConstMeta =>
+      const TaskConstMeta(debugName: "generate_vault_key", argNames: []);
+
+  @override
   Future<void> crateApiSimpleInitApp() {
     return handler.executeNormal(
       NormalTask(
@@ -154,7 +273,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 2,
+            funcId: 5,
             port: port_,
           );
         },
@@ -188,7 +307,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 6,
             port: port_,
           );
         },
@@ -221,7 +340,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 7,
             port: port_,
           );
         },
@@ -258,7 +377,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 8,
             port: port_,
           );
         },
@@ -291,7 +410,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 9,
             port: port_,
           );
         },
@@ -323,7 +442,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(exportKey, serializer);
           sse_encode_list_prim_u_8_loose(sealed, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -343,6 +462,154 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  PairingConfirm crateApiPairingPairingNewDeviceConfirmRound({
+    required List<int> state,
+    required List<int> hello,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(state, serializer);
+          sse_encode_list_prim_u_8_loose(hello, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_pairing_confirm,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiPairingPairingNewDeviceConfirmRoundConstMeta,
+        argValues: [state, hello],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPairingPairingNewDeviceConfirmRoundConstMeta =>
+      const TaskConstMeta(
+        debugName: "pairing_new_device_confirm_round",
+        argNames: ["state", "hello"],
+      );
+
+  @override
+  PairingOpened crateApiPairingPairingNewDeviceOpen({
+    required List<int> state,
+    required List<int> sealed,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(state, serializer);
+          sse_encode_list_prim_u_8_loose(sealed, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_pairing_opened,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiPairingPairingNewDeviceOpenConstMeta,
+        argValues: [state, sealed],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPairingPairingNewDeviceOpenConstMeta =>
+      const TaskConstMeta(
+        debugName: "pairing_new_device_open",
+        argNames: ["state", "sealed"],
+      );
+
+  @override
+  PairingStart crateApiPairingPairingNewDeviceStart({
+    required List<int> devicePublicKey,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(devicePublicKey, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_pairing_start,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiPairingPairingNewDeviceStartConstMeta,
+        argValues: [devicePublicKey],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPairingPairingNewDeviceStartConstMeta =>
+      const TaskConstMeta(
+        debugName: "pairing_new_device_start",
+        argNames: ["devicePublicKey"],
+      );
+
+  @override
+  PairingSourceBegin crateApiPairingPairingSourceBeginRound({
+    required List<int> qr,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(qr, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_pairing_source_begin,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiPairingPairingSourceBeginRoundConstMeta,
+        argValues: [qr],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPairingPairingSourceBeginRoundConstMeta =>
+      const TaskConstMeta(
+        debugName: "pairing_source_begin_round",
+        argNames: ["qr"],
+      );
+
+  @override
+  Uint8List crateApiPairingPairingSourceSealRound({
+    required List<int> state,
+    required List<int> accountId,
+    required List<int> vaultKey,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(state, serializer);
+          sse_encode_list_prim_u_8_loose(accountId, serializer);
+          sse_encode_list_prim_u_8_loose(vaultKey, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiPairingPairingSourceSealRoundConstMeta,
+        argValues: [state, accountId, vaultKey],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPairingPairingSourceSealRoundConstMeta =>
+      const TaskConstMeta(
+        debugName: "pairing_source_seal_round",
+        argNames: ["state", "accountId", "vaultKey"],
+      );
+
+  @override
   Uint8List crateApiVaultKeySealVaultKey({
     required List<int> exportKey,
     required List<int> wrappedVaultKey,
@@ -353,7 +620,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(exportKey, serializer);
           sse_encode_list_prim_u_8_loose(wrappedVaultKey, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -372,10 +639,82 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         argNames: ["exportKey", "wrappedVaultKey"],
       );
 
+  @override
+  Uint8List crateApiVaultKeyUnwrapVaultKey({
+    required List<int> kek,
+    required List<int> wrapped,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(kek, serializer);
+          sse_encode_list_prim_u_8_loose(wrapped, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiVaultKeyUnwrapVaultKeyConstMeta,
+        argValues: [kek, wrapped],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultKeyUnwrapVaultKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "unwrap_vault_key",
+        argNames: ["kek", "wrapped"],
+      );
+
+  @override
+  Uint8List crateApiVaultKeyWrapVaultKey({
+    required List<int> kek,
+    required List<int> vaultKey,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(kek, serializer);
+          sse_encode_list_prim_u_8_loose(vaultKey, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiVaultKeyWrapVaultKeyConstMeta,
+        argValues: [kek, vaultKey],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultKeyWrapVaultKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "wrap_vault_key",
+        argNames: ["kek", "vaultKey"],
+      );
+
   @protected
   String dco_decode_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as String;
+  }
+
+  @protected
+  DeviceKeypair dco_decode_device_keypair(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return DeviceKeypair(
+      public: dco_decode_list_prim_u_8_strict(arr[0]),
+      secret: dco_decode_list_prim_u_8_strict(arr[1]),
+    );
   }
 
   @protected
@@ -428,6 +767,56 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PairingConfirm dco_decode_pairing_confirm(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return PairingConfirm(
+      state: dco_decode_list_prim_u_8_strict(arr[0]),
+      sas: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  PairingOpened dco_decode_pairing_opened(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return PairingOpened(
+      vaultKey: dco_decode_list_prim_u_8_strict(arr[0]),
+      accountId: dco_decode_list_prim_u_8_strict(arr[1]),
+    );
+  }
+
+  @protected
+  PairingSourceBegin dco_decode_pairing_source_begin(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return PairingSourceBegin(
+      state: dco_decode_list_prim_u_8_strict(arr[0]),
+      hello: dco_decode_list_prim_u_8_strict(arr[1]),
+      sas: dco_decode_String(arr[2]),
+      devicePublicKey: dco_decode_list_prim_u_8_strict(arr[3]),
+    );
+  }
+
+  @protected
+  PairingStart dco_decode_pairing_start(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return PairingStart(
+      state: dco_decode_list_prim_u_8_strict(arr[0]),
+      qr: dco_decode_list_prim_u_8_strict(arr[1]),
+    );
+  }
+
+  @protected
   int dco_decode_u_8(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
@@ -444,6 +833,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_list_prim_u_8_strict(deserializer);
     return utf8.decoder.convert(inner);
+  }
+
+  @protected
+  DeviceKeypair sse_decode_device_keypair(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_public = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_secret = sse_decode_list_prim_u_8_strict(deserializer);
+    return DeviceKeypair(public: var_public, secret: var_secret);
   }
 
   @protected
@@ -496,6 +893,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PairingConfirm sse_decode_pairing_confirm(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_state = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_sas = sse_decode_String(deserializer);
+    return PairingConfirm(state: var_state, sas: var_sas);
+  }
+
+  @protected
+  PairingOpened sse_decode_pairing_opened(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_vaultKey = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_accountId = sse_decode_list_prim_u_8_strict(deserializer);
+    return PairingOpened(vaultKey: var_vaultKey, accountId: var_accountId);
+  }
+
+  @protected
+  PairingSourceBegin sse_decode_pairing_source_begin(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_state = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_hello = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_sas = sse_decode_String(deserializer);
+    var var_devicePublicKey = sse_decode_list_prim_u_8_strict(deserializer);
+    return PairingSourceBegin(
+      state: var_state,
+      hello: var_hello,
+      sas: var_sas,
+      devicePublicKey: var_devicePublicKey,
+    );
+  }
+
+  @protected
+  PairingStart sse_decode_pairing_start(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_state = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_qr = sse_decode_list_prim_u_8_strict(deserializer);
+    return PairingStart(state: var_state, qr: var_qr);
+  }
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8();
@@ -522,6 +960,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_String(String self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
+  }
+
+  @protected
+  void sse_encode_device_keypair(DeviceKeypair self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.public, serializer);
+    sse_encode_list_prim_u_8_strict(self.secret, serializer);
   }
 
   @protected
@@ -575,6 +1020,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(self.upload, serializer);
     sse_encode_list_prim_u_8_strict(self.exportKey, serializer);
+  }
+
+  @protected
+  void sse_encode_pairing_confirm(
+    PairingConfirm self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.state, serializer);
+    sse_encode_String(self.sas, serializer);
+  }
+
+  @protected
+  void sse_encode_pairing_opened(PairingOpened self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.vaultKey, serializer);
+    sse_encode_list_prim_u_8_strict(self.accountId, serializer);
+  }
+
+  @protected
+  void sse_encode_pairing_source_begin(
+    PairingSourceBegin self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.state, serializer);
+    sse_encode_list_prim_u_8_strict(self.hello, serializer);
+    sse_encode_String(self.sas, serializer);
+    sse_encode_list_prim_u_8_strict(self.devicePublicKey, serializer);
+  }
+
+  @protected
+  void sse_encode_pairing_start(PairingStart self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.state, serializer);
+    sse_encode_list_prim_u_8_strict(self.qr, serializer);
   }
 
   @protected

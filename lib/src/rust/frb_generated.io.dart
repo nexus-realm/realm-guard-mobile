@@ -3,7 +3,9 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/device_key.dart';
 import 'api/opaque.dart';
+import 'api/pairing.dart';
 import 'api/simple.dart';
 import 'api/vault_key.dart';
 import 'dart:async';
@@ -24,6 +26,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  DeviceKeypair dco_decode_device_keypair(dynamic raw);
+
+  @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
 
   @protected
@@ -39,6 +44,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   OpaqueRegisterFinish dco_decode_opaque_register_finish(dynamic raw);
 
   @protected
+  PairingConfirm dco_decode_pairing_confirm(dynamic raw);
+
+  @protected
+  PairingOpened dco_decode_pairing_opened(dynamic raw);
+
+  @protected
+  PairingSourceBegin dco_decode_pairing_source_begin(dynamic raw);
+
+  @protected
+  PairingStart dco_decode_pairing_start(dynamic raw);
+
+  @protected
   int dco_decode_u_8(dynamic raw);
 
   @protected
@@ -46,6 +63,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String sse_decode_String(SseDeserializer deserializer);
+
+  @protected
+  DeviceKeypair sse_decode_device_keypair(SseDeserializer deserializer);
 
   @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
@@ -69,6 +89,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  PairingConfirm sse_decode_pairing_confirm(SseDeserializer deserializer);
+
+  @protected
+  PairingOpened sse_decode_pairing_opened(SseDeserializer deserializer);
+
+  @protected
+  PairingSourceBegin sse_decode_pairing_source_begin(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PairingStart sse_decode_pairing_start(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer);
 
   @protected
@@ -82,6 +116,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_device_keypair(DeviceKeypair self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
@@ -109,6 +146,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     OpaqueRegisterFinish self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_pairing_confirm(
+    PairingConfirm self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_pairing_opened(PairingOpened self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_pairing_source_begin(
+    PairingSourceBegin self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_pairing_start(PairingStart self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);

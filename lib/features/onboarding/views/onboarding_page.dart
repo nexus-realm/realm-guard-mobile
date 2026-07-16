@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/feature_flags/feature_flags_controller.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/vault_service.dart';
+import '../../auth/service/auth_service.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../../../shared/widgets/password_form.dart';
 import '../../../shared/widgets/view_title.dart';
@@ -17,11 +18,13 @@ class OnboardingPage extends StatefulWidget {
   final OnboardingStorageService onboardingStorageService;
   final VaultService vaultService;
   final FeatureFlagsController featureFlagsController;
+  final AuthService authService;
 
   const OnboardingPage({
     required this.onboardingStorageService,
     required this.vaultService,
     required this.featureFlagsController,
+    required this.authService,
     super.key,
   });
 
@@ -35,6 +38,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
   final TextEditingController _passwordConfirmationController =
       TextEditingController();
 
+  // Étape optionnelle de synchronisation : création de compte (OPAQUE).
+  final TextEditingController _syncUsernameController = TextEditingController();
+  final TextEditingController _syncPasswordController = TextEditingController();
+  final _syncFormKey = GlobalKey<FormState>();
+  _SyncStage _syncStage = _SyncStage.choice;
+
   final _formKey = GlobalKey<FormState>();
   AutovalidateMode _autoValidateMode = AutovalidateMode.disabled;
 
@@ -45,6 +54,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       onboardingStorageService: widget.onboardingStorageService,
       vaultService: widget.vaultService,
       featureFlagsController: widget.featureFlagsController,
+      authService: widget.authService,
     );
     _viewModel.addListener(_onViewModelUpdated);
     _viewModel.initialize();
@@ -56,6 +66,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
     _viewModel.dispose();
     _passwordController.dispose();
     _passwordConfirmationController.dispose();
+    _syncUsernameController.dispose();
+    _syncPasswordController.dispose();
     super.dispose();
   }
 
@@ -195,6 +207,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
         return _buildBiometricChoiceStep();
       case OnboardingStep.totpChoice:
         return _buildTotpChoiceStep();
+      case OnboardingStep.syncChoice:
+        return _buildSyncChoiceStep();
     }
   }
 
@@ -381,4 +395,234 @@ class _OnboardingPageState extends State<OnboardingPage> {
       ],
     );
   }
+
+  /// Étape **synchronisation** (optionnelle, dernière étape). Trois sous-états :
+  /// choix hors-ligne/connecté → création de compte → confirmation de réussite.
+  Widget _buildSyncChoiceStep() {
+    switch (_syncStage) {
+      case _SyncStage.choice:
+        return _buildSyncChoice();
+      case _SyncStage.register:
+        return _buildSyncRegister();
+      case _SyncStage.success:
+        return _buildSyncSuccess();
+    }
+  }
+
+  Widget _buildSyncChoice() {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 24,
+      children: [
+        Column(
+          spacing: 24,
+          children: [
+            const ViewTitle(
+              topTitle: 'Multi-appareils',
+              title: 'Synchronisation_',
+            ),
+            Column(
+              spacing: 12,
+              children: [
+                Text(
+                  'Realm Guard fonctionne parfaitement hors-ligne. Créez un '
+                  'compte chiffré pour synchroniser, ou liez cet appareil à un '
+                  'compte existant.',
+                  style: textTheme.bodyLarge,
+                ),
+                Text(
+                  'Le mot de passe du compte est distinct du mot de passe maître '
+                  'que vous définirez ensuite ; le serveur ne le voit jamais.',
+                  style: textTheme.bodyLarge,
+                ),
+              ],
+            ),
+          ],
+        ),
+        Column(
+          spacing: 12,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            GradientElevatedButton.icon(
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : () => setState(() => _syncStage = _SyncStage.register),
+              icon: const Icon(Icons.person_add_alt),
+              label: const Text('Créer un compte'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : () => context.push(AppRoutes.pairedSetup),
+              icon: const Icon(Icons.qr_code_2),
+              label: const Text('J\'ai déjà un compte — lier cet appareil'),
+            ),
+            // Sans autre appareil sous la main : récupération depuis le backup
+            // serveur (exige le mot de passe du compte **et** le mot de passe maître).
+            TextButton(
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : () => context.push(AppRoutes.vaultRecovery),
+              child: const Text('Récupérer mon coffre (aucun autre appareil)'),
+            ),
+            TextButton(
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : _viewModel.completeSyncStep,
+              child: const Text('Continuer hors-ligne'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSyncRegister() {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 24,
+      children: [
+        Column(
+          spacing: 16,
+          children: [
+            const ViewTitle(
+              topTitle: 'Synchronisation',
+              title: 'Créer un compte_',
+            ),
+            Text(
+              'Choisissez un nom d\'utilisateur et un mot de passe de compte '
+              '(distinct du mot de passe maître, jamais transmis en clair).',
+              style: textTheme.bodyLarge,
+            ),
+            Form(
+              key: _syncFormKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 16,
+                children: [
+                  TextFormField(
+                    controller: _syncUsernameController,
+                    enabled: !_viewModel.isSubmitting,
+                    autocorrect: false,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Nom d\'utilisateur',
+                      prefixIcon: Icon(Icons.person_outline),
+                    ),
+                    validator: (value) =>
+                        (value == null || value.trim().isEmpty)
+                        ? 'Champ requis'
+                        : null,
+                  ),
+                  TextFormField(
+                    controller: _syncPasswordController,
+                    enabled: !_viewModel.isSubmitting,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Mot de passe du compte',
+                      prefixIcon: Icon(Icons.lock_outline),
+                    ),
+                    validator: (value) =>
+                        (value == null || value.trim().length < 12)
+                        ? 'Au moins 12 caractères'
+                        : null,
+                    onFieldSubmitted: (_) => _submitSyncAccount(),
+                  ),
+                  if (_viewModel.errorMessage != null)
+                    Text(
+                      _viewModel.errorMessage!,
+                      style: TextStyle(color: colorScheme.error),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 8,
+          children: [
+            GradientElevatedButton(
+              onPressed: _viewModel.isSubmitting ? null : _submitSyncAccount,
+              child: _viewModel.isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Créer le compte'),
+            ),
+            TextButton(
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : () => setState(() => _syncStage = _SyncStage.choice),
+              child: const Text('Retour'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSyncSuccess() {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 24,
+      children: [
+        Column(
+          spacing: 16,
+          children: [
+            const ViewTitle(topTitle: 'Synchronisation', title: 'Compte créé_'),
+            Row(
+              children: [
+                Icon(Icons.check_circle_outline, color: colorScheme.primary),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Compte de synchronisation créé et session ouverte sur cet '
+                    'appareil.',
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              'Vous pourrez ajouter d\'autres appareils depuis les paramètres.',
+              style: textTheme.bodyLarge,
+            ),
+          ],
+        ),
+        GradientElevatedButton(
+          onPressed: _viewModel.isSubmitting
+              ? null
+              : _viewModel.completeSyncStep,
+          child: const Text('Continuer'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submitSyncAccount() async {
+    final isValid = _syncFormKey.currentState?.validate() ?? false;
+    if (!isValid) return;
+
+    FocusScope.of(context).unfocus();
+    final created = await _viewModel.registerSyncAccount(
+      username: _syncUsernameController.text,
+      password: _syncPasswordController.text,
+    );
+    if (!mounted || !created) return;
+    setState(() => _syncStage = _SyncStage.success);
+  }
 }
+
+/// Sous-étapes locales de l'écran de synchronisation d'onboarding.
+enum _SyncStage { choice, register, success }
