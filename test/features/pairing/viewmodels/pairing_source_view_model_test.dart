@@ -6,12 +6,18 @@ import 'package:realmguard/features/pairing/service/pairing_service.dart';
 import 'package:realmguard/features/pairing/viewmodels/pairing_source_view_model.dart';
 
 class _FakeApi implements PairingApi {
+  static final devicePk = Uint8List.fromList(List<int>.filled(32, 7));
+
   bool failSeal = false;
+  bool failRegister = false;
   String? lastQr;
+  String? lastAccountId;
   Uint8List? lastVaultKey;
+  final List<Uint8List> registered = [];
+  String? lastDeviceName;
 
   @override
-  PairingSession startNewDevice() => throw UnimplementedError();
+  Future<PairingSession> startNewDevice() => throw UnimplementedError();
 
   @override
   Future<PairingReceipt> receiveVaultKey(
@@ -21,40 +27,115 @@ class _FakeApi implements PairingApi {
   }) => throw UnimplementedError();
 
   @override
-  Future<String> pairScannedDevice({
+  Future<PairingSealOutcome> pairScannedDevice({
     required String qrPayload,
+    required String accountId,
     required Uint8List vaultKey,
   }) async {
     if (failSeal) throw const PairingException.invalidQr();
     lastQr = qrPayload;
+    lastAccountId = accountId;
     lastVaultKey = vaultKey;
-    return '654321';
+    return PairingSealOutcome(sas: '654321', devicePublicKey: devicePk);
   }
+
+  @override
+  Future<void> registerPairedDevice({
+    required Uint8List devicePublicKey,
+    required String name,
+  }) async {
+    if (failRegister) throw const PairingException.server();
+    registered.add(devicePublicKey);
+    lastDeviceName = name;
+  }
+
+  @override
+  Future<void> authenticateDevice() => throw UnimplementedError();
 }
 
 void main() {
   final vaultKey = Uint8List.fromList([9, 9]);
+  const account = '00000000-0000-0000-0000-000000000001';
 
   PairingSourceViewModel build(
     _FakeApi api, {
     Uint8List? Function()? vaultKeyProvider,
     Future<bool> Function()? authorize,
+    Future<String> Function()? accountIdProvider,
   }) => PairingSourceViewModel(
     service: api,
     vaultKeyProvider: vaultKeyProvider ?? () => vaultKey,
+    accountIdProvider: accountIdProvider ?? () async => account,
     authorize: authorize ?? () async => true,
   );
 
-  test('onQrScanned : biométrie OK → scelle et expose le SAS', () async {
+  test(
+    'onQrScanned : autorisé → scelle et expose le SAS, sans inscrire',
+    () async {
+      final api = _FakeApi();
+      final vm = build(api);
+
+      await vm.onQrScanned('{"i":"r","q":"AAAA"}');
+
+      expect(vm.sas, '654321');
+      expect(vm.error, isNull);
+      expect(api.lastVaultKey, vaultKey);
+      expect(api.lastAccountId, account);
+      // **Sécurité** : rien n'est inscrit tant que le SAS n'est pas confirmé.
+      expect(api.registered, isEmpty);
+      expect(vm.registered, isFalse);
+    },
+  );
+
+  test("confirmSas → inscrit l'appareil au compte", () async {
+    final api = _FakeApi();
+    final vm = build(api);
+    await vm.onQrScanned('{"i":"r","q":"AAAA"}');
+
+    await vm.confirmSas();
+
+    expect(api.registered, [_FakeApi.devicePk]);
+    expect(api.lastDeviceName, isNotEmpty);
+    expect(vm.registered, isTrue);
+    expect(vm.error, isNull);
+  });
+
+  test('rejectSas → aucune inscription, alerte affichée', () async {
+    final api = _FakeApi();
+    final vm = build(api);
+    await vm.onQrScanned('{"i":"r","q":"AAAA"}');
+
+    vm.rejectSas();
+
+    expect(api.registered, isEmpty);
+    expect(vm.registered, isFalse);
+    expect(vm.sas, isNull);
+    expect(vm.error, isNotNull);
+  });
+
+  test('confirmSas sans SAS préalable → sans effet', () async {
     final api = _FakeApi();
     final vm = build(api);
 
-    await vm.onQrScanned('{"i":"r","q":"AAAA"}');
+    await vm.confirmSas();
 
-    expect(vm.sas, '654321');
-    expect(vm.error, isNull);
-    expect(api.lastVaultKey, vaultKey);
+    expect(api.registered, isEmpty);
+    expect(vm.registered, isFalse);
   });
+
+  test(
+    "échec de l'inscription → message, appareil non marqué inscrit",
+    () async {
+      final api = _FakeApi()..failRegister = true;
+      final vm = build(api);
+      await vm.onQrScanned('{"i":"r","q":"AAAA"}');
+
+      await vm.confirmSas();
+
+      expect(vm.registered, isFalse);
+      expect(vm.error, isNotNull);
+    },
+  );
 
   test(
     'coffre verrouillé (pas de VaultKey) → erreur, pas de scellage',

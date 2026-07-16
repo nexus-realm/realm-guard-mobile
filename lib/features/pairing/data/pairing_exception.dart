@@ -4,6 +4,7 @@ enum PairingErrorKind {
   corrupted,
   timeout,
   sessionExpired,
+  deviceRejected,
   network,
   server,
 }
@@ -34,6 +35,14 @@ class PairingException implements Exception {
     : this(
         PairingErrorKind.sessionExpired,
         'Session expirée. Reconnectez-vous.',
+      );
+
+  /// Le serveur refuse l'authentification par clé d'appareil : appareil non inscrit
+  /// au compte, ou révoqué.
+  const PairingException.deviceRejected()
+    : this(
+        PairingErrorKind.deviceRejected,
+        "Cet appareil n'est pas autorisé sur ce compte (non inscrit ou révoqué).",
       );
 
   const PairingException.network()

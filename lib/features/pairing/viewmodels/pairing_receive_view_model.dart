@@ -35,7 +35,7 @@ class PairingReceiveViewModel extends ChangeNotifier {
   /// Démarre le pairing : génère le QR puis attend la réponse déposée par la source.
   Future<void> start() async {
     if (_waiting || _sas != null) return;
-    _session = _service.startNewDevice();
+    _session = await _service.startNewDevice();
     if (kDebugMode) {
       // Permet de récupérer le payload depuis la console de l'hôte quand le
       // presse-papiers ne traverse pas entre deux émulateurs.

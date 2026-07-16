@@ -23,6 +23,8 @@ import '../../features/home/views/totp_detail_page.dart';
 import '../../features/onboarding/service/onboarding_storage_service.dart';
 import '../../features/onboarding/views/onboarding_page.dart';
 import '../../features/onboarding/views/startup_gate_page.dart';
+import '../../features/pairing/service/device_key_ffi.dart';
+import '../../features/pairing/service/device_key_store.dart';
 import '../../features/pairing/service/pairing_ffi.dart';
 import '../../features/pairing/service/pairing_service.dart';
 import '../../features/pairing/views/add_device_page.dart';
@@ -69,6 +71,8 @@ final AuthService _authService = AuthService(
 /// Service de pairing d'appareil (v2) — opt-in via Réglages.
 final PairingService _pairingService = PairingService(
   ffi: const FrbPairingFfi(),
+  deviceKeyFfi: const FrbDeviceKeyFfi(),
+  deviceKeyStore: const SecureDeviceKeyStore(FlutterSecureStorage()),
   httpClient: http.Client(),
   session: const SecureSessionStore(FlutterSecureStorage()),
   config: const ServerConfig.dev(),
@@ -212,6 +216,7 @@ final GoRouter appRouter = GoRouter(
           builder: (context, state) => AddDevicePage(
             pairingService: _pairingService,
             vaultService: _vaultService,
+            authService: _authService,
           ),
         ),
         GoRoute(

@@ -6,22 +6,28 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-/// **Nouvel appareil** — démarre le pairing (paire éphémère X25519 + payload QR).
-PairingStart pairingNewDeviceStart() =>
-    RustLib.instance.api.crateApiPairingPairingNewDeviceStart();
+/// **Nouvel appareil** — démarre le pairing (paire éphémère X25519 + payload QR), en
+/// incorporant sa clé d'identité `device_public_key` au QR et à l'état.
+PairingStart pairingNewDeviceStart({required List<int> devicePublicKey}) =>
+    RustLib.instance.api.crateApiPairingPairingNewDeviceStart(
+      devicePublicKey: devicePublicKey,
+    );
 
-/// **Appareil source** — scelle la VaultKey vers le nouvel appareil décrit par le QR.
-/// Renvoie la réponse à déposer + le SAS à afficher.
+/// **Appareil source** — scelle `{account_id, vault_key}` vers le nouvel appareil
+/// décrit par le QR. Renvoie la réponse à déposer, le SAS à afficher, et la clé
+/// d'identité du nouvel appareil (à inscrire après confirmation du SAS).
 PairingSealed pairingSourceSeal({
   required List<int> qr,
+  required List<int> accountId,
   required List<int> vaultKey,
 }) => RustLib.instance.api.crateApiPairingPairingSourceSeal(
   qr: qr,
+  accountId: accountId,
   vaultKey: vaultKey,
 );
 
-/// **Nouvel appareil** — ouvre la réponse scellée → VaultKey + SAS. **Échoue** si le
-/// blob ne s'ouvre pas (mauvais destinataire / altération).
+/// **Nouvel appareil** — ouvre la réponse scellée → VaultKey + account_id + SAS.
+/// **Échoue** si le blob ne s'ouvre pas (mauvais destinataire / altération).
 PairingOpened pairingNewDeviceOpen({
   required List<int> state,
   required List<int> response,
@@ -35,13 +41,20 @@ class PairingOpened {
   /// VaultKey reçue (octets).
   final Uint8List vaultKey;
 
+  /// Identifiant du compte que le nouvel appareil rejoint.
+  final Uint8List accountId;
+
   /// SAS à afficher (doit correspondre à celui de la source).
   final String sas;
 
-  const PairingOpened({required this.vaultKey, required this.sas});
+  const PairingOpened({
+    required this.vaultKey,
+    required this.accountId,
+    required this.sas,
+  });
 
   @override
-  int get hashCode => vaultKey.hashCode ^ sas.hashCode;
+  int get hashCode => vaultKey.hashCode ^ accountId.hashCode ^ sas.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -49,6 +62,7 @@ class PairingOpened {
       other is PairingOpened &&
           runtimeType == other.runtimeType &&
           vaultKey == other.vaultKey &&
+          accountId == other.accountId &&
           sas == other.sas;
 }
 
@@ -60,10 +74,21 @@ class PairingSealed {
   /// SAS à afficher (doit correspondre à celui du nouvel appareil).
   final String sas;
 
-  const PairingSealed({required this.response, required this.sas});
+  /// Clé d'identité du nouvel appareil, **extraite du QR** (donc liée au
+  /// transcript). À inscrire au registre du compte **uniquement après** que
+  /// l'utilisateur a confirmé le SAS : sur un QR substitué, cette valeur serait la
+  /// clé de l'attaquant.
+  final Uint8List devicePublicKey;
+
+  const PairingSealed({
+    required this.response,
+    required this.sas,
+    required this.devicePublicKey,
+  });
 
   @override
-  int get hashCode => response.hashCode ^ sas.hashCode;
+  int get hashCode =>
+      response.hashCode ^ sas.hashCode ^ devicePublicKey.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -71,7 +96,8 @@ class PairingSealed {
       other is PairingSealed &&
           runtimeType == other.runtimeType &&
           response == other.response &&
-          sas == other.sas;
+          sas == other.sas &&
+          devicePublicKey == other.devicePublicKey;
 }
 
 /// Résultat du démarrage côté **nouvel appareil**.

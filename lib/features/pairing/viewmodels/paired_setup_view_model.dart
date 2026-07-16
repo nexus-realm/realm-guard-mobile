@@ -48,7 +48,7 @@ class PairedSetupViewModel extends ChangeNotifier {
   /// **Phase 1** — affiche le QR et attend le transfert depuis l'appareil source.
   Future<void> startPairing() async {
     if (_waiting || _sas != null) return;
-    _session = _pairing.startNewDevice();
+    _session = await _pairing.startNewDevice();
     if (kDebugMode) {
       // Permet de récupérer le payload depuis la console de l'hôte quand le
       // presse-papiers ne traverse pas entre deux émulateurs.
@@ -105,6 +105,7 @@ class PairedSetupViewModel extends ChangeNotifier {
 
     try {
       await _install(vaultKey, normalized);
+      await _authenticateQuietly();
       await _markOnboardingSteps();
       _installed = true;
       return true;
@@ -117,6 +118,20 @@ class PairedSetupViewModel extends ChangeNotifier {
     } finally {
       _submitting = false;
       notifyListeners();
+    }
+  }
+
+  /// Ouvre une session d'appareil (challenge-response Ed25519). **Best-effort** : au
+  /// moment de l'installation, la source n'a en général pas encore inscrit cet
+  /// appareil (elle ne le fait qu'après confirmation du SAS) → l'auth échoue et sera
+  /// retentée plus tard. Un échec ne doit jamais empêcher l'installation du coffre.
+  Future<void> _authenticateQuietly() async {
+    try {
+      await _pairing.authenticateDevice();
+    } catch (error, stack) {
+      if (kDebugMode) {
+        debugPrint('[pairing] session appareil non obtenue : $error\n$stack');
+      }
     }
   }
 

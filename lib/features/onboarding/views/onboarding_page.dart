@@ -573,10 +573,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         Column(
           spacing: 16,
           children: [
-            const ViewTitle(
-              topTitle: 'Synchronisation',
-              title: 'Compte créé_',
-            ),
+            const ViewTitle(topTitle: 'Synchronisation', title: 'Compte créé_'),
             Row(
               children: [
                 Icon(Icons.check_circle_outline, color: colorScheme.primary),

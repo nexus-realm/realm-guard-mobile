@@ -9,9 +9,10 @@ class _FakeApi implements PairingApi {
   bool failReceive = false;
   final receiptVaultKey = Uint8List.fromList([5, 5]);
   final receiptSas = '123456';
+  final receiptAccountId = '00000000-0000-0000-0000-000000000001';
 
   @override
-  PairingSession startNewDevice() => PairingSession(
+  Future<PairingSession> startNewDevice() async => PairingSession(
     state: Uint8List.fromList([1]),
     relayId: 'relay',
     qrPayload: '{"i":"relay","q":"AAAA"}',
@@ -24,14 +25,31 @@ class _FakeApi implements PairingApi {
     Duration interval = const Duration(seconds: 2),
   }) async {
     if (failReceive) throw const PairingException.timeout();
-    return PairingReceipt(vaultKey: receiptVaultKey, sas: receiptSas);
+    return PairingReceipt(
+      vaultKey: receiptVaultKey,
+      accountId: receiptAccountId,
+      sas: receiptSas,
+    );
   }
 
   @override
-  Future<String> pairScannedDevice({
+  Future<PairingSealOutcome> pairScannedDevice({
     required String qrPayload,
+    required String accountId,
     required Uint8List vaultKey,
-  }) async => '000000';
+  }) async => PairingSealOutcome(
+    sas: '000000',
+    devicePublicKey: Uint8List.fromList([0]),
+  );
+
+  @override
+  Future<void> registerPairedDevice({
+    required Uint8List devicePublicKey,
+    required String name,
+  }) async {}
+
+  @override
+  Future<void> authenticateDevice() async {}
 }
 
 void main() {

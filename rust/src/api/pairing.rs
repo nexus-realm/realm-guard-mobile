@@ -20,44 +20,59 @@ pub struct PairingSealed {
     pub response: Vec<u8>,
     /// SAS à afficher (doit correspondre à celui du nouvel appareil).
     pub sas: String,
+    /// Clé d'identité du nouvel appareil, **extraite du QR** (donc liée au
+    /// transcript). À inscrire au registre du compte **uniquement après** que
+    /// l'utilisateur a confirmé le SAS : sur un QR substitué, cette valeur serait la
+    /// clé de l'attaquant.
+    pub device_public_key: Vec<u8>,
 }
 
 /// Résultat de l'ouverture côté **nouvel appareil**.
 pub struct PairingOpened {
     /// VaultKey reçue (octets).
     pub vault_key: Vec<u8>,
+    /// Identifiant du compte que le nouvel appareil rejoint.
+    pub account_id: Vec<u8>,
     /// SAS à afficher (doit correspondre à celui de la source).
     pub sas: String,
 }
 
-/// **Nouvel appareil** — démarre le pairing (paire éphémère X25519 + payload QR).
+/// **Nouvel appareil** — démarre le pairing (paire éphémère X25519 + payload QR), en
+/// incorporant sa clé d'identité `device_public_key` au QR et à l'état.
 #[flutter_rust_bridge::frb(sync)]
-pub fn pairing_new_device_start() -> Result<PairingStart, String> {
-    let result = pairing_start().map_err(|e| e.to_string())?;
+pub fn pairing_new_device_start(device_public_key: Vec<u8>) -> Result<PairingStart, String> {
+    let result = pairing_start(&device_public_key).map_err(|e| e.to_string())?;
     Ok(PairingStart {
         state: result.state,
         qr: result.qr,
     })
 }
 
-/// **Appareil source** — scelle la VaultKey vers le nouvel appareil décrit par le QR.
-/// Renvoie la réponse à déposer + le SAS à afficher.
+/// **Appareil source** — scelle `{account_id, vault_key}` vers le nouvel appareil
+/// décrit par le QR. Renvoie la réponse à déposer, le SAS à afficher, et la clé
+/// d'identité du nouvel appareil (à inscrire après confirmation du SAS).
 #[flutter_rust_bridge::frb(sync)]
-pub fn pairing_source_seal(qr: Vec<u8>, vault_key: Vec<u8>) -> Result<PairingSealed, String> {
-    let result = pairing_seal(&qr, &vault_key).map_err(|e| e.to_string())?;
+pub fn pairing_source_seal(
+    qr: Vec<u8>,
+    account_id: Vec<u8>,
+    vault_key: Vec<u8>,
+) -> Result<PairingSealed, String> {
+    let result = pairing_seal(&qr, &account_id, &vault_key).map_err(|e| e.to_string())?;
     Ok(PairingSealed {
         response: result.response,
         sas: result.sas,
+        device_public_key: result.device_public_key,
     })
 }
 
-/// **Nouvel appareil** — ouvre la réponse scellée → VaultKey + SAS. **Échoue** si le
-/// blob ne s'ouvre pas (mauvais destinataire / altération).
+/// **Nouvel appareil** — ouvre la réponse scellée → VaultKey + account_id + SAS.
+/// **Échoue** si le blob ne s'ouvre pas (mauvais destinataire / altération).
 #[flutter_rust_bridge::frb(sync)]
 pub fn pairing_new_device_open(state: Vec<u8>, response: Vec<u8>) -> Result<PairingOpened, String> {
     let result = pairing_open(&state, &response).map_err(|e| e.to_string())?;
     Ok(PairingOpened {
         vault_key: result.vault_key,
+        account_id: result.account_id,
         sas: result.sas,
     })
 }

@@ -440,6 +440,7 @@ version = "2.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "115531babc129696a58c64a4fef0a8bf9e9698629fb97e9e40767d235cfbcd53"
 dependencies = [
+ "pkcs8",
  "serde",
  "signature",
 ]
@@ -456,6 +457,7 @@ dependencies = [
  "sha2",
  "signature",
  "subtle",
+ "zeroize",
 ]
 
 [[package]]
@@ -1006,11 +1008,12 @@ dependencies = [
 [[package]]
 name = "realm-guard-core"
 version = "0.1.0"
-source = "git+https://github.com/nexus-realm/realm-guard-core?branch=develop#a4ef030e3cc5a8c207eca84dc39a54fd888d9927"
+source = "git+https://github.com/nexus-realm/realm-guard-core?branch=develop#da5fc3560fdfafd331b06ff1f9bcff5beaa9682e"
 dependencies = [
  "argon2",
  "bip39",
  "chacha20poly1305",
+ "ed25519-dalek",
  "getrandom",
  "hkdf",
  "opaque-ke",

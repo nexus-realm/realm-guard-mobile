@@ -93,6 +93,17 @@ class AuthService {
   /// Efface la session locale.
   Future<void> logout() => _session.clear();
 
+  /// Identifiant (UUID) du compte de la session courante, via `/auth/me`.
+  /// L'appareil **source** en a besoin pour sceller le blob de pairing (le nouvel
+  /// appareil apprend ainsi quel compte il rejoint). Nécessite une session active.
+  Future<String> currentAccountId() async {
+    final token = await _requireToken();
+    final resp = await _get('/auth/me', token);
+    if (resp.statusCode == 401) throw const AuthException.sessionExpired();
+    if (resp.statusCode != 200) throw const AuthException.server();
+    return _json(resp)['account_id'] as String;
+  }
+
   /// Téléverse la VaultKey pour la synchro multi-appareils. [wrappedVaultKey]
   /// (déjà enrobée par la KEK) est **ré-enrobée** sous la clé exportée OPAQUE
   /// ([exportKey], obtenue au register/login) avant l'envoi ; [salt] (non secret)
