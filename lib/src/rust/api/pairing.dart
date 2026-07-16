@@ -13,30 +13,68 @@ PairingStart pairingNewDeviceStart({required List<int> devicePublicKey}) =>
       devicePublicKey: devicePublicKey,
     );
 
-/// **Appareil source** — scelle `{account_id, vault_key}` vers le nouvel appareil
-/// décrit par le QR. Renvoie la réponse à déposer, le SAS à afficher, et la clé
-/// d'identité du nouvel appareil (à inscrire après confirmation du SAS).
-PairingSealed pairingSourceSeal({
-  required List<int> qr,
+/// **Appareil source, tour 1** — scanne le QR et dérive le SAS. Ne publie que sa clé
+/// publique : **aucun secret ne circule** tant que le SAS n'est pas confirmé.
+PairingSourceBegin pairingSourceBeginRound({required List<int> qr}) =>
+    RustLib.instance.api.crateApiPairingPairingSourceBeginRound(qr: qr);
+
+/// **Nouvel appareil, tour 1** — reçoit la clé publique de la source et dérive le SAS
+/// à comparer.
+PairingConfirm pairingNewDeviceConfirmRound({
+  required List<int> state,
+  required List<int> hello,
+}) => RustLib.instance.api.crateApiPairingPairingNewDeviceConfirmRound(
+  state: state,
+  hello: hello,
+);
+
+/// **Appareil source, tour 2** — scelle `{account_id, vault_key}`.
+///
+/// À n'appeler qu'**après** confirmation du SAS par l'utilisateur : c'est ce qui
+/// empêche un MITM d'obtenir la VaultKey.
+Uint8List pairingSourceSealRound({
+  required List<int> state,
   required List<int> accountId,
   required List<int> vaultKey,
-}) => RustLib.instance.api.crateApiPairingPairingSourceSeal(
-  qr: qr,
+}) => RustLib.instance.api.crateApiPairingPairingSourceSealRound(
+  state: state,
   accountId: accountId,
   vaultKey: vaultKey,
 );
 
-/// **Nouvel appareil** — ouvre la réponse scellée → VaultKey + account_id + SAS.
+/// **Nouvel appareil, tour 2** — ouvre le blob scellé → VaultKey + account_id.
 /// **Échoue** si le blob ne s'ouvre pas (mauvais destinataire / altération).
 PairingOpened pairingNewDeviceOpen({
   required List<int> state,
-  required List<int> response,
+  required List<int> sealed,
 }) => RustLib.instance.api.crateApiPairingPairingNewDeviceOpen(
   state: state,
-  response: response,
+  sealed: sealed,
 );
 
-/// Résultat de l'ouverture côté **nouvel appareil**.
+/// Résultat du **tour 1** côté nouvel appareil.
+class PairingConfirm {
+  /// État à conserver jusqu'à l'ouverture (contient la clé AEAD dérivée).
+  final Uint8List state;
+
+  /// SAS à afficher (doit correspondre à celui de la source).
+  final String sas;
+
+  const PairingConfirm({required this.state, required this.sas});
+
+  @override
+  int get hashCode => state.hashCode ^ sas.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PairingConfirm &&
+          runtimeType == other.runtimeType &&
+          state == other.state &&
+          sas == other.sas;
+}
+
+/// Résultat de l'ouverture (**tour 2**) côté nouvel appareil.
 class PairingOpened {
   /// VaultKey reçue (octets).
   final Uint8List vaultKey;
@@ -44,17 +82,10 @@ class PairingOpened {
   /// Identifiant du compte que le nouvel appareil rejoint.
   final Uint8List accountId;
 
-  /// SAS à afficher (doit correspondre à celui de la source).
-  final String sas;
-
-  const PairingOpened({
-    required this.vaultKey,
-    required this.accountId,
-    required this.sas,
-  });
+  const PairingOpened({required this.vaultKey, required this.accountId});
 
   @override
-  int get hashCode => vaultKey.hashCode ^ accountId.hashCode ^ sas.hashCode;
+  int get hashCode => vaultKey.hashCode ^ accountId.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -62,47 +93,49 @@ class PairingOpened {
       other is PairingOpened &&
           runtimeType == other.runtimeType &&
           vaultKey == other.vaultKey &&
-          accountId == other.accountId &&
-          sas == other.sas;
+          accountId == other.accountId;
 }
 
-/// Résultat du scellage côté **appareil source**.
-class PairingSealed {
-  /// Réponse scellée à déposer au relais.
-  final Uint8List response;
+/// Résultat du **tour 1** côté appareil source.
+class PairingSourceBegin {
+  /// État à conserver jusqu'au scellage (contient la clé AEAD dérivée).
+  final Uint8List state;
 
-  /// SAS à afficher (doit correspondre à celui du nouvel appareil).
+  /// Tour 1 à déposer au relais : la clé publique éphémère seule (aucun secret).
+  final Uint8List hello;
+
+  /// SAS à afficher. **Ne sceller qu'après** confirmation par l'utilisateur.
   final String sas;
 
-  /// Clé d'identité du nouvel appareil, **extraite du QR** (donc liée au
-  /// transcript). À inscrire au registre du compte **uniquement après** que
-  /// l'utilisateur a confirmé le SAS : sur un QR substitué, cette valeur serait la
-  /// clé de l'attaquant.
+  /// Clé d'identité du nouvel appareil, extraite du QR (liée au transcript). À
+  /// inscrire au registre **uniquement après** confirmation du SAS.
   final Uint8List devicePublicKey;
 
-  const PairingSealed({
-    required this.response,
+  const PairingSourceBegin({
+    required this.state,
+    required this.hello,
     required this.sas,
     required this.devicePublicKey,
   });
 
   @override
   int get hashCode =>
-      response.hashCode ^ sas.hashCode ^ devicePublicKey.hashCode;
+      state.hashCode ^ hello.hashCode ^ sas.hashCode ^ devicePublicKey.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is PairingSealed &&
+      other is PairingSourceBegin &&
           runtimeType == other.runtimeType &&
-          response == other.response &&
+          state == other.state &&
+          hello == other.hello &&
           sas == other.sas &&
           devicePublicKey == other.devicePublicKey;
 }
 
 /// Résultat du démarrage côté **nouvel appareil**.
 class PairingStart {
-  /// État à conserver (contient le secret éphémère) jusqu'à la réception.
+  /// État à conserver (contient le secret éphémère) jusqu'au tour 1.
   final Uint8List state;
 
   /// Payload QR du cœur (à envelopper côté Dart puis afficher).

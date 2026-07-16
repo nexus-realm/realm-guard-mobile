@@ -14,22 +14,27 @@ import 'package:realmguard/features/pairing/service/pairing_service.dart';
 import 'package:realmguard/src/rust/api/device_key.dart';
 import 'package:realmguard/src/rust/api/pairing.dart';
 
-/// Faux FFI de pairing : valeurs déterministes, échecs simulables.
+/// Faux FFI de pairing (deux tours) : valeurs déterministes, échecs simulables.
 class _FakeFfi implements PairingFfi {
-  bool failSeal = false;
+  bool failBegin = false;
   bool failOpen = false;
 
   final startState = Uint8List.fromList([1, 1, 1]);
   final startQr = Uint8List.fromList([2, 2, 2, 2]);
-  final sealResponse = Uint8List.fromList([7, 7, 7]);
-  final sealSas = '246810';
-  final sealDevicePk = Uint8List.fromList(List<int>.filled(32, 3));
+  final beginState = Uint8List.fromList([6, 6, 6]);
+  final beginHello = Uint8List.fromList([8, 8]);
+  final beginSas = '246810';
+  final beginDevicePk = Uint8List.fromList(List<int>.filled(32, 3));
+  final confirmState = Uint8List.fromList([4, 4]);
+  final confirmSas = '246810';
+  final sealed = Uint8List.fromList([7, 7, 7]);
   final openVaultKey = Uint8List.fromList([5, 5, 5, 5]);
-  final openSas = '135790';
   final openAccountId = Uint8List.fromList(List<int>.filled(16, 0)..[15] = 1);
 
   Uint8List? lastStartDevicePk;
   Uint8List? lastSealAccountId;
+  Uint8List? lastSealState;
+  Uint8List? lastConfirmHello;
 
   @override
   PairingStart start(Uint8List devicePublicKey) {
@@ -38,24 +43,33 @@ class _FakeFfi implements PairingFfi {
   }
 
   @override
-  PairingSealed seal(Uint8List qr, Uint8List accountId, Uint8List vaultKey) {
-    if (failSeal) throw Exception('seal');
-    lastSealAccountId = accountId;
-    return PairingSealed(
-      response: sealResponse,
-      sas: sealSas,
-      devicePublicKey: sealDevicePk,
+  PairingSourceBegin begin(Uint8List qr) {
+    if (failBegin) throw Exception('begin');
+    return PairingSourceBegin(
+      state: beginState,
+      hello: beginHello,
+      sas: beginSas,
+      devicePublicKey: beginDevicePk,
     );
   }
 
   @override
-  PairingOpened open(Uint8List state, Uint8List response) {
+  PairingConfirm confirm(Uint8List state, Uint8List hello) {
+    lastConfirmHello = hello;
+    return PairingConfirm(state: confirmState, sas: confirmSas);
+  }
+
+  @override
+  Uint8List seal(Uint8List state, Uint8List accountId, Uint8List vaultKey) {
+    lastSealState = state;
+    lastSealAccountId = accountId;
+    return sealed;
+  }
+
+  @override
+  PairingOpened open(Uint8List state, Uint8List sealed) {
     if (failOpen) throw Exception('open');
-    return PairingOpened(
-      vaultKey: openVaultKey,
-      accountId: openAccountId,
-      sas: openSas,
-    );
+    return PairingOpened(vaultKey: openVaultKey, accountId: openAccountId);
   }
 }
 
@@ -168,47 +182,75 @@ void main() {
     expect(deviceKeyFfi.generateCalls, 1);
   });
 
-  test(
-    'pairScannedDevice scelle, dépose (POST Bearer) et renvoie le SAS',
-    () async {
-      final ffi = _FakeFfi();
-      final session = _FakeSession()..token = 'tok';
-      String? authHeader;
-      String? path;
-      Map<String, dynamic>? body;
-      final client = MockClient((req) async {
-        if (req.method == 'POST' && req.url.path.startsWith('/pairing/')) {
-          authHeader = req.headers['authorization'];
-          path = req.url.path;
-          body = jsonDecode(req.body) as Map<String, dynamic>;
-          return http.Response('', 204);
-        }
-        return http.Response('not found', 404);
-      });
+  test('beginPairing (tour 1) ne dépose que le hello — aucun secret', () async {
+    final ffi = _FakeFfi();
+    final session = _FakeSession()..token = 'tok';
+    String? authHeader;
+    String? path;
+    Map<String, dynamic>? body;
+    final client = MockClient((req) async {
+      if (req.method == 'POST' && req.url.path.startsWith('/pairing/')) {
+        authHeader = req.headers['authorization'];
+        path = req.url.path;
+        body = jsonDecode(req.body) as Map<String, dynamic>;
+        return http.Response('', 204);
+      }
+      return http.Response('not found', 404);
+    });
 
-      final qrPayload = jsonEncode({
-        'i': 'relay0123',
-        'q': base64.encode([9, 9]),
-      });
-      final outcome = await build(client, ffi: ffi, session: session)
-          .pairScannedDevice(
-            qrPayload: qrPayload,
-            accountId: account,
-            vaultKey: Uint8List.fromList([1]),
-          );
+    final qrPayload = jsonEncode({
+      'i': 'relay0123',
+      'q': base64.encode([9, 9]),
+    });
+    final handshake = await build(
+      client,
+      ffi: ffi,
+      session: session,
+    ).beginPairing(qrPayload: qrPayload);
 
-      expect(outcome.sas, ffi.sealSas);
-      // La clé d'appareil remontée vient du QR (à inscrire après confirmation).
-      expect(outcome.devicePublicKey, ffi.sealDevicePk);
-      // L'account_id est converti en 16 octets pour le cœur.
-      expect(ffi.lastSealAccountId!.length, 16);
-      expect(authHeader, 'Bearer tok');
-      expect(path, '/pairing/relay0123');
-      expect(base64.decode(body!['response'] as String), ffi.sealResponse);
-    },
-  );
+    expect(handshake.sas, ffi.beginSas);
+    expect(handshake.relayId, 'relay0123');
+    // La clé d'appareil vient du QR (à inscrire après confirmation seulement).
+    expect(handshake.devicePublicKey, ffi.beginDevicePk);
+    expect(authHeader, 'Bearer tok');
+    expect(path, '/pairing/relay0123');
+    // **Sécurité** : le tour 1 ne dépose que le hello, jamais le blob scellé.
+    expect(base64.decode(body!['response'] as String), ffi.beginHello);
+    expect(ffi.lastSealAccountId, isNull);
+  });
 
-  test('pairScannedDevice sans session → sessionExpired', () async {
+  test('sealVaultKey (tour 2) scelle et dépose sur le même relais', () async {
+    final ffi = _FakeFfi();
+    final session = _FakeSession()..token = 'tok';
+    final posted = <String, Uint8List>{};
+    final client = MockClient((req) async {
+      if (req.method == 'POST' && req.url.path.startsWith('/pairing/')) {
+        final body = jsonDecode(req.body) as Map<String, dynamic>;
+        posted[req.url.path] = base64.decode(body['response'] as String);
+        return http.Response('', 204);
+      }
+      return http.Response('not found', 404);
+    });
+
+    final service = build(client, ffi: ffi, session: session);
+    final qrPayload = jsonEncode({
+      'i': 'relay0123',
+      'q': base64.encode([9, 9]),
+    });
+    final handshake = await service.beginPairing(qrPayload: qrPayload);
+    await service.sealVaultKey(
+      handshake: handshake,
+      accountId: account,
+      vaultKey: Uint8List.fromList([1]),
+    );
+
+    // Le blob est scellé avec l'état du tour 1, et déposé sur le même relay_id.
+    expect(ffi.lastSealState, ffi.beginState);
+    expect(ffi.lastSealAccountId!.length, 16);
+    expect(posted['/pairing/relay0123'], ffi.sealed);
+  });
+
+  test('beginPairing sans session → sessionExpired', () async {
     final client = MockClient((req) async => http.Response('', 204));
     final qrPayload = jsonEncode({
       'i': 'r',
@@ -216,11 +258,7 @@ void main() {
     });
 
     expect(
-      () => build(client).pairScannedDevice(
-        qrPayload: qrPayload,
-        accountId: account,
-        vaultKey: Uint8List.fromList([1]),
-      ),
+      () => build(client).beginPairing(qrPayload: qrPayload),
       throwsA(
         isA<PairingException>().having(
           (e) => e.kind,
@@ -231,16 +269,15 @@ void main() {
     );
   });
 
-  test('pairScannedDevice avec QR illisible → invalidQr', () async {
+  test('beginPairing avec QR illisible → invalidQr', () async {
     final session = _FakeSession()..token = 'tok';
     final client = MockClient((req) async => http.Response('', 204));
 
     expect(
-      () => build(client, session: session).pairScannedDevice(
-        qrPayload: 'ceci-n-est-pas-du-json',
-        accountId: account,
-        vaultKey: Uint8List.fromList([1]),
-      ),
+      () => build(
+        client,
+        session: session,
+      ).beginPairing(qrPayload: 'ceci-n-est-pas-du-json'),
       throwsA(
         isA<PairingException>().having(
           (e) => e.kind,
@@ -251,7 +288,7 @@ void main() {
     );
   });
 
-  test('pairScannedDevice rejeté (401) → sessionExpired', () async {
+  test('beginPairing rejeté (401) → sessionExpired', () async {
     final session = _FakeSession()..token = 'tok';
     final client = MockClient((req) async => http.Response('', 401));
     final qrPayload = jsonEncode({
@@ -260,11 +297,7 @@ void main() {
     });
 
     expect(
-      () => build(client, session: session).pairScannedDevice(
-        qrPayload: qrPayload,
-        accountId: account,
-        vaultKey: Uint8List.fromList([1]),
-      ),
+      () => build(client, session: session).beginPairing(qrPayload: qrPayload),
       throwsA(
         isA<PairingException>().having(
           (e) => e.kind,
@@ -275,42 +308,75 @@ void main() {
     );
   });
 
-  test('receiveVaultKey poll (404 puis 200) → VaultKey + SAS', () async {
+  test(
+    'awaitSourceHello (tour 1) poll (404 puis 200) → SAS avant tout transfert',
+    () async {
+      final ffi = _FakeFfi();
+      final hello = Uint8List.fromList([3, 3, 3]);
+      var calls = 0;
+      final client = MockClient((req) async {
+        if (req.method == 'GET' && req.url.path == '/pairing/r1') {
+          calls++;
+          if (calls < 2) return http.Response('', 404);
+          return http.Response(
+            jsonEncode({'response': base64.encode(hello)}),
+            200,
+          );
+        }
+        return http.Response('not found', 404);
+      });
+
+      final session = PairingSession(
+        state: Uint8List(0),
+        relayId: 'r1',
+        qrPayload: '',
+      );
+      final handshake = await build(client, ffi: ffi).awaitSourceHello(
+        session,
+        timeout: const Duration(seconds: 1),
+        interval: const Duration(milliseconds: 5),
+      );
+
+      expect(handshake.sas, ffi.confirmSas);
+      expect(handshake.state, ffi.confirmState);
+      expect(ffi.lastConfirmHello, hello);
+      expect(calls, 2);
+    },
+  );
+
+  test('awaitVaultKey (tour 2) → VaultKey + compte', () async {
     final ffi = _FakeFfi();
-    var calls = 0;
-    final client = MockClient((req) async {
-      if (req.method == 'GET' && req.url.path == '/pairing/r1') {
-        calls++;
-        if (calls < 2) return http.Response('', 404);
-        return http.Response(
-          jsonEncode({
-            'response': base64.encode([3, 3, 3]),
-          }),
-          200,
-        );
-      }
-      return http.Response('not found', 404);
-    });
+    final client = MockClient(
+      (req) async => http.Response(
+        jsonEncode({
+          'response': base64.encode([3, 3, 3]),
+        }),
+        200,
+      ),
+    );
 
     final session = PairingSession(
       state: Uint8List(0),
       relayId: 'r1',
       qrPayload: '',
     );
-    final receipt = await build(client, ffi: ffi).receiveVaultKey(
+    final handshake = PairingHandshake(
+      state: ffi.confirmState,
+      sas: ffi.confirmSas,
+    );
+    final receipt = await build(client, ffi: ffi).awaitVaultKey(
       session,
+      handshake,
       timeout: const Duration(seconds: 1),
       interval: const Duration(milliseconds: 5),
     );
 
     expect(receipt.vaultKey, ffi.openVaultKey);
-    expect(receipt.sas, ffi.openSas);
     // Le compte rejoint est reformaté en UUID textuel depuis les 16 octets du blob.
     expect(receipt.accountId, account);
-    expect(calls, 2);
   });
 
-  test('receiveVaultKey blob illisible (open échoue) → corrupted', () async {
+  test('awaitVaultKey blob illisible (open échoue) → corrupted', () async {
     final ffi = _FakeFfi()..failOpen = true;
     final client = MockClient(
       (req) async => http.Response(
@@ -325,10 +391,15 @@ void main() {
       relayId: 'r1',
       qrPayload: '',
     );
+    final handshake = PairingHandshake(
+      state: ffi.confirmState,
+      sas: ffi.confirmSas,
+    );
 
     expect(
-      () => build(client, ffi: ffi).receiveVaultKey(
+      () => build(client, ffi: ffi).awaitVaultKey(
         session,
+        handshake,
         timeout: const Duration(seconds: 1),
         interval: const Duration(milliseconds: 5),
       ),
@@ -463,7 +534,7 @@ void main() {
     expect(session.token, isNull);
   });
 
-  test('receiveVaultKey expire si rien n\'est déposé → timeout', () async {
+  test('awaitSourceHello expire si la source ne vient pas → timeout', () async {
     final client = MockClient((req) async => http.Response('', 404));
     final session = PairingSession(
       state: Uint8List.fromList([0]),
@@ -472,7 +543,7 @@ void main() {
     );
 
     expect(
-      () => build(client).receiveVaultKey(
+      () => build(client).awaitSourceHello(
         session,
         timeout: const Duration(milliseconds: 30),
         interval: const Duration(milliseconds: 5),

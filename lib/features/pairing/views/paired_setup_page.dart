@@ -82,8 +82,8 @@ class _PairedSetupPageState extends State<PairedSetupPage> {
   }
 
   Widget _body(BuildContext context) {
-    // Phase 2 dès que la VaultKey est reçue (SAS disponible).
-    if (_viewModel.sas != null) return _localPasswordStep(context);
+    // Tour 2 fait : la VaultKey est arrivée → mot de passe local.
+    if (_viewModel.vaultKeyReceived) return _localPasswordStep(context);
 
     final error = _viewModel.error;
     if (error != null) {
@@ -93,7 +93,33 @@ class _PairedSetupPageState extends State<PairedSetupPage> {
         message: error,
       );
     }
+
+    // Tour 1 fait : on affiche le SAS **avant** tout transfert, le temps que
+    // l'utilisateur le compare et confirme sur l'appareil source.
+    final sas = _viewModel.sas;
+    if (sas != null) return _sasStep(context, sas);
+
     return _qrStep(context);
+  }
+
+  /// Comparaison du SAS : le coffre n'a pas encore été transmis, la source attend la
+  /// confirmation de l'utilisateur.
+  Widget _sasStep(BuildContext context, String sas) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        PairingSasView(sas: sas),
+        const SizedBox(height: 32),
+        const Text(
+          "Vérifiez que ce code est identique sur l'autre appareil, puis confirmez "
+          'là-bas. Le coffre ne sera transmis qu'
+          'après.',
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        const Center(child: CircularProgressIndicator()),
+      ],
+    );
   }
 
   Widget _qrStep(BuildContext context) {

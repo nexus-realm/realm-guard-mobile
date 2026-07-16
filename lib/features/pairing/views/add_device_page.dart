@@ -100,14 +100,15 @@ class _AddDevicePageState extends State<AddDevicePage> {
         child: ListenableBuilder(
           listenable: _viewModel,
           builder: (context, _) {
-            if (_viewModel.registered) {
+            if (_viewModel.completed) {
               return const Padding(
                 padding: EdgeInsets.all(24),
                 child: PairingStatusView(
                   icon: Icons.check_circle_outline,
                   title: 'Appareil autorisé',
                   message:
-                      'Il est inscrit sur votre compte et peut se synchroniser.',
+                      'Le coffre lui a été transmis et il est inscrit sur votre '
+                      'compte.',
                 ),
               );
             }
@@ -141,14 +142,16 @@ class _AddDevicePageState extends State<AddDevicePage> {
             const SizedBox(height: 12),
           ],
           const Text(
-            'Ce code est-il identique à celui affiché sur le nouvel appareil ?',
+            'Ce code est-il identique à celui affiché sur le nouvel appareil ?\n'
+            "Le coffre n'a pas encore été transmis : il ne partira qu'après votre "
+            'confirmation.',
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: _viewModel.busy ? null : _viewModel.confirmSas,
             icon: const Icon(Icons.check),
-            label: const Text('Oui, autoriser cet appareil'),
+            label: const Text('Oui, transmettre le coffre'),
           ),
           const SizedBox(height: 8),
           OutlinedButton(

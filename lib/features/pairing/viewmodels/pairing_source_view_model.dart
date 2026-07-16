@@ -3,13 +3,14 @@ import 'package:flutter/foundation.dart';
 import '../data/pairing_exception.dart';
 import '../service/pairing_service.dart';
 
-/// État de l'écran « ajouter un appareil » (**appareil source**).
+/// État de l'écran « ajouter un appareil » (**appareil source**), protocole en **deux
+/// tours**.
 ///
-/// Sur un QR scanné : confirmation d'identité (biométrie ou code de l'appareil),
-/// scellage + dépôt de la VaultKey, puis affichage du SAS. L'inscription de
-/// l'appareil au registre du compte n'a lieu qu'**après confirmation du SAS** par
-/// l'utilisateur : la clé provient du QR, donc un QR substitué (MITM) ferait sinon
-/// inscrire l'appareil de l'attaquant.
+/// Sur un QR scanné : confirmation d'identité (biométrie ou code), puis **tour 1** —
+/// on dépose seulement une clé publique et on affiche le SAS. **Rien de sensible
+/// n'est parti.** Ce n'est qu'à [confirmSas] que la VaultKey est scellée et déposée,
+/// puis l'appareil inscrit au compte. Sur un QR substitué (MITM), les SAS divergent :
+/// l'utilisateur ne confirme pas, et l'attaquant n'obtient **rien**.
 class PairingSourceViewModel extends ChangeNotifier {
   PairingSourceViewModel({
     required PairingApi service,
@@ -30,31 +31,29 @@ class PairingSourceViewModel extends ChangeNotifier {
   final String _deviceName;
 
   bool _busy = false;
-  String? _sas;
-  Uint8List? _devicePublicKey;
-  bool _registered = false;
+  PairingSourceHandshake? _handshake;
+  bool _completed = false;
   String? _error;
 
   bool get busy => _busy;
 
-  /// SAS à comparer avec le nouvel appareil (non nul ⇒ attente de confirmation).
-  String? get sas => _sas;
+  /// SAS à comparer (non nul ⇒ tour 1 fait, en attente de confirmation).
+  String? get sas => _handshake?.sas;
 
-  /// L'utilisateur a confirmé le SAS et l'appareil est inscrit au compte.
-  bool get registered => _registered;
+  /// VaultKey transmise **et** appareil inscrit : le pairing est terminé.
+  bool get completed => _completed;
 
   String? get error => _error;
 
-  /// Traite un QR scanné : gate d'autorisation, puis scellage + dépôt. Ignore les
-  /// scans suivants une fois le SAS obtenu ou une opération en cours.
+  /// Traite un QR scanné : gate d'autorisation, puis **tour 1** (dépôt de la clé
+  /// publique + SAS). Ignore les scans suivants une fois le tour 1 fait.
   Future<void> onQrScanned(String qrPayload) async {
-    if (_busy || _sas != null) return;
+    if (_busy || _handshake != null) return;
     _busy = true;
     _error = null;
     notifyListeners();
     try {
-      final vaultKey = _vaultKeyProvider();
-      if (vaultKey == null) {
+      if (_vaultKeyProvider() == null) {
         _error = 'Coffre verrouillé.';
         return;
       }
@@ -76,14 +75,7 @@ class PairingSourceViewModel extends ChangeNotifier {
         return;
       }
 
-      final accountId = await _accountIdProvider();
-      final outcome = await _service.pairScannedDevice(
-        qrPayload: qrPayload,
-        accountId: accountId,
-        vaultKey: vaultKey,
-      );
-      _sas = outcome.sas;
-      _devicePublicKey = outcome.devicePublicKey;
+      _handshake = await _service.beginPairing(qrPayload: qrPayload);
     } on PairingException catch (error) {
       _error = error.message;
     } catch (error, stack) {
@@ -95,24 +87,36 @@ class PairingSourceViewModel extends ChangeNotifier {
     }
   }
 
-  /// L'utilisateur confirme que les deux SAS correspondent → inscrit l'appareil au
-  /// registre du compte. **Seul chemin** vers l'inscription.
+  /// L'utilisateur confirme que les deux SAS correspondent → **tour 2** : scellage +
+  /// dépôt de la VaultKey, puis inscription de l'appareil. **Seul chemin** par lequel
+  /// la VaultKey quitte cet appareil.
   Future<void> confirmSas() async {
-    final devicePublicKey = _devicePublicKey;
-    if (_busy || _registered || devicePublicKey == null) return;
+    final handshake = _handshake;
+    if (_busy || _completed || handshake == null) return;
     _busy = true;
     _error = null;
     notifyListeners();
     try {
+      final vaultKey = _vaultKeyProvider();
+      if (vaultKey == null) {
+        _error = 'Coffre verrouillé.';
+        return;
+      }
+      final accountId = await _accountIdProvider();
+      await _service.sealVaultKey(
+        handshake: handshake,
+        accountId: accountId,
+        vaultKey: vaultKey,
+      );
       await _service.registerPairedDevice(
-        devicePublicKey: devicePublicKey,
+        devicePublicKey: handshake.devicePublicKey,
         name: _deviceName,
       );
-      _registered = true;
+      _completed = true;
     } on PairingException catch (error) {
       _error = error.message;
     } catch (error, stack) {
-      _logFailure('inscription', error, stack);
+      _logFailure('transfert', error, stack);
       _error = 'Une erreur inattendue est survenue.';
     } finally {
       _busy = false;
@@ -120,14 +124,13 @@ class PairingSourceViewModel extends ChangeNotifier {
     }
   }
 
-  /// Les SAS diffèrent → **rien n'est inscrit**. La VaultKey a en revanche déjà été
-  /// déposée (limite du protocole à un tour) : on alerte explicitement.
+  /// Les SAS diffèrent → on abandonne. **Rien n'a été transmis** : ni VaultKey, ni
+  /// inscription. C'est tout l'intérêt du protocole en deux tours.
   void rejectSas() {
-    _sas = null;
-    _devicePublicKey = null;
+    _handshake = null;
     _error =
-        'Codes différents : appareil NON autorisé. Le pairing a peut-être été '
-        'intercepté — changez votre mot de passe maître par précaution.';
+        'Codes différents : pairing abandonné. Aucune donnée transmise. '
+        "Recommencez, et assurez-vous de scanner l'écran du bon appareil.";
     notifyListeners();
   }
 

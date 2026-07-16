@@ -70,7 +70,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1604042671;
+  int get rustContentHash => -1690116021;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -120,17 +120,26 @@ abstract class RustLibApi extends BaseApi {
     required List<int> sealed,
   });
 
+  PairingConfirm crateApiPairingPairingNewDeviceConfirmRound({
+    required List<int> state,
+    required List<int> hello,
+  });
+
   PairingOpened crateApiPairingPairingNewDeviceOpen({
     required List<int> state,
-    required List<int> response,
+    required List<int> sealed,
   });
 
   PairingStart crateApiPairingPairingNewDeviceStart({
     required List<int> devicePublicKey,
   });
 
-  PairingSealed crateApiPairingPairingSourceSeal({
+  PairingSourceBegin crateApiPairingPairingSourceBeginRound({
     required List<int> qr,
+  });
+
+  Uint8List crateApiPairingPairingSourceSealRound({
+    required List<int> state,
     required List<int> accountId,
     required List<int> vaultKey,
   });
@@ -453,24 +462,54 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  PairingOpened crateApiPairingPairingNewDeviceOpen({
+  PairingConfirm crateApiPairingPairingNewDeviceConfirmRound({
     required List<int> state,
-    required List<int> response,
+    required List<int> hello,
   }) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(state, serializer);
-          sse_encode_list_prim_u_8_loose(response, serializer);
+          sse_encode_list_prim_u_8_loose(hello, serializer);
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_pairing_confirm,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiPairingPairingNewDeviceConfirmRoundConstMeta,
+        argValues: [state, hello],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPairingPairingNewDeviceConfirmRoundConstMeta =>
+      const TaskConstMeta(
+        debugName: "pairing_new_device_confirm_round",
+        argNames: ["state", "hello"],
+      );
+
+  @override
+  PairingOpened crateApiPairingPairingNewDeviceOpen({
+    required List<int> state,
+    required List<int> sealed,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(state, serializer);
+          sse_encode_list_prim_u_8_loose(sealed, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_pairing_opened,
           decodeErrorData: sse_decode_String,
         ),
         constMeta: kCrateApiPairingPairingNewDeviceOpenConstMeta,
-        argValues: [state, response],
+        argValues: [state, sealed],
         apiImpl: this,
       ),
     );
@@ -479,7 +518,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiPairingPairingNewDeviceOpenConstMeta =>
       const TaskConstMeta(
         debugName: "pairing_new_device_open",
-        argNames: ["state", "response"],
+        argNames: ["state", "sealed"],
       );
 
   @override
@@ -491,7 +530,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(devicePublicKey, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_pairing_start,
@@ -511,8 +550,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  PairingSealed crateApiPairingPairingSourceSeal({
+  PairingSourceBegin crateApiPairingPairingSourceBeginRound({
     required List<int> qr,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(qr, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_pairing_source_begin,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiPairingPairingSourceBeginRoundConstMeta,
+        argValues: [qr],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPairingPairingSourceBeginRoundConstMeta =>
+      const TaskConstMeta(
+        debugName: "pairing_source_begin_round",
+        argNames: ["qr"],
+      );
+
+  @override
+  Uint8List crateApiPairingPairingSourceSealRound({
+    required List<int> state,
     required List<int> accountId,
     required List<int> vaultKey,
   }) {
@@ -520,26 +587,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_list_prim_u_8_loose(qr, serializer);
+          sse_encode_list_prim_u_8_loose(state, serializer);
           sse_encode_list_prim_u_8_loose(accountId, serializer);
           sse_encode_list_prim_u_8_loose(vaultKey, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_pairing_sealed,
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
           decodeErrorData: sse_decode_String,
         ),
-        constMeta: kCrateApiPairingPairingSourceSealConstMeta,
-        argValues: [qr, accountId, vaultKey],
+        constMeta: kCrateApiPairingPairingSourceSealRoundConstMeta,
+        argValues: [state, accountId, vaultKey],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiPairingPairingSourceSealConstMeta =>
+  TaskConstMeta get kCrateApiPairingPairingSourceSealRoundConstMeta =>
       const TaskConstMeta(
-        debugName: "pairing_source_seal",
-        argNames: ["qr", "accountId", "vaultKey"],
+        debugName: "pairing_source_seal_round",
+        argNames: ["state", "accountId", "vaultKey"],
       );
 
   @override
@@ -553,7 +620,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(exportKey, serializer);
           sse_encode_list_prim_u_8_loose(wrappedVaultKey, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -583,7 +650,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(kek, serializer);
           sse_encode_list_prim_u_8_loose(wrapped, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -613,7 +680,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(kek, serializer);
           sse_encode_list_prim_u_8_loose(vaultKey, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -700,28 +767,40 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  PairingOpened dco_decode_pairing_opened(dynamic raw) {
+  PairingConfirm dco_decode_pairing_confirm(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-    return PairingOpened(
-      vaultKey: dco_decode_list_prim_u_8_strict(arr[0]),
-      accountId: dco_decode_list_prim_u_8_strict(arr[1]),
-      sas: dco_decode_String(arr[2]),
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return PairingConfirm(
+      state: dco_decode_list_prim_u_8_strict(arr[0]),
+      sas: dco_decode_String(arr[1]),
     );
   }
 
   @protected
-  PairingSealed dco_decode_pairing_sealed(dynamic raw) {
+  PairingOpened dco_decode_pairing_opened(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-    return PairingSealed(
-      response: dco_decode_list_prim_u_8_strict(arr[0]),
-      sas: dco_decode_String(arr[1]),
-      devicePublicKey: dco_decode_list_prim_u_8_strict(arr[2]),
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return PairingOpened(
+      vaultKey: dco_decode_list_prim_u_8_strict(arr[0]),
+      accountId: dco_decode_list_prim_u_8_strict(arr[1]),
+    );
+  }
+
+  @protected
+  PairingSourceBegin dco_decode_pairing_source_begin(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return PairingSourceBegin(
+      state: dco_decode_list_prim_u_8_strict(arr[0]),
+      hello: dco_decode_list_prim_u_8_strict(arr[1]),
+      sas: dco_decode_String(arr[2]),
+      devicePublicKey: dco_decode_list_prim_u_8_strict(arr[3]),
     );
   }
 
@@ -814,26 +893,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PairingConfirm sse_decode_pairing_confirm(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_state = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_sas = sse_decode_String(deserializer);
+    return PairingConfirm(state: var_state, sas: var_sas);
+  }
+
+  @protected
   PairingOpened sse_decode_pairing_opened(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_vaultKey = sse_decode_list_prim_u_8_strict(deserializer);
     var var_accountId = sse_decode_list_prim_u_8_strict(deserializer);
-    var var_sas = sse_decode_String(deserializer);
-    return PairingOpened(
-      vaultKey: var_vaultKey,
-      accountId: var_accountId,
-      sas: var_sas,
-    );
+    return PairingOpened(vaultKey: var_vaultKey, accountId: var_accountId);
   }
 
   @protected
-  PairingSealed sse_decode_pairing_sealed(SseDeserializer deserializer) {
+  PairingSourceBegin sse_decode_pairing_source_begin(
+    SseDeserializer deserializer,
+  ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_response = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_state = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_hello = sse_decode_list_prim_u_8_strict(deserializer);
     var var_sas = sse_decode_String(deserializer);
     var var_devicePublicKey = sse_decode_list_prim_u_8_strict(deserializer);
-    return PairingSealed(
-      response: var_response,
+    return PairingSourceBegin(
+      state: var_state,
+      hello: var_hello,
       sas: var_sas,
       devicePublicKey: var_devicePublicKey,
     );
@@ -937,17 +1023,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_pairing_opened(PairingOpened self, SseSerializer serializer) {
+  void sse_encode_pairing_confirm(
+    PairingConfirm self,
+    SseSerializer serializer,
+  ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_list_prim_u_8_strict(self.vaultKey, serializer);
-    sse_encode_list_prim_u_8_strict(self.accountId, serializer);
+    sse_encode_list_prim_u_8_strict(self.state, serializer);
     sse_encode_String(self.sas, serializer);
   }
 
   @protected
-  void sse_encode_pairing_sealed(PairingSealed self, SseSerializer serializer) {
+  void sse_encode_pairing_opened(PairingOpened self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_list_prim_u_8_strict(self.response, serializer);
+    sse_encode_list_prim_u_8_strict(self.vaultKey, serializer);
+    sse_encode_list_prim_u_8_strict(self.accountId, serializer);
+  }
+
+  @protected
+  void sse_encode_pairing_source_begin(
+    PairingSourceBegin self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.state, serializer);
+    sse_encode_list_prim_u_8_strict(self.hello, serializer);
     sse_encode_String(self.sas, serializer);
     sse_encode_list_prim_u_8_strict(self.devicePublicKey, serializer);
   }

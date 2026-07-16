@@ -19,8 +19,16 @@ class _FakeApi implements PairingApi {
   );
 
   @override
-  Future<PairingReceipt> receiveVaultKey(
+  Future<PairingHandshake> awaitSourceHello(
     PairingSession session, {
+    Duration timeout = const Duration(minutes: 3),
+    Duration interval = const Duration(seconds: 2),
+  }) async => PairingHandshake(state: Uint8List.fromList([2]), sas: receiptSas);
+
+  @override
+  Future<PairingReceipt> awaitVaultKey(
+    PairingSession session,
+    PairingHandshake handshake, {
     Duration timeout = const Duration(minutes: 3),
     Duration interval = const Duration(seconds: 2),
   }) async {
@@ -28,19 +36,19 @@ class _FakeApi implements PairingApi {
     return PairingReceipt(
       vaultKey: receiptVaultKey,
       accountId: receiptAccountId,
-      sas: receiptSas,
     );
   }
 
   @override
-  Future<PairingSealOutcome> pairScannedDevice({
-    required String qrPayload,
+  Future<PairingSourceHandshake> beginPairing({required String qrPayload}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> sealVaultKey({
+    required PairingSourceHandshake handshake,
     required String accountId,
     required Uint8List vaultKey,
-  }) async => PairingSealOutcome(
-    sas: '000000',
-    devicePublicKey: Uint8List.fromList([0]),
-  );
+  }) => throw UnimplementedError();
 
   @override
   Future<void> registerPairedDevice({
@@ -69,13 +77,16 @@ void main() {
     },
   );
 
-  test('start remonte une erreur de pairing (timeout)', () async {
+  test('tour 2 en échec : le SAS reste affiché, pas de VaultKey', () async {
     final api = _FakeApi()..failReceive = true;
     final vm = PairingReceiveViewModel(service: api);
 
     await vm.start();
 
-    expect(vm.sas, isNull);
+    // Le tour 1 a réussi → le SAS est légitimement exposé, même si la VaultKey
+    // n'arrive jamais (source qui ne confirme pas, ou timeout).
+    expect(vm.sas, api.receiptSas);
+    expect(vm.vaultKey, isNull);
     expect(vm.error, isNotNull);
     expect(vm.waiting, isFalse);
   });

@@ -23,19 +23,30 @@ class _FakePairing implements PairingApi {
   );
 
   @override
-  Future<PairingReceipt> receiveVaultKey(
+  Future<PairingHandshake> awaitSourceHello(
     PairingSession session, {
+    Duration timeout = const Duration(minutes: 3),
+    Duration interval = const Duration(seconds: 2),
+  }) async => PairingHandshake(state: Uint8List.fromList([2]), sas: '424242');
+
+  @override
+  Future<PairingReceipt> awaitVaultKey(
+    PairingSession session,
+    PairingHandshake handshake, {
     Duration timeout = const Duration(minutes: 3),
     Duration interval = const Duration(seconds: 2),
   }) async => PairingReceipt(
     vaultKey: vaultKey,
     accountId: '00000000-0000-0000-0000-000000000001',
-    sas: '424242',
   );
 
   @override
-  Future<PairingSealOutcome> pairScannedDevice({
-    required String qrPayload,
+  Future<PairingSourceHandshake> beginPairing({required String qrPayload}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> sealVaultKey({
+    required PairingSourceHandshake handshake,
     required String accountId,
     required Uint8List vaultKey,
   }) => throw UnimplementedError();

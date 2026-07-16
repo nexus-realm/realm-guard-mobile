@@ -22,8 +22,8 @@ class PairedSetupViewModel extends ChangeNotifier {
   final OnboardingStorageService _onboardingStorage;
 
   PairingSession? _session;
+  PairingHandshake? _handshake;
   bool _waiting = false;
-  String? _sas;
   Uint8List? _vaultKey;
   bool _submitting = false;
   bool _installed = false;
@@ -32,11 +32,16 @@ class PairedSetupViewModel extends ChangeNotifier {
   /// QR à afficher (phase 1).
   String? get qrPayload => _session?.qrPayload;
 
-  /// En attente du transfert depuis l'appareil source ?
+  /// En attente de la source (tour 1 puis tour 2) ?
   bool get waiting => _waiting;
 
-  /// SAS reçu : non nul ⇒ VaultKey reçue → on passe au code local (phase 2).
-  String? get sas => _sas;
+  /// SAS à comparer avec la source. Non nul dès le **tour 1** — donc **avant** que
+  /// la VaultKey n'arrive : c'est ce qui permet à l'utilisateur de comparer les
+  /// codes pendant que la source attend sa confirmation.
+  String? get sas => _handshake?.sas;
+
+  /// VaultKey reçue (tour 2) : on peut passer au mot de passe local.
+  bool get vaultKeyReceived => _vaultKey != null;
 
   bool get submitting => _submitting;
 
@@ -45,9 +50,10 @@ class PairedSetupViewModel extends ChangeNotifier {
 
   String? get error => _error;
 
-  /// **Phase 1** — affiche le QR et attend le transfert depuis l'appareil source.
+  /// **Phase 1** — affiche le QR, attend le **tour 1** (→ SAS à comparer), puis le
+  /// **tour 2** (→ VaultKey, qui n'arrive que si la source a confirmé).
   Future<void> startPairing() async {
-    if (_waiting || _sas != null) return;
+    if (_waiting || _handshake != null) return;
     _session = await _pairing.startNewDevice();
     if (kDebugMode) {
       // Permet de récupérer le payload depuis la console de l'hôte quand le
@@ -58,9 +64,14 @@ class PairedSetupViewModel extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final receipt = await _pairing.receiveVaultKey(_session!);
+      // Tour 1 : le SAS s'affiche dès maintenant, rien de sensible n'a circulé.
+      final handshake = await _pairing.awaitSourceHello(_session!);
+      _handshake = handshake;
+      notifyListeners();
+
+      // Tour 2 : bloqué tant que l'utilisateur n'a pas confirmé côté source.
+      final receipt = await _pairing.awaitVaultKey(_session!, handshake);
       _vaultKey = receipt.vaultKey;
-      _sas = receipt.sas;
     } on PairingException catch (error) {
       _error = error.message;
     } catch (error, stack) {

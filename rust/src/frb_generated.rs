@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1604042671;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1690116021;
 
 // Section: executor
 
@@ -374,6 +374,38 @@ fn wire__crate__api__vault_key__open_vault_key_impl(
         },
     )
 }
+fn wire__crate__api__pairing__pairing_new_device_confirm_round_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "pairing_new_device_confirm_round",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_state = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_hello = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok =
+                    crate::api::pairing::pairing_new_device_confirm_round(api_state, api_hello)?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__pairing__pairing_new_device_open_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -396,11 +428,11 @@ fn wire__crate__api__pairing__pairing_new_device_open_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_state = <Vec<u8>>::sse_decode(&mut deserializer);
-            let api_response = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_sealed = <Vec<u8>>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, String>((move || {
                 let output_ok =
-                    crate::api::pairing::pairing_new_device_open(api_state, api_response)?;
+                    crate::api::pairing::pairing_new_device_open(api_state, api_sealed)?;
                 Ok(output_ok)
             })())
         },
@@ -437,14 +469,14 @@ fn wire__crate__api__pairing__pairing_new_device_start_impl(
         },
     )
 }
-fn wire__crate__api__pairing__pairing_source_seal_impl(
+fn wire__crate__api__pairing__pairing_source_begin_round_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
     data_len_: i32,
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "pairing_source_seal",
+            debug_name: "pairing_source_begin_round",
             port: None,
             mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
         },
@@ -459,12 +491,42 @@ fn wire__crate__api__pairing__pairing_source_seal_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_qr = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok = crate::api::pairing::pairing_source_begin_round(api_qr)?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__pairing__pairing_source_seal_round_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "pairing_source_seal_round",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_state = <Vec<u8>>::sse_decode(&mut deserializer);
             let api_account_id = <Vec<u8>>::sse_decode(&mut deserializer);
             let api_vault_key = <Vec<u8>>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, String>((move || {
-                let output_ok = crate::api::pairing::pairing_source_seal(
-                    api_qr,
+                let output_ok = crate::api::pairing::pairing_source_seal_round(
+                    api_state,
                     api_account_id,
                     api_vault_key,
                 )?;
@@ -640,28 +702,40 @@ impl SseDecode for crate::api::opaque::OpaqueRegisterFinish {
     }
 }
 
-impl SseDecode for crate::api::pairing::PairingOpened {
+impl SseDecode for crate::api::pairing::PairingConfirm {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_vaultKey = <Vec<u8>>::sse_decode(deserializer);
-        let mut var_accountId = <Vec<u8>>::sse_decode(deserializer);
+        let mut var_state = <Vec<u8>>::sse_decode(deserializer);
         let mut var_sas = <String>::sse_decode(deserializer);
-        return crate::api::pairing::PairingOpened {
-            vault_key: var_vaultKey,
-            account_id: var_accountId,
+        return crate::api::pairing::PairingConfirm {
+            state: var_state,
             sas: var_sas,
         };
     }
 }
 
-impl SseDecode for crate::api::pairing::PairingSealed {
+impl SseDecode for crate::api::pairing::PairingOpened {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_response = <Vec<u8>>::sse_decode(deserializer);
+        let mut var_vaultKey = <Vec<u8>>::sse_decode(deserializer);
+        let mut var_accountId = <Vec<u8>>::sse_decode(deserializer);
+        return crate::api::pairing::PairingOpened {
+            vault_key: var_vaultKey,
+            account_id: var_accountId,
+        };
+    }
+}
+
+impl SseDecode for crate::api::pairing::PairingSourceBegin {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_state = <Vec<u8>>::sse_decode(deserializer);
+        let mut var_hello = <Vec<u8>>::sse_decode(deserializer);
         let mut var_sas = <String>::sse_decode(deserializer);
         let mut var_devicePublicKey = <Vec<u8>>::sse_decode(deserializer);
-        return crate::api::pairing::PairingSealed {
-            response: var_response,
+        return crate::api::pairing::PairingSourceBegin {
+            state: var_state,
+            hello: var_hello,
             sas: var_sas,
             device_public_key: var_devicePublicKey,
         };
@@ -743,12 +817,22 @@ fn pde_ffi_dispatcher_sync_impl(
         3 => wire__crate__api__device_key__device_sign_challenge_impl(ptr, rust_vec_len, data_len),
         4 => wire__crate__api__vault_key__generate_vault_key_impl(ptr, rust_vec_len, data_len),
         10 => wire__crate__api__vault_key__open_vault_key_impl(ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__pairing__pairing_new_device_open_impl(ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__pairing__pairing_new_device_start_impl(ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__pairing__pairing_source_seal_impl(ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__vault_key__seal_vault_key_impl(ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__vault_key__unwrap_vault_key_impl(ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__vault_key__wrap_vault_key_impl(ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__pairing__pairing_new_device_confirm_round_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        12 => wire__crate__api__pairing__pairing_new_device_open_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__pairing__pairing_new_device_start_impl(ptr, rust_vec_len, data_len),
+        14 => {
+            wire__crate__api__pairing__pairing_source_begin_round_impl(ptr, rust_vec_len, data_len)
+        }
+        15 => {
+            wire__crate__api__pairing__pairing_source_seal_round_impl(ptr, rust_vec_len, data_len)
+        }
+        16 => wire__crate__api__vault_key__seal_vault_key_impl(ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__vault_key__unwrap_vault_key_impl(ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__vault_key__wrap_vault_key_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -841,12 +925,32 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::opaque::OpaqueRegisterFinish>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::pairing::PairingConfirm {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.state.into_into_dart().into_dart(),
+            self.sas.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::pairing::PairingConfirm
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::pairing::PairingConfirm>
+    for crate::api::pairing::PairingConfirm
+{
+    fn into_into_dart(self) -> crate::api::pairing::PairingConfirm {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::pairing::PairingOpened {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.vault_key.into_into_dart().into_dart(),
             self.account_id.into_into_dart().into_dart(),
-            self.sas.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -863,10 +967,11 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::pairing::PairingOpened>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::pairing::PairingSealed {
+impl flutter_rust_bridge::IntoDart for crate::api::pairing::PairingSourceBegin {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
-            self.response.into_into_dart().into_dart(),
+            self.state.into_into_dart().into_dart(),
+            self.hello.into_into_dart().into_dart(),
             self.sas.into_into_dart().into_dart(),
             self.device_public_key.into_into_dart().into_dart(),
         ]
@@ -874,13 +979,13 @@ impl flutter_rust_bridge::IntoDart for crate::api::pairing::PairingSealed {
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::api::pairing::PairingSealed
+    for crate::api::pairing::PairingSourceBegin
 {
 }
-impl flutter_rust_bridge::IntoIntoDart<crate::api::pairing::PairingSealed>
-    for crate::api::pairing::PairingSealed
+impl flutter_rust_bridge::IntoIntoDart<crate::api::pairing::PairingSourceBegin>
+    for crate::api::pairing::PairingSourceBegin
 {
-    fn into_into_dart(self) -> crate::api::pairing::PairingSealed {
+    fn into_into_dart(self) -> crate::api::pairing::PairingSourceBegin {
         self
     }
 }
@@ -956,19 +1061,27 @@ impl SseEncode for crate::api::opaque::OpaqueRegisterFinish {
     }
 }
 
+impl SseEncode for crate::api::pairing::PairingConfirm {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<u8>>::sse_encode(self.state, serializer);
+        <String>::sse_encode(self.sas, serializer);
+    }
+}
+
 impl SseEncode for crate::api::pairing::PairingOpened {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <Vec<u8>>::sse_encode(self.vault_key, serializer);
         <Vec<u8>>::sse_encode(self.account_id, serializer);
-        <String>::sse_encode(self.sas, serializer);
     }
 }
 
-impl SseEncode for crate::api::pairing::PairingSealed {
+impl SseEncode for crate::api::pairing::PairingSourceBegin {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <Vec<u8>>::sse_encode(self.response, serializer);
+        <Vec<u8>>::sse_encode(self.state, serializer);
+        <Vec<u8>>::sse_encode(self.hello, serializer);
         <String>::sse_encode(self.sas, serializer);
         <Vec<u8>>::sse_encode(self.device_public_key, serializer);
     }

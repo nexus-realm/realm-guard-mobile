@@ -32,7 +32,9 @@ class PairingReceiveViewModel extends ChangeNotifier {
   /// est une intégration à venir.
   Uint8List? get vaultKey => _vaultKey;
 
-  /// Démarre le pairing : génère le QR puis attend la réponse déposée par la source.
+  /// Démarre le pairing : génère le QR, attend le **tour 1** (→ SAS à comparer, avant
+  /// que quoi que ce soit de sensible ne circule), puis le **tour 2** (→ VaultKey,
+  /// qui n'arrive que si l'utilisateur a confirmé le SAS côté source).
   Future<void> start() async {
     if (_waiting || _sas != null) return;
     _session = await _service.startNewDevice();
@@ -45,9 +47,12 @@ class PairingReceiveViewModel extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final receipt = await _service.receiveVaultKey(_session!);
+      final handshake = await _service.awaitSourceHello(_session!);
+      _sas = handshake.sas;
+      notifyListeners();
+
+      final receipt = await _service.awaitVaultKey(_session!, handshake);
       _vaultKey = receipt.vaultKey;
-      _sas = receipt.sas;
     } on PairingException catch (error) {
       _error = error.message;
     } catch (error, stack) {

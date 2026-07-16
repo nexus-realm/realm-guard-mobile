@@ -60,9 +60,14 @@ class _ReceiveDevicePageState extends State<ReceiveDevicePage> {
 
     final sas = _viewModel.sas;
     if (sas != null) {
+      // Le SAS s'affiche dès le tour 1 : le coffre n'est transmis qu'une fois
+      // l'utilisateur l'a confirmé sur l'appareil source.
       return PairingSasView(
         sas: sas,
-        footer: 'Coffre reçu. (Installation sur cet appareil : à venir.)',
+        footer: _viewModel.vaultKey != null
+            ? 'Coffre reçu. (Installation sur cet appareil : à venir.)'
+            : "Vérifiez que ce code est identique sur l'autre appareil, puis "
+                  'confirmez là-bas.',
       );
     }
 

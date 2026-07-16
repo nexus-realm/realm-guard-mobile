@@ -44,10 +44,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   OpaqueRegisterFinish dco_decode_opaque_register_finish(dynamic raw);
 
   @protected
+  PairingConfirm dco_decode_pairing_confirm(dynamic raw);
+
+  @protected
   PairingOpened dco_decode_pairing_opened(dynamic raw);
 
   @protected
-  PairingSealed dco_decode_pairing_sealed(dynamic raw);
+  PairingSourceBegin dco_decode_pairing_source_begin(dynamic raw);
 
   @protected
   PairingStart dco_decode_pairing_start(dynamic raw);
@@ -86,10 +89,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  PairingConfirm sse_decode_pairing_confirm(SseDeserializer deserializer);
+
+  @protected
   PairingOpened sse_decode_pairing_opened(SseDeserializer deserializer);
 
   @protected
-  PairingSealed sse_decode_pairing_sealed(SseDeserializer deserializer);
+  PairingSourceBegin sse_decode_pairing_source_begin(
+    SseDeserializer deserializer,
+  );
 
   @protected
   PairingStart sse_decode_pairing_start(SseDeserializer deserializer);
@@ -140,10 +148,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_pairing_confirm(
+    PairingConfirm self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_pairing_opened(PairingOpened self, SseSerializer serializer);
 
   @protected
-  void sse_encode_pairing_sealed(PairingSealed self, SseSerializer serializer);
+  void sse_encode_pairing_source_begin(
+    PairingSourceBegin self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_pairing_start(PairingStart self, SseSerializer serializer);

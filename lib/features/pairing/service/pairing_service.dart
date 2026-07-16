@@ -15,7 +15,7 @@ import 'device_key_store.dart';
 import 'pairing_ffi.dart';
 
 /// Session de pairing côté **nouvel appareil** : à conserver entre l'affichage du QR
-/// et la réception de la réponse.
+/// et la réception.
 class PairingSession {
   /// État éphémère du cœur (contient le secret X25519).
   final Uint8List state;
@@ -33,7 +33,42 @@ class PairingSession {
   });
 }
 
-/// Résultat d'un pairing réussi côté nouvel appareil.
+/// **Tour 1 terminé côté nouvel appareil** : le SAS peut être comparé. La VaultKey
+/// n'arrivera qu'après confirmation côté source.
+class PairingHandshake {
+  /// État de session (contient la clé AEAD dérivée) — sensible, éphémère.
+  final Uint8List state;
+
+  /// SAS à afficher / comparer.
+  final String sas;
+
+  const PairingHandshake({required this.state, required this.sas});
+}
+
+/// **Tour 1 terminé côté source** : SAS à faire confirmer avant tout envoi.
+class PairingSourceHandshake {
+  /// État de session (contient la clé AEAD dérivée) — sensible, éphémère.
+  final Uint8List state;
+
+  /// Routage du relais, pour le dépôt du tour 2.
+  final String relayId;
+
+  /// SAS à comparer avec le nouvel appareil.
+  final String sas;
+
+  /// Clé d'identité du nouvel appareil, **liée au transcript** (extraite du QR). À
+  /// n'inscrire qu'après confirmation du SAS.
+  final Uint8List devicePublicKey;
+
+  const PairingSourceHandshake({
+    required this.state,
+    required this.relayId,
+    required this.sas,
+    required this.devicePublicKey,
+  });
+}
+
+/// Résultat d'un pairing réussi côté nouvel appareil (tour 2).
 class PairingReceipt {
   /// VaultKey reçue (clé racine du coffre).
   final Uint8List vaultKey;
@@ -41,28 +76,7 @@ class PairingReceipt {
   /// Compte rejoint (UUID textuel), extrait du blob scellé.
   final String accountId;
 
-  /// SAS à afficher / comparer avec l'appareil source.
-  final String sas;
-
-  const PairingReceipt({
-    required this.vaultKey,
-    required this.accountId,
-    required this.sas,
-  });
-}
-
-/// Résultat du scellage côté **source** : SAS à faire confirmer, puis clé d'identité
-/// du nouvel appareil à inscrire au registre.
-class PairingSealOutcome {
-  /// SAS à comparer avec le nouvel appareil.
-  final String sas;
-
-  /// Clé d'identité du nouvel appareil, **liée au transcript** (extraite du QR).
-  /// À n'inscrire qu'**après** confirmation du SAS par l'utilisateur : sur un QR
-  /// substitué, ce serait la clé de l'attaquant.
-  final Uint8List devicePublicKey;
-
-  const PairingSealOutcome({required this.sas, required this.devicePublicKey});
+  const PairingReceipt({required this.vaultKey, required this.accountId});
 }
 
 /// Contrat du service de pairing (abstrait pour la testabilité des ViewModels).
@@ -71,22 +85,35 @@ abstract interface class PairingApi {
   /// au premier appel et la réutilise ensuite.
   Future<PairingSession> startNewDevice();
 
-  /// Nouvel appareil : attend puis ouvre la réponse → VaultKey + compte + SAS.
-  Future<PairingReceipt> receiveVaultKey(
+  /// **Tour 1, nouvel appareil** : attend la clé publique de la source et dérive le
+  /// SAS à comparer. Rien de sensible n'a encore circulé.
+  Future<PairingHandshake> awaitSourceHello(
     PairingSession session, {
     Duration timeout,
     Duration interval,
   });
 
-  /// Appareil source : scanne, scelle, dépose → SAS + clé de l'appareil à inscrire.
-  Future<PairingSealOutcome> pairScannedDevice({
-    required String qrPayload,
+  /// **Tour 2, nouvel appareil** : attend la VaultKey scellée — elle n'arrive que si
+  /// l'utilisateur a confirmé le SAS côté source.
+  Future<PairingReceipt> awaitVaultKey(
+    PairingSession session,
+    PairingHandshake handshake, {
+    Duration timeout,
+    Duration interval,
+  });
+
+  /// **Tour 1, source** : scanne le QR, dérive le SAS et dépose sa clé publique.
+  Future<PairingSourceHandshake> beginPairing({required String qrPayload});
+
+  /// **Tour 2, source** : scelle la VaultKey et la dépose. **À n'appeler qu'après
+  /// confirmation du SAS** — c'est ce qui empêche un MITM de l'obtenir.
+  Future<void> sealVaultKey({
+    required PairingSourceHandshake handshake,
     required String accountId,
     required Uint8List vaultKey,
   });
 
-  /// Appareil source : inscrit l'appareil au registre du compte. **À n'appeler
-  /// qu'après confirmation du SAS.**
+  /// Source : inscrit l'appareil au registre du compte. **Après confirmation du SAS.**
   Future<void> registerPairedDevice({
     required Uint8List devicePublicKey,
     required String name,
@@ -97,12 +124,13 @@ abstract interface class PairingApi {
   Future<void> authenticateDevice();
 }
 
-/// Orchestration du **pairing d'appareil** : combine le FFI cœur (X25519 + scellage,
-/// clés d'identité Ed25519) et le serveur (relais `/pairing/{id}`, registre
-/// `/devices`, auth `/auth/device/*`).
+/// Orchestration du **pairing d'appareil en deux tours** : combine le FFI cœur
+/// (X25519, SAS, scellage, clés Ed25519) et le serveur (relais `/pairing/{id}`,
+/// registre `/devices`, auth `/auth/device/*`).
 ///
-/// Le `relay_id` est une **enveloppe transport** (JSON `{i, q}` dans le QR) : le
-/// serveur ne voit qu'un blob opaque, scellé vers la clé éphémère du nouvel appareil.
+/// Le relais est une **boîte aux lettres à usage unique** (`GETDEL`) : on l'utilise
+/// **deux fois de suite** sur le même `relay_id` — d'abord le `hello` (tour 1), puis
+/// le blob scellé (tour 2). Le serveur ne voit que des octets opaques.
 class PairingService implements PairingApi {
   final PairingFfi _ffi;
   final DeviceKeyFfi _deviceKeyFfi;
@@ -125,8 +153,6 @@ class PairingService implements PairingApi {
        _session = session,
        _config = config;
 
-  /// **Nouvel appareil** — démarre le pairing : renvoie le QR à afficher + la session
-  /// à conserver jusqu'à la réception. Le QR porte la clé d'identité de cet appareil.
   @override
   Future<PairingSession> startNewDevice() async {
     final deviceKey = await _ensureDeviceKey();
@@ -140,18 +166,33 @@ class PairingService implements PairingApi {
     );
   }
 
-  /// **Nouvel appareil** — attend (poll) la réponse déposée par la source puis
-  /// l'ouvre. Renvoie la VaultKey, le compte rejoint et le SAS à comparer.
   @override
-  Future<PairingReceipt> receiveVaultKey(
+  Future<PairingHandshake> awaitSourceHello(
     PairingSession session, {
     Duration timeout = const Duration(minutes: 3),
     Duration interval = const Duration(seconds: 2),
   }) async {
-    final response = await _pollForResponse(session.relayId, timeout, interval);
+    final hello = await _pollRelay(session.relayId, timeout, interval);
+    final PairingConfirm confirmed;
+    try {
+      confirmed = _ffi.confirm(session.state, hello);
+    } catch (_) {
+      throw const PairingException.corrupted();
+    }
+    return PairingHandshake(state: confirmed.state, sas: confirmed.sas);
+  }
+
+  @override
+  Future<PairingReceipt> awaitVaultKey(
+    PairingSession session,
+    PairingHandshake handshake, {
+    Duration timeout = const Duration(minutes: 3),
+    Duration interval = const Duration(seconds: 2),
+  }) async {
+    final sealed = await _pollRelay(session.relayId, timeout, interval);
     final PairingOpened opened;
     try {
-      opened = _ffi.open(session.state, response);
+      opened = _ffi.open(handshake.state, sealed);
     } catch (_) {
       // Le blob ne s'ouvre pas → mauvais destinataire ou altération.
       throw const PairingException.corrupted();
@@ -162,21 +203,12 @@ class PairingService implements PairingApi {
     } on FormatException {
       throw const PairingException.corrupted();
     }
-    return PairingReceipt(
-      vaultKey: opened.vaultKey,
-      accountId: accountId,
-      sas: opened.sas,
-    );
+    return PairingReceipt(vaultKey: opened.vaultKey, accountId: accountId);
   }
 
-  /// **Appareil source** — scanne le QR, scelle `{accountId, vaultKey}` et dépose la
-  /// réponse. Renvoie le SAS à faire confirmer + la clé d'identité du nouvel appareil.
-  /// Nécessite une session active.
   @override
-  Future<PairingSealOutcome> pairScannedDevice({
+  Future<PairingSourceHandshake> beginPairing({
     required String qrPayload,
-    required String accountId,
-    required Uint8List vaultKey,
   }) async {
     final token = await _requireToken();
 
@@ -190,6 +222,36 @@ class PairingService implements PairingApi {
       throw const PairingException.invalidQr();
     }
 
+    final PairingSourceBegin begin;
+    try {
+      begin = _ffi.begin(qr);
+    } catch (_) {
+      throw const PairingException.invalidQr();
+    }
+
+    // Tour 1 : on ne dépose que la clé publique — rien à voler ici.
+    final resp = await _post('/pairing/$relayId', token, {
+      'response': base64.encode(begin.hello),
+    });
+    if (resp.statusCode == 401) throw const PairingException.sessionExpired();
+    if (resp.statusCode != 204) throw const PairingException.server();
+
+    return PairingSourceHandshake(
+      state: begin.state,
+      relayId: relayId,
+      sas: begin.sas,
+      devicePublicKey: begin.devicePublicKey,
+    );
+  }
+
+  @override
+  Future<void> sealVaultKey({
+    required PairingSourceHandshake handshake,
+    required String accountId,
+    required Uint8List vaultKey,
+  }) async {
+    final token = await _requireToken();
+
     final Uint8List accountBytes;
     try {
       accountBytes = AccountId.toBytes(accountId);
@@ -197,28 +259,20 @@ class PairingService implements PairingApi {
       throw const PairingException.server();
     }
 
-    final PairingSealed sealed;
+    final Uint8List sealed;
     try {
-      sealed = _ffi.seal(qr, accountBytes, vaultKey);
+      sealed = _ffi.seal(handshake.state, accountBytes, vaultKey);
     } catch (_) {
-      throw const PairingException.invalidQr();
+      throw const PairingException.server();
     }
 
-    final resp = await _post('/pairing/$relayId', token, {
-      'response': base64.encode(sealed.response),
+    final resp = await _post('/pairing/${handshake.relayId}', token, {
+      'response': base64.encode(sealed),
     });
     if (resp.statusCode == 401) throw const PairingException.sessionExpired();
     if (resp.statusCode != 204) throw const PairingException.server();
-    return PairingSealOutcome(
-      sas: sealed.sas,
-      devicePublicKey: sealed.devicePublicKey,
-    );
   }
 
-  /// **Appareil source** — inscrit la clé de l'appareil au registre du compte.
-  ///
-  /// **À n'appeler qu'après confirmation du SAS** : la clé vient du QR scanné, donc
-  /// un QR substitué (MITM) ferait inscrire l'appareil de l'attaquant.
   @override
   Future<void> registerPairedDevice({
     required Uint8List devicePublicKey,
@@ -233,11 +287,6 @@ class PairingService implements PairingApi {
     if (resp.statusCode != 201) throw const PairingException.server();
   }
 
-  /// **Nouvel appareil** — challenge-response Ed25519 : demande un défi, le signe avec
-  /// la graine locale, et échange la signature contre un token de session.
-  ///
-  /// Lève [PairingException.deviceRejected] si le serveur refuse (appareil non
-  /// inscrit ou révoqué).
   @override
   Future<void> authenticateDevice() async {
     final deviceKey = await _deviceKeyStore.read();
@@ -289,7 +338,8 @@ class PairingService implements PairingApi {
     return key;
   }
 
-  Future<Uint8List> _pollForResponse(
+  /// Attend un dépôt sur le relais (usage unique). Sert aux **deux** tours.
+  Future<Uint8List> _pollRelay(
     String relayId,
     Duration timeout,
     Duration interval,
