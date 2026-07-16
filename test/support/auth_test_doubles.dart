@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:realmguard/features/auth/data/auth_exception.dart';
 import 'package:realmguard/features/auth/data/server_config.dart';
+import 'package:realmguard/features/auth/data/stored_vault_key.dart';
 import 'package:realmguard/features/auth/service/auth_service.dart';
 import 'package:realmguard/features/auth/service/opaque_client.dart';
 import 'package:realmguard/features/auth/service/session_store.dart';
@@ -78,6 +79,21 @@ class FakeAuthService extends AuthService {
   final List<String> registeredUsernames = [];
   final List<String> loggedInUsernames = [];
 
+  /// Si non nul, [login] lève cette exception.
+  AuthException? loginFailure;
+
+  /// Sauvegarde renvoyée par [fetchVaultKey] (`null` = aucune sur le compte).
+  StoredVaultKey? backup;
+
+  /// Clés exportées passées à [fetchVaultKey].
+  final List<Uint8List> fetchedWith = [];
+
+  @override
+  Future<StoredVaultKey?> fetchVaultKey(Uint8List exportKey) async {
+    fetchedWith.add(exportKey);
+    return backup;
+  }
+
   /// État de session simulé (pilote [isLoggedIn]).
   bool loggedIn = false;
 
@@ -106,6 +122,8 @@ class FakeAuthService extends AuthService {
 
   @override
   Future<Uint8List> login(String username, String password) async {
+    final pendingFailure = loginFailure;
+    if (pendingFailure != null) throw pendingFailure;
     loggedInUsernames.add(username);
     loggedIn = true;
     return exportKey;

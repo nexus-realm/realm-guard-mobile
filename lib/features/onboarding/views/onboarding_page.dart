@@ -459,6 +459,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
               icon: const Icon(Icons.qr_code_2),
               label: const Text('J\'ai déjà un compte — lier cet appareil'),
             ),
+            // Sans autre appareil sous la main : récupération depuis le backup
+            // serveur (exige le mot de passe du compte **et** le mot de passe maître).
+            TextButton(
+              onPressed: _viewModel.isSubmitting
+                  ? null
+                  : () => context.push(AppRoutes.vaultRecovery),
+              child: const Text('Récupérer mon coffre (aucun autre appareil)'),
+            ),
             TextButton(
               onPressed: _viewModel.isSubmitting
                   ? null

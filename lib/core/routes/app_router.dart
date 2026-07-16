@@ -10,6 +10,7 @@ import '../../features/auth/service/opaque_client.dart';
 import '../../features/auth/service/session_store.dart';
 import '../../features/auth/service/vault_key_cipher.dart';
 import '../../features/auth/views/sync_page.dart';
+import '../../features/auth/views/vault_recovery_page.dart';
 import '../../features/debug/views/security_debug_page.dart';
 import '../../features/debug/views/vault_debug_page.dart';
 import '../../features/home/views/add_credential_page.dart';
@@ -139,6 +140,15 @@ final GoRouter appRouter = GoRouter(
       name: 'pairedSetup',
       builder: (context, state) => PairedSetupPage(
         pairingService: _pairingService,
+        vaultService: _vaultService,
+        onboardingStorageService: _onboardingStorageService,
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.vaultRecovery,
+      name: 'vaultRecovery',
+      builder: (context, state) => VaultRecoveryPage(
+        authService: _authService,
         vaultService: _vaultService,
         onboardingStorageService: _onboardingStorageService,
       ),

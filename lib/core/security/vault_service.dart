@@ -12,6 +12,21 @@ import 'vault_key_crypto.dart';
 import 'vault_migrator.dart';
 import 'wrapped_vault_key_store.dart';
 
+/// Issue d'une récupération de coffre depuis le backup serveur.
+enum RecoverVaultResult {
+  /// Coffre récupéré et installé.
+  success,
+
+  /// Le mot de passe maître ne désenrobe pas la clé sauvegardée.
+  wrongMasterPassword,
+
+  /// Un coffre existe déjà sur cet appareil : rien n'a été touché.
+  vaultAlreadyExists,
+
+  /// Échec technique (installation).
+  failure,
+}
+
 /// Issue d'un changement de mot de passe maître.
 enum ChangePasswordResult {
   /// Mot de passe changé, base re-chiffrée.
@@ -172,6 +187,47 @@ class VaultService {
     } catch (e) {
       if (e is VaultUnlockException) rethrow;
       throw VaultUnlockException(e);
+    }
+  }
+
+  /// Récupère le coffre depuis le **backup serveur**, sur un appareil sans autre
+  /// appareil disponible.
+  ///
+  /// [wrappedVaultKey] est la VaultKey enrobée par la KEK d'origine, et [backupSalt]
+  /// le sel qui a servi à la dériver. Ce sel est **transitoire** : il ne sert qu'à
+  /// redériver la KEK pour désenrober. Une fois la VaultKey en main, l'installation
+  /// locale repart sur un sel neuf — seule la VaultKey doit être conservée à
+  /// l'identique.
+  ///
+  /// Réutilise [installPairedVaultKey] : même ordre critique (wrapped-VK écrite avant
+  /// la base) et même garde-fou anti-écrasement.
+  Future<RecoverVaultResult> recoverVaultFromBackup({
+    required Uint8List wrappedVaultKey,
+    required Uint8List backupSalt,
+    required String masterPassword,
+  }) async {
+    final List<int> vaultKey;
+    try {
+      // Sel du **backup**, pas le sel local : c'est la seule KEK qui ouvre ce blob.
+      final kek = await _deriveKeyBytes(masterPassword, backupSalt);
+      vaultKey = _vaultKeyCrypto.unwrap(kek, wrappedVaultKey);
+    } catch (_) {
+      // L'AEAD ne distingue pas « mauvais mot de passe » de « blob altéré » : côté
+      // utilisateur, la cause plausible est le mot de passe maître.
+      return RecoverVaultResult.wrongMasterPassword;
+    }
+
+    try {
+      await installPairedVaultKey(
+        vaultKey: vaultKey,
+        localPassword: masterPassword,
+      );
+      return RecoverVaultResult.success;
+    } catch (e) {
+      if (e is VaultUnlockException && e.cause is StateError) {
+        return RecoverVaultResult.vaultAlreadyExists;
+      }
+      return RecoverVaultResult.failure;
     }
   }
 
