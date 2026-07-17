@@ -21,6 +21,16 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<Uint8List> syncId = GeneratedColumn<Uint8List>(
+    'sync_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+    clientDefault: generateSyncId,
+  );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
@@ -108,6 +118,7 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    syncId,
     name,
     emails,
     usernames,
@@ -131,6 +142,12 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('sync_id')) {
+      context.handle(
+        _syncIdMeta,
+        syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
+      );
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -200,6 +217,10 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      syncId: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}sync_id'],
+      ),
       name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}name'],
@@ -243,6 +264,11 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
 
 class Profile extends DataClass implements Insertable<Profile> {
   final int id;
+
+  /// Clé stable de synchronisation (16 o) ⇔ `EntryId` du CRDT. Indexée unique
+  /// (index créé en migration). `clientDefault` garantit un id sur toute
+  /// insertion hors chemin CRDT.
+  final Uint8List? syncId;
   final String name;
 
   /// Listes encodées JSON (tableau de chaînes).
@@ -257,6 +283,7 @@ class Profile extends DataClass implements Insertable<Profile> {
   final DateTime updatedAt;
   const Profile({
     required this.id,
+    this.syncId,
     required this.name,
     required this.emails,
     required this.usernames,
@@ -270,6 +297,9 @@ class Profile extends DataClass implements Insertable<Profile> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<Uint8List>(syncId);
+    }
     map['name'] = Variable<String>(name);
     map['emails'] = Variable<String>(emails);
     map['usernames'] = Variable<String>(usernames);
@@ -288,6 +318,9 @@ class Profile extends DataClass implements Insertable<Profile> {
   ProfilesCompanion toCompanion(bool nullToAbsent) {
     return ProfilesCompanion(
       id: Value(id),
+      syncId: syncId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncId),
       name: Value(name),
       emails: Value(emails),
       usernames: Value(usernames),
@@ -308,6 +341,7 @@ class Profile extends DataClass implements Insertable<Profile> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Profile(
       id: serializer.fromJson<int>(json['id']),
+      syncId: serializer.fromJson<Uint8List?>(json['syncId']),
       name: serializer.fromJson<String>(json['name']),
       emails: serializer.fromJson<String>(json['emails']),
       usernames: serializer.fromJson<String>(json['usernames']),
@@ -323,6 +357,7 @@ class Profile extends DataClass implements Insertable<Profile> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'syncId': serializer.toJson<Uint8List?>(syncId),
       'name': serializer.toJson<String>(name),
       'emails': serializer.toJson<String>(emails),
       'usernames': serializer.toJson<String>(usernames),
@@ -336,6 +371,7 @@ class Profile extends DataClass implements Insertable<Profile> {
 
   Profile copyWith({
     int? id,
+    Value<Uint8List?> syncId = const Value.absent(),
     String? name,
     String? emails,
     String? usernames,
@@ -346,6 +382,7 @@ class Profile extends DataClass implements Insertable<Profile> {
     DateTime? updatedAt,
   }) => Profile(
     id: id ?? this.id,
+    syncId: syncId.present ? syncId.value : this.syncId,
     name: name ?? this.name,
     emails: emails ?? this.emails,
     usernames: usernames ?? this.usernames,
@@ -358,6 +395,7 @@ class Profile extends DataClass implements Insertable<Profile> {
   Profile copyWithCompanion(ProfilesCompanion data) {
     return Profile(
       id: data.id.present ? data.id.value : this.id,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       name: data.name.present ? data.name.value : this.name,
       emails: data.emails.present ? data.emails.value : this.emails,
       usernames: data.usernames.present ? data.usernames.value : this.usernames,
@@ -375,6 +413,7 @@ class Profile extends DataClass implements Insertable<Profile> {
   String toString() {
     return (StringBuffer('Profile(')
           ..write('id: $id, ')
+          ..write('syncId: $syncId, ')
           ..write('name: $name, ')
           ..write('emails: $emails, ')
           ..write('usernames: $usernames, ')
@@ -390,6 +429,7 @@ class Profile extends DataClass implements Insertable<Profile> {
   @override
   int get hashCode => Object.hash(
     id,
+    $driftBlobEquality.hash(syncId),
     name,
     emails,
     usernames,
@@ -404,6 +444,7 @@ class Profile extends DataClass implements Insertable<Profile> {
       identical(this, other) ||
       (other is Profile &&
           other.id == this.id &&
+          $driftBlobEquality.equals(other.syncId, this.syncId) &&
           other.name == this.name &&
           other.emails == this.emails &&
           other.usernames == this.usernames &&
@@ -416,6 +457,7 @@ class Profile extends DataClass implements Insertable<Profile> {
 
 class ProfilesCompanion extends UpdateCompanion<Profile> {
   final Value<int> id;
+  final Value<Uint8List?> syncId;
   final Value<String> name;
   final Value<String> emails;
   final Value<String> usernames;
@@ -426,6 +468,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   final Value<DateTime> updatedAt;
   const ProfilesCompanion({
     this.id = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.name = const Value.absent(),
     this.emails = const Value.absent(),
     this.usernames = const Value.absent(),
@@ -437,6 +480,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   });
   ProfilesCompanion.insert({
     this.id = const Value.absent(),
+    this.syncId = const Value.absent(),
     required String name,
     required String emails,
     this.usernames = const Value.absent(),
@@ -449,6 +493,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
        emails = Value(emails);
   static Insertable<Profile> custom({
     Expression<int>? id,
+    Expression<Uint8List>? syncId,
     Expression<String>? name,
     Expression<String>? emails,
     Expression<String>? usernames,
@@ -460,6 +505,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (syncId != null) 'sync_id': syncId,
       if (name != null) 'name': name,
       if (emails != null) 'emails': emails,
       if (usernames != null) 'usernames': usernames,
@@ -473,6 +519,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
 
   ProfilesCompanion copyWith({
     Value<int>? id,
+    Value<Uint8List?>? syncId,
     Value<String>? name,
     Value<String>? emails,
     Value<String>? usernames,
@@ -484,6 +531,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   }) {
     return ProfilesCompanion(
       id: id ?? this.id,
+      syncId: syncId ?? this.syncId,
       name: name ?? this.name,
       emails: emails ?? this.emails,
       usernames: usernames ?? this.usernames,
@@ -500,6 +548,9 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (syncId.present) {
+      map['sync_id'] = Variable<Uint8List>(syncId.value);
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
@@ -532,6 +583,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   String toString() {
     return (StringBuffer('ProfilesCompanion(')
           ..write('id: $id, ')
+          ..write('syncId: $syncId, ')
           ..write('name: $name, ')
           ..write('emails: $emails, ')
           ..write('usernames: $usernames, ')
@@ -563,6 +615,16 @@ class $CredentialsTable extends Credentials
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<Uint8List> syncId = GeneratedColumn<Uint8List>(
+    'sync_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+    clientDefault: generateSyncId,
   );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
@@ -681,6 +743,7 @@ class $CredentialsTable extends Credentials
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    syncId,
     title,
     username,
     password,
@@ -706,6 +769,12 @@ class $CredentialsTable extends Credentials
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('sync_id')) {
+      context.handle(
+        _syncIdMeta,
+        syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
+      );
     }
     if (data.containsKey('title')) {
       context.handle(
@@ -785,6 +854,10 @@ class $CredentialsTable extends Credentials
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      syncId: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}sync_id'],
+      ),
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -836,6 +909,11 @@ class $CredentialsTable extends Credentials
 
 class Credential extends DataClass implements Insertable<Credential> {
   final int id;
+
+  /// Clé stable de synchronisation (16 o) ⇔ `EntryId` du CRDT. Indexée unique
+  /// (index créé en migration). `clientDefault` garantit un id sur toute
+  /// insertion hors chemin CRDT.
+  final Uint8List? syncId;
   final String title;
   final String? username;
   final String? password;
@@ -851,6 +929,7 @@ class Credential extends DataClass implements Insertable<Credential> {
   final DateTime updatedAt;
   const Credential({
     required this.id,
+    this.syncId,
     required this.title,
     this.username,
     this.password,
@@ -866,6 +945,9 @@ class Credential extends DataClass implements Insertable<Credential> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<Uint8List>(syncId);
+    }
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || username != null) {
       map['username'] = Variable<String>(username);
@@ -892,6 +974,9 @@ class Credential extends DataClass implements Insertable<Credential> {
   CredentialsCompanion toCompanion(bool nullToAbsent) {
     return CredentialsCompanion(
       id: Value(id),
+      syncId: syncId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncId),
       title: Value(title),
       username: username == null && nullToAbsent
           ? const Value.absent()
@@ -920,6 +1005,7 @@ class Credential extends DataClass implements Insertable<Credential> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Credential(
       id: serializer.fromJson<int>(json['id']),
+      syncId: serializer.fromJson<Uint8List?>(json['syncId']),
       title: serializer.fromJson<String>(json['title']),
       username: serializer.fromJson<String?>(json['username']),
       password: serializer.fromJson<String?>(json['password']),
@@ -937,6 +1023,7 @@ class Credential extends DataClass implements Insertable<Credential> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'syncId': serializer.toJson<Uint8List?>(syncId),
       'title': serializer.toJson<String>(title),
       'username': serializer.toJson<String?>(username),
       'password': serializer.toJson<String?>(password),
@@ -952,6 +1039,7 @@ class Credential extends DataClass implements Insertable<Credential> {
 
   Credential copyWith({
     int? id,
+    Value<Uint8List?> syncId = const Value.absent(),
     String? title,
     Value<String?> username = const Value.absent(),
     Value<String?> password = const Value.absent(),
@@ -964,6 +1052,7 @@ class Credential extends DataClass implements Insertable<Credential> {
     DateTime? updatedAt,
   }) => Credential(
     id: id ?? this.id,
+    syncId: syncId.present ? syncId.value : this.syncId,
     title: title ?? this.title,
     username: username.present ? username.value : this.username,
     password: password.present ? password.value : this.password,
@@ -978,6 +1067,7 @@ class Credential extends DataClass implements Insertable<Credential> {
   Credential copyWithCompanion(CredentialsCompanion data) {
     return Credential(
       id: data.id.present ? data.id.value : this.id,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       title: data.title.present ? data.title.value : this.title,
       username: data.username.present ? data.username.value : this.username,
       password: data.password.present ? data.password.value : this.password,
@@ -997,6 +1087,7 @@ class Credential extends DataClass implements Insertable<Credential> {
   String toString() {
     return (StringBuffer('Credential(')
           ..write('id: $id, ')
+          ..write('syncId: $syncId, ')
           ..write('title: $title, ')
           ..write('username: $username, ')
           ..write('password: $password, ')
@@ -1014,6 +1105,7 @@ class Credential extends DataClass implements Insertable<Credential> {
   @override
   int get hashCode => Object.hash(
     id,
+    $driftBlobEquality.hash(syncId),
     title,
     username,
     password,
@@ -1030,6 +1122,7 @@ class Credential extends DataClass implements Insertable<Credential> {
       identical(this, other) ||
       (other is Credential &&
           other.id == this.id &&
+          $driftBlobEquality.equals(other.syncId, this.syncId) &&
           other.title == this.title &&
           other.username == this.username &&
           other.password == this.password &&
@@ -1044,6 +1137,7 @@ class Credential extends DataClass implements Insertable<Credential> {
 
 class CredentialsCompanion extends UpdateCompanion<Credential> {
   final Value<int> id;
+  final Value<Uint8List?> syncId;
   final Value<String> title;
   final Value<String?> username;
   final Value<String?> password;
@@ -1056,6 +1150,7 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
   final Value<DateTime> updatedAt;
   const CredentialsCompanion({
     this.id = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.title = const Value.absent(),
     this.username = const Value.absent(),
     this.password = const Value.absent(),
@@ -1069,6 +1164,7 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
   });
   CredentialsCompanion.insert({
     this.id = const Value.absent(),
+    this.syncId = const Value.absent(),
     required String title,
     this.username = const Value.absent(),
     this.password = const Value.absent(),
@@ -1082,6 +1178,7 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
   }) : title = Value(title);
   static Insertable<Credential> custom({
     Expression<int>? id,
+    Expression<Uint8List>? syncId,
     Expression<String>? title,
     Expression<String>? username,
     Expression<String>? password,
@@ -1095,6 +1192,7 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (syncId != null) 'sync_id': syncId,
       if (title != null) 'title': title,
       if (username != null) 'username': username,
       if (password != null) 'password': password,
@@ -1110,6 +1208,7 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
 
   CredentialsCompanion copyWith({
     Value<int>? id,
+    Value<Uint8List?>? syncId,
     Value<String>? title,
     Value<String?>? username,
     Value<String?>? password,
@@ -1123,6 +1222,7 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
   }) {
     return CredentialsCompanion(
       id: id ?? this.id,
+      syncId: syncId ?? this.syncId,
       title: title ?? this.title,
       username: username ?? this.username,
       password: password ?? this.password,
@@ -1141,6 +1241,9 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (syncId.present) {
+      map['sync_id'] = Variable<Uint8List>(syncId.value);
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -1179,6 +1282,7 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
   String toString() {
     return (StringBuffer('CredentialsCompanion(')
           ..write('id: $id, ')
+          ..write('syncId: $syncId, ')
           ..write('title: $title, ')
           ..write('username: $username, ')
           ..write('password: $password, ')
@@ -1211,6 +1315,16 @@ class $TotpsTable extends Totps with TableInfo<$TotpsTable, Totp> {
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<Uint8List> syncId = GeneratedColumn<Uint8List>(
+    'sync_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+    clientDefault: generateSyncId,
   );
   static const VerificationMeta _labelMeta = const VerificationMeta('label');
   @override
@@ -1329,6 +1443,7 @@ class $TotpsTable extends Totps with TableInfo<$TotpsTable, Totp> {
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    syncId,
     label,
     account,
     secret,
@@ -1354,6 +1469,12 @@ class $TotpsTable extends Totps with TableInfo<$TotpsTable, Totp> {
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('sync_id')) {
+      context.handle(
+        _syncIdMeta,
+        syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
+      );
     }
     if (data.containsKey('label')) {
       context.handle(
@@ -1432,6 +1553,10 @@ class $TotpsTable extends Totps with TableInfo<$TotpsTable, Totp> {
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      syncId: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}sync_id'],
+      ),
       label: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}label'],
@@ -1484,6 +1609,11 @@ class $TotpsTable extends Totps with TableInfo<$TotpsTable, Totp> {
 class Totp extends DataClass implements Insertable<Totp> {
   final int id;
 
+  /// Clé stable de synchronisation (16 o) ⇔ `EntryId` du CRDT. Indexée unique
+  /// (index créé en migration). `clientDefault` garantit un id sur toute
+  /// insertion hors chemin CRDT.
+  final Uint8List? syncId;
+
   /// Libellé affiché (ex. « GitHub »).
   final String label;
 
@@ -1505,6 +1635,7 @@ class Totp extends DataClass implements Insertable<Totp> {
   final DateTime updatedAt;
   const Totp({
     required this.id,
+    this.syncId,
     required this.label,
     this.account,
     required this.secret,
@@ -1520,6 +1651,9 @@ class Totp extends DataClass implements Insertable<Totp> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<Uint8List>(syncId);
+    }
     map['label'] = Variable<String>(label);
     if (!nullToAbsent || account != null) {
       map['account'] = Variable<String>(account);
@@ -1540,6 +1674,9 @@ class Totp extends DataClass implements Insertable<Totp> {
   TotpsCompanion toCompanion(bool nullToAbsent) {
     return TotpsCompanion(
       id: Value(id),
+      syncId: syncId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncId),
       label: Value(label),
       account: account == null && nullToAbsent
           ? const Value.absent()
@@ -1564,6 +1701,7 @@ class Totp extends DataClass implements Insertable<Totp> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Totp(
       id: serializer.fromJson<int>(json['id']),
+      syncId: serializer.fromJson<Uint8List?>(json['syncId']),
       label: serializer.fromJson<String>(json['label']),
       account: serializer.fromJson<String?>(json['account']),
       secret: serializer.fromJson<String>(json['secret']),
@@ -1581,6 +1719,7 @@ class Totp extends DataClass implements Insertable<Totp> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'syncId': serializer.toJson<Uint8List?>(syncId),
       'label': serializer.toJson<String>(label),
       'account': serializer.toJson<String?>(account),
       'secret': serializer.toJson<String>(secret),
@@ -1596,6 +1735,7 @@ class Totp extends DataClass implements Insertable<Totp> {
 
   Totp copyWith({
     int? id,
+    Value<Uint8List?> syncId = const Value.absent(),
     String? label,
     Value<String?> account = const Value.absent(),
     String? secret,
@@ -1608,6 +1748,7 @@ class Totp extends DataClass implements Insertable<Totp> {
     DateTime? updatedAt,
   }) => Totp(
     id: id ?? this.id,
+    syncId: syncId.present ? syncId.value : this.syncId,
     label: label ?? this.label,
     account: account.present ? account.value : this.account,
     secret: secret ?? this.secret,
@@ -1622,6 +1763,7 @@ class Totp extends DataClass implements Insertable<Totp> {
   Totp copyWithCompanion(TotpsCompanion data) {
     return Totp(
       id: data.id.present ? data.id.value : this.id,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       label: data.label.present ? data.label.value : this.label,
       account: data.account.present ? data.account.value : this.account,
       secret: data.secret.present ? data.secret.value : this.secret,
@@ -1639,6 +1781,7 @@ class Totp extends DataClass implements Insertable<Totp> {
   String toString() {
     return (StringBuffer('Totp(')
           ..write('id: $id, ')
+          ..write('syncId: $syncId, ')
           ..write('label: $label, ')
           ..write('account: $account, ')
           ..write('secret: $secret, ')
@@ -1656,6 +1799,7 @@ class Totp extends DataClass implements Insertable<Totp> {
   @override
   int get hashCode => Object.hash(
     id,
+    $driftBlobEquality.hash(syncId),
     label,
     account,
     secret,
@@ -1672,6 +1816,7 @@ class Totp extends DataClass implements Insertable<Totp> {
       identical(this, other) ||
       (other is Totp &&
           other.id == this.id &&
+          $driftBlobEquality.equals(other.syncId, this.syncId) &&
           other.label == this.label &&
           other.account == this.account &&
           other.secret == this.secret &&
@@ -1686,6 +1831,7 @@ class Totp extends DataClass implements Insertable<Totp> {
 
 class TotpsCompanion extends UpdateCompanion<Totp> {
   final Value<int> id;
+  final Value<Uint8List?> syncId;
   final Value<String> label;
   final Value<String?> account;
   final Value<String> secret;
@@ -1698,6 +1844,7 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
   final Value<DateTime> updatedAt;
   const TotpsCompanion({
     this.id = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.label = const Value.absent(),
     this.account = const Value.absent(),
     this.secret = const Value.absent(),
@@ -1711,6 +1858,7 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
   });
   TotpsCompanion.insert({
     this.id = const Value.absent(),
+    this.syncId = const Value.absent(),
     required String label,
     this.account = const Value.absent(),
     required String secret,
@@ -1725,6 +1873,7 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
        secret = Value(secret);
   static Insertable<Totp> custom({
     Expression<int>? id,
+    Expression<Uint8List>? syncId,
     Expression<String>? label,
     Expression<String>? account,
     Expression<String>? secret,
@@ -1738,6 +1887,7 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (syncId != null) 'sync_id': syncId,
       if (label != null) 'label': label,
       if (account != null) 'account': account,
       if (secret != null) 'secret': secret,
@@ -1753,6 +1903,7 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
 
   TotpsCompanion copyWith({
     Value<int>? id,
+    Value<Uint8List?>? syncId,
     Value<String>? label,
     Value<String?>? account,
     Value<String>? secret,
@@ -1766,6 +1917,7 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
   }) {
     return TotpsCompanion(
       id: id ?? this.id,
+      syncId: syncId ?? this.syncId,
       label: label ?? this.label,
       account: account ?? this.account,
       secret: secret ?? this.secret,
@@ -1784,6 +1936,9 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (syncId.present) {
+      map['sync_id'] = Variable<Uint8List>(syncId.value);
     }
     if (label.present) {
       map['label'] = Variable<String>(label.value);
@@ -1822,6 +1977,7 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
   String toString() {
     return (StringBuffer('TotpsCompanion(')
           ..write('id: $id, ')
+          ..write('syncId: $syncId, ')
           ..write('label: $label, ')
           ..write('account: $account, ')
           ..write('secret: $secret, ')
@@ -1857,6 +2013,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 typedef $$ProfilesTableCreateCompanionBuilder =
     ProfilesCompanion Function({
       Value<int> id,
+      Value<Uint8List?> syncId,
       required String name,
       required String emails,
       Value<String> usernames,
@@ -1869,6 +2026,7 @@ typedef $$ProfilesTableCreateCompanionBuilder =
 typedef $$ProfilesTableUpdateCompanionBuilder =
     ProfilesCompanion Function({
       Value<int> id,
+      Value<Uint8List?> syncId,
       Value<String> name,
       Value<String> emails,
       Value<String> usernames,
@@ -1932,6 +2090,11 @@ class $$ProfilesTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get syncId => $composableBuilder(
+    column: $table.syncId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2040,6 +2203,11 @@ class $$ProfilesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<Uint8List> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get name => $composableBuilder(
     column: $table.name,
     builder: (column) => ColumnOrderings(column),
@@ -2092,6 +2260,9 @@ class $$ProfilesTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
@@ -2199,6 +2370,7 @@ class $$ProfilesTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<Uint8List?> syncId = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> emails = const Value.absent(),
                 Value<String> usernames = const Value.absent(),
@@ -2209,6 +2381,7 @@ class $$ProfilesTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => ProfilesCompanion(
                 id: id,
+                syncId: syncId,
                 name: name,
                 emails: emails,
                 usernames: usernames,
@@ -2221,6 +2394,7 @@ class $$ProfilesTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<Uint8List?> syncId = const Value.absent(),
                 required String name,
                 required String emails,
                 Value<String> usernames = const Value.absent(),
@@ -2231,6 +2405,7 @@ class $$ProfilesTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => ProfilesCompanion.insert(
                 id: id,
+                syncId: syncId,
                 name: name,
                 emails: emails,
                 usernames: usernames,
@@ -2326,6 +2501,7 @@ typedef $$ProfilesTableProcessedTableManager =
 typedef $$CredentialsTableCreateCompanionBuilder =
     CredentialsCompanion Function({
       Value<int> id,
+      Value<Uint8List?> syncId,
       required String title,
       Value<String?> username,
       Value<String?> password,
@@ -2340,6 +2516,7 @@ typedef $$CredentialsTableCreateCompanionBuilder =
 typedef $$CredentialsTableUpdateCompanionBuilder =
     CredentialsCompanion Function({
       Value<int> id,
+      Value<Uint8List?> syncId,
       Value<String> title,
       Value<String?> username,
       Value<String?> password,
@@ -2387,6 +2564,11 @@ class $$CredentialsTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get syncId => $composableBuilder(
+    column: $table.syncId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2473,6 +2655,11 @@ class $$CredentialsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<Uint8List> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get title => $composableBuilder(
     column: $table.title,
     builder: (column) => ColumnOrderings(column),
@@ -2553,6 +2740,9 @@ class $$CredentialsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -2636,6 +2826,7 @@ class $$CredentialsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<Uint8List?> syncId = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> username = const Value.absent(),
                 Value<String?> password = const Value.absent(),
@@ -2648,6 +2839,7 @@ class $$CredentialsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => CredentialsCompanion(
                 id: id,
+                syncId: syncId,
                 title: title,
                 username: username,
                 password: password,
@@ -2662,6 +2854,7 @@ class $$CredentialsTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<Uint8List?> syncId = const Value.absent(),
                 required String title,
                 Value<String?> username = const Value.absent(),
                 Value<String?> password = const Value.absent(),
@@ -2674,6 +2867,7 @@ class $$CredentialsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => CredentialsCompanion.insert(
                 id: id,
+                syncId: syncId,
                 title: title,
                 username: username,
                 password: password,
@@ -2755,6 +2949,7 @@ typedef $$CredentialsTableProcessedTableManager =
 typedef $$TotpsTableCreateCompanionBuilder =
     TotpsCompanion Function({
       Value<int> id,
+      Value<Uint8List?> syncId,
       required String label,
       Value<String?> account,
       required String secret,
@@ -2769,6 +2964,7 @@ typedef $$TotpsTableCreateCompanionBuilder =
 typedef $$TotpsTableUpdateCompanionBuilder =
     TotpsCompanion Function({
       Value<int> id,
+      Value<Uint8List?> syncId,
       Value<String> label,
       Value<String?> account,
       Value<String> secret,
@@ -2813,6 +3009,11 @@ class $$TotpsTableFilterComposer extends Composer<_$AppDatabase, $TotpsTable> {
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get syncId => $composableBuilder(
+    column: $table.syncId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2899,6 +3100,11 @@ class $$TotpsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<Uint8List> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get label => $composableBuilder(
     column: $table.label,
     builder: (column) => ColumnOrderings(column),
@@ -2980,6 +3186,9 @@ class $$TotpsTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<Uint8List> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
+
   GeneratedColumn<String> get label =>
       $composableBuilder(column: $table.label, builder: (column) => column);
 
@@ -3060,6 +3269,7 @@ class $$TotpsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<Uint8List?> syncId = const Value.absent(),
                 Value<String> label = const Value.absent(),
                 Value<String?> account = const Value.absent(),
                 Value<String> secret = const Value.absent(),
@@ -3072,6 +3282,7 @@ class $$TotpsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => TotpsCompanion(
                 id: id,
+                syncId: syncId,
                 label: label,
                 account: account,
                 secret: secret,
@@ -3086,6 +3297,7 @@ class $$TotpsTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<Uint8List?> syncId = const Value.absent(),
                 required String label,
                 Value<String?> account = const Value.absent(),
                 required String secret,
@@ -3098,6 +3310,7 @@ class $$TotpsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => TotpsCompanion.insert(
                 id: id,
+                syncId: syncId,
                 label: label,
                 account: account,
                 secret: secret,

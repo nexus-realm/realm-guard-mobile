@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'models/credentials.dart';
 import 'models/profiles.dart';
+import 'models/sync_id.dart';
 import 'models/totps.dart';
 
 part 'app_database.g.dart';
@@ -17,10 +18,14 @@ class AppDatabase extends _$AppDatabase {
     : super(_openConnection(encryptionKeyBytes));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (migrator) async {
+      await migrator.createAll();
+      await _createSyncIdIndexes();
+    },
     onUpgrade: (migrator, from, to) async {
       if (from == 1) {
         await migrator.renameTable(credentials, 'vault_entries');
@@ -60,8 +65,45 @@ class AppDatabase extends _$AppDatabase {
         // Nouveau type de secret : TOTP.
         await migrator.createTable(totps);
       }
+      if (from < 5) {
+        // Synchronisation CRDT : clé stable `syncId` (⇔ `EntryId`) par ligne.
+        await migrator.addColumn(profiles, profiles.syncId);
+        await migrator.addColumn(credentials, credentials.syncId);
+        await migrator.addColumn(totps, totps.syncId);
+        // Attribue un id de sync (16 o) à chaque ligne v1 existante.
+        // `randomblob(16)` : généré côté SQLite, sans aller-retour Dart.
+        await customStatement(
+          'UPDATE profiles SET sync_id = randomblob(16) WHERE sync_id IS NULL',
+        );
+        await customStatement(
+          'UPDATE credentials SET sync_id = randomblob(16) WHERE sync_id IS NULL',
+        );
+        await customStatement(
+          'UPDATE totps SET sync_id = randomblob(16) WHERE sync_id IS NULL',
+        );
+        await _createSyncIdIndexes();
+      }
     },
   );
+
+  /// Index unique sur `syncId` de chaque table. Créé à la main (et non via une
+  /// contrainte `UNIQUE` de colonne) car SQLite refuse d'ajouter une colonne
+  /// UNIQUE par `ALTER TABLE` ; l'index couvre aussi les recherches par `syncId`
+  /// de la projection.
+  Future<void> _createSyncIdIndexes() async {
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_sync_id '
+      'ON profiles (sync_id)',
+    );
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_credentials_sync_id '
+      'ON credentials (sync_id)',
+    );
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_totps_sync_id '
+      'ON totps (sync_id)',
+    );
+  }
 }
 
 LazyDatabase _openConnection(List<int> encryptionKeyBytes) {
