@@ -38,6 +38,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DeviceKeypair dco_decode_device_keypair(dynamic raw);
 
   @protected
+  HlcTick dco_decode_hlc_tick(dynamic raw);
+
+  @protected
   List<CrdtField> dco_decode_list_crdt_field(dynamic raw);
 
   @protected
@@ -96,6 +99,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   DeviceKeypair sse_decode_device_keypair(SseDeserializer deserializer);
+
+  @protected
+  HlcTick sse_decode_hlc_tick(SseDeserializer deserializer);
 
   @protected
   List<CrdtField> sse_decode_list_crdt_field(SseDeserializer deserializer);
@@ -172,6 +178,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_device_keypair(DeviceKeypair self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_hlc_tick(HlcTick self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_crdt_field(

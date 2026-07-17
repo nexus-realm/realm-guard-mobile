@@ -12,7 +12,7 @@
 
 use realm_guard_core::codec;
 use realm_guard_core::crdt::{DeviceId, Hlc, Timestamp};
-use realm_guard_core::crypto::Ciphertext;
+use realm_guard_core::crypto::{Ciphertext, decrypt_entry_bytes, encrypt_entry_bytes};
 use realm_guard_core::model::{EntryId, FieldId, VaultDoc};
 
 /// Un `VaultDoc` ré-encodé + le delta produit par une mutation.
@@ -27,6 +27,12 @@ pub struct CrdtMutation {
 pub struct CrdtField {
     pub field_id: u16,
     pub value: Vec<u8>,
+}
+
+/// État d'horloge HLC d'un appareil, threadé par Dart (pas d'`HlcClock` vivant).
+pub struct HlcTick {
+    pub wall_ms: u64,
+    pub counter: u32,
 }
 
 fn decode_doc(bytes: &[u8]) -> Result<VaultDoc<Ciphertext>, String> {
@@ -150,4 +156,50 @@ pub fn crdt_device_id_from_key(public_key: Vec<u8>) -> Result<Vec<u8>, String> {
         return Err("clé publique trop courte (16 octets minimum)".to_string());
     }
     Ok(public_key[..16].to_vec())
+}
+
+/// Génère un `EntryId` aléatoire (16 o) via le CSPRNG de l'OS — pour une nouvelle
+/// entrée du coffre.
+#[flutter_rust_bridge::frb(sync)]
+pub fn crdt_new_entry_id() -> Result<Vec<u8>, String> {
+    Ok(EntryId::generate()
+        .map_err(|e| e.to_string())?
+        .as_bytes()
+        .to_vec())
+}
+
+/// Chiffre la valeur d'un champ (clé propre à l'entrée, dérivée de `vault_key` et
+/// `entry_id`). Sortie = `Ciphertext` **encodé**, à passer à [`crdt_set_field`].
+#[flutter_rust_bridge::frb(sync)]
+pub fn crdt_encrypt_field(
+    vault_key: Vec<u8>,
+    entry_id: Vec<u8>,
+    plaintext: Vec<u8>,
+) -> Result<Vec<u8>, String> {
+    encrypt_entry_bytes(&vault_key, &entry_id, &plaintext).map_err(|e| e.to_string())
+}
+
+/// Déchiffre la valeur d'un champ (issue de [`crdt_entry_fields`]) → clair.
+#[flutter_rust_bridge::frb(sync)]
+pub fn crdt_decrypt_field(
+    vault_key: Vec<u8>,
+    entry_id: Vec<u8>,
+    value: Vec<u8>,
+) -> Result<Vec<u8>, String> {
+    decrypt_entry_bytes(&vault_key, &entry_id, &value).map_err(|e| e.to_string())
+}
+
+/// Fait avancer l'horloge HLC locale : renvoie le prochain `(wall_ms, counter)`
+/// strictement supérieur, à persister par Dart et à passer à [`crdt_set_field`].
+#[flutter_rust_bridge::frb(sync)]
+pub fn crdt_hlc_tick(last_wall_ms: u64, last_counter: u32, now_ms: u64) -> HlcTick {
+    let next = Hlc {
+        wall_ms: last_wall_ms,
+        counter: last_counter,
+    }
+    .next_local(now_ms);
+    HlcTick {
+        wall_ms: next.wall_ms,
+        counter: next.counter,
+    }
 }

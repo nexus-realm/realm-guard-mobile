@@ -76,6 +76,45 @@ List<CrdtField> crdtEntryFields({
 Uint8List crdtDeviceIdFromKey({required List<int> publicKey}) =>
     RustLib.instance.api.crateApiCrdtCrdtDeviceIdFromKey(publicKey: publicKey);
 
+/// Génère un `EntryId` aléatoire (16 o) via le CSPRNG de l'OS — pour une nouvelle
+/// entrée du coffre.
+Uint8List crdtNewEntryId() => RustLib.instance.api.crateApiCrdtCrdtNewEntryId();
+
+/// Chiffre la valeur d'un champ (clé propre à l'entrée, dérivée de `vault_key` et
+/// `entry_id`). Sortie = `Ciphertext` **encodé**, à passer à [`crdt_set_field`].
+Uint8List crdtEncryptField({
+  required List<int> vaultKey,
+  required List<int> entryId,
+  required List<int> plaintext,
+}) => RustLib.instance.api.crateApiCrdtCrdtEncryptField(
+  vaultKey: vaultKey,
+  entryId: entryId,
+  plaintext: plaintext,
+);
+
+/// Déchiffre la valeur d'un champ (issue de [`crdt_entry_fields`]) → clair.
+Uint8List crdtDecryptField({
+  required List<int> vaultKey,
+  required List<int> entryId,
+  required List<int> value,
+}) => RustLib.instance.api.crateApiCrdtCrdtDecryptField(
+  vaultKey: vaultKey,
+  entryId: entryId,
+  value: value,
+);
+
+/// Fait avancer l'horloge HLC locale : renvoie le prochain `(wall_ms, counter)`
+/// strictement supérieur, à persister par Dart et à passer à [`crdt_set_field`].
+HlcTick crdtHlcTick({
+  required BigInt lastWallMs,
+  required int lastCounter,
+  required BigInt nowMs,
+}) => RustLib.instance.api.crateApiCrdtCrdtHlcTick(
+  lastWallMs: lastWallMs,
+  lastCounter: lastCounter,
+  nowMs: nowMs,
+);
+
 /// Un champ énuméré : identifiant + valeur (`Ciphertext` encodé, opaque).
 class CrdtField {
   final int fieldId;
@@ -115,4 +154,23 @@ class CrdtMutation {
           runtimeType == other.runtimeType &&
           doc == other.doc &&
           delta == other.delta;
+}
+
+/// État d'horloge HLC d'un appareil, threadé par Dart (pas d'`HlcClock` vivant).
+class HlcTick {
+  final BigInt wallMs;
+  final int counter;
+
+  const HlcTick({required this.wallMs, required this.counter});
+
+  @override
+  int get hashCode => wallMs.hashCode ^ counter.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HlcTick &&
+          runtimeType == other.runtimeType &&
+          wallMs == other.wallMs &&
+          counter == other.counter;
 }
