@@ -29,6 +29,7 @@ class VaultCrdt {
   final Uint8List _vaultKey;
   final Uint8List _deviceId;
   final DateTime Function() _now;
+  final void Function()? _onChanged;
 
   VaultCrdt({
     required CrdtFfi ffi,
@@ -37,13 +38,15 @@ class VaultCrdt {
     required Uint8List vaultKey,
     required Uint8List deviceId,
     DateTime Function() now = DateTime.now,
+    void Function()? onChanged,
   }) : _ffi = ffi,
        _store = store,
        _pending = pending,
        _writer = VaultDocWriter(ffi),
        _vaultKey = vaultKey,
        _deviceId = deviceId,
-       _now = now;
+       _now = now,
+       _onChanged = onChanged;
 
   /// Applique une entrée (création si [isNew], sinon mise à jour) : chiffre et
   /// écrit ses [fields] dans le doc persisté. Renvoie les deltas produits.
@@ -66,6 +69,7 @@ class VaultCrdt {
     // Curseur préservé : une écriture locale ne change pas la progression de tirage.
     await _store.save(state.copyWith(doc: result.doc, clock: result.clock));
     await _enqueue(result.deltas);
+    _onChanged?.call();
     return result.deltas;
   }
 
@@ -78,6 +82,7 @@ class VaultCrdt {
     // La suppression n'émet pas d'HLC de champ : horloge et curseur conservés.
     await _store.save(state.copyWith(doc: mutation.doc));
     await _enqueue([mutation.delta]);
+    _onChanged?.call();
     return [mutation.delta];
   }
 
@@ -104,6 +109,7 @@ class VaultCrdt {
     }
     await _store.save(state);
     await _enqueue(deltas);
+    _onChanged?.call();
   }
 
   Future<void> _enqueue(List<Uint8List> deltas) async {

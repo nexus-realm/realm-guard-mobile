@@ -35,6 +35,9 @@ import '../../features/pairing/views/paired_setup_page.dart';
 import '../../features/pairing/views/receive_device_page.dart';
 import '../../features/settings/data/legal_documents.dart';
 import '../../features/settings/service/app_reset_service.dart';
+import '../../features/sync/service/sync_api.dart';
+import '../../features/sync/service/sync_session_controller.dart';
+import '../../features/sync/service/sync_socket.dart';
 import '../../features/settings/views/about_page.dart';
 import '../../features/settings/views/change_password_page.dart';
 import '../../features/settings/views/legal_page.dart';
@@ -112,6 +115,28 @@ final PairingService _pairingService = PairingService(
   config: const ServerConfig.dev(),
 );
 
+/// Client du log de synchronisation (`/sync/*`), gated par session (ré-auth par
+/// clé d'appareil à la volée).
+final SyncApi _syncApi = SyncService(
+  httpClient: http.Client(),
+  session: const SecureSessionStore(FlutterSecureStorage()),
+  config: const ServerConfig.dev(),
+  ensureSession: () => _pairingService.authenticateDevice(),
+);
+
+/// Cycle de vie de la synchronisation temps réel. Attaché au démarrage
+/// (`main.dart`) ; ne démarre la pile qu'une fois le coffre déverrouillé
+/// (déclenché par `HomeTab`), la coupe au verrouillage.
+final SyncSessionController syncSessionController = SyncSessionController(
+  vaultService: _vaultService,
+  api: _syncApi,
+  socketFactory: () => WsSyncSocket(
+    session: const SecureSessionStore(FlutterSecureStorage()),
+    config: const ServerConfig.dev(),
+    ensureSession: () => _pairingService.authenticateDevice(),
+  ),
+);
+
 /// Un `VaultRepository` câblé sur la session CRDT (write-through de la synchro).
 /// La session est résolue paresseusement à la première écriture ; les repos en
 /// lecture seule (accueil, autofill-fill) n'en ont pas besoin.
@@ -176,6 +201,7 @@ final GoRouter appRouter = GoRouter(
           builder: (context, state) => HomeTab(
             vaultService: _vaultService,
             featureFlagsController: featureFlagsController,
+            syncSessionController: syncSessionController,
           ),
         ),
       ],

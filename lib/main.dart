@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -85,14 +86,23 @@ class _RealmGuardState extends State<RealmGuard> {
   @override
   void initState() {
     super.initState();
-    // Auto-lock : verrouille le coffre en arrière-plan / après inactivité et
-    // renvoie vers l'écran de déverrouillage.
-    appLockController.attach(onLock: () => appRouter.go(AppRoutes.unlock));
+    // Synchronisation : observe le cycle de vie et les mutations locales pour
+    // démarrer/rafraîchir la sync une fois le coffre déverrouillé.
+    syncSessionController.attach();
+    // Auto-lock : verrouille le coffre en arrière-plan / après inactivité, coupe
+    // la synchro et renvoie vers l'écran de déverrouillage.
+    appLockController.attach(
+      onLock: () {
+        unawaited(syncSessionController.stop());
+        appRouter.go(AppRoutes.unlock);
+      },
+    );
   }
 
   @override
   void dispose() {
     appLockController.detach();
+    syncSessionController.detach();
     super.dispose();
   }
 

@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../database/app_database.dart';
@@ -85,6 +85,13 @@ class VaultService {
   // Session CRDT de la session courante (write-through de la synchro). Construite
   // paresseusement à la première écriture, remise à zéro à la fermeture.
   VaultCrdt? _vaultCrdt;
+  // Notifié après chaque mutation locale du coffre (via le write-through CRDT) :
+  // permet à la couche de synchro de déclencher un push sans coupler le chemin
+  // d'écriture au moteur de sync.
+  final _LocalMutations _mutations = _LocalMutations();
+
+  /// S'abonner pour être notifié après chaque écriture locale (push réactif).
+  Listenable get onLocalMutation => _mutations;
 
   /// Ouverture initiale ou manuelle avec le mot de passe maître. Migre le coffre
   /// vers le modèle VaultKey au premier déverrouillage (cf. [VaultMigrator]).
@@ -338,6 +345,7 @@ class VaultService {
         pending: DriftPendingDeltaStore(db),
         vaultKey: Uint8List.fromList(key),
         deviceId: await _crdtDeviceIdStore.getOrCreate(),
+        onChanged: _mutations.ping,
       );
       await _seedCrdtIfNeeded(db, store, crdt);
       _vaultCrdt = crdt;
@@ -386,4 +394,10 @@ class VaultService {
     if (_database == null) throw Exception("Vault is locked!");
     return _database!;
   }
+}
+
+/// Notifie ses abonnés à chaque mutation locale du coffre. Expose [ping] car
+/// `notifyListeners` est protégé.
+class _LocalMutations extends ChangeNotifier {
+  void ping() => notifyListeners();
 }

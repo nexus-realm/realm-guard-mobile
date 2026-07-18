@@ -71,6 +71,27 @@ void main() {
       expect(store.state!.cursor, 5); // curseur intact
       expect(await pending.count(), 1);
     });
+
+    test('onChanged notifié après une écriture locale', () async {
+      var changes = 0;
+      final crdt = VaultCrdt(
+        ffi: FakeCrdtFfi(),
+        store: InMemoryVaultDocStore(),
+        pending: InMemoryPendingDeltaStore(),
+        vaultKey: Uint8List.fromList([1, 2, 3]),
+        deviceId: _id(8),
+        now: () => DateTime.fromMillisecondsSinceEpoch(1000),
+        onChanged: () => changes++,
+      );
+
+      await crdt.putEntry(
+        entryId: _id(1),
+        fields: {VaultFields.kind: const IntValue(1)},
+        isNew: true,
+      );
+
+      expect(changes, 1);
+    });
   });
 
   group('VaultCrdt.removeEntry', () {
