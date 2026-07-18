@@ -7,6 +7,7 @@ import '../database/app_database.dart';
 import '../exceptions/vault_unlock_exception.dart';
 import '../sync/crdt_device_id_store.dart';
 import '../sync/crdt_ffi.dart';
+import '../sync/mutex.dart';
 import '../sync/pending_delta_store.dart';
 import '../sync/vault_crdt.dart';
 import '../sync/vault_doc_store.dart';
@@ -85,6 +86,13 @@ class VaultService {
   // Session CRDT de la session courante (write-through de la synchro). Construite
   // paresseusement à la première écriture, remise à zéro à la fermeture.
   VaultCrdt? _vaultCrdt;
+  // Verrou partagé (par session) sérialisant les RMW du doc CRDT entre les
+  // écritures locales (VaultCrdt) et le moteur de sync (SyncEngine).
+  Mutex? _docLock;
+
+  /// Verrou du doc CRDT de la session courante (à passer au `SyncEngine` pour
+  /// sérialiser tirages et écritures locales). `null` si aucune session.
+  Mutex? get docLock => _docLock;
   // Notifié après chaque mutation locale du coffre (via le write-through CRDT) :
   // permet à la couche de synchro de déclencher un push sans coupler le chemin
   // d'écriture au moteur de sync.
@@ -321,6 +329,7 @@ class VaultService {
     _database = null;
     _currentKey = null;
     _vaultCrdt = null;
+    _docLock = null;
     await db?.close();
   }
 
@@ -339,6 +348,7 @@ class VaultService {
     if (db == null || key == null) return null;
     try {
       final store = DriftVaultDocStore(db);
+      final lock = _docLock ??= Mutex();
       final crdt = VaultCrdt(
         ffi: _crdtFfi,
         store: store,
@@ -346,6 +356,7 @@ class VaultService {
         vaultKey: Uint8List.fromList(key),
         deviceId: await _crdtDeviceIdStore.getOrCreate(),
         onChanged: _mutations.ping,
+        lock: lock,
       );
       await _seedCrdtIfNeeded(db, store, crdt);
       _vaultCrdt = crdt;

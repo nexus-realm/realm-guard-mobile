@@ -87,6 +87,9 @@ class SyncSessionController with WidgetsBindingObserver {
         ffi: _ffi,
         reprojector: DriftProjector(db, _ffi),
         vaultKey: Uint8List.fromList(key),
+        // Verrou partagé avec VaultCrdt (créé par ensureCrdtSession) → sérialise
+        // les tirages et les écritures locales sur le même doc.
+        lock: _vaultService.docLock,
       );
       final controller = SyncController(
         engine: engine,

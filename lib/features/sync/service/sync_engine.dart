@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import '../../../core/sync/crdt_ffi.dart';
 import '../../../core/sync/drift_projector.dart';
+import '../../../core/sync/mutex.dart';
 import '../../../core/sync/pending_delta_store.dart';
 import '../../../core/sync/vault_doc_store.dart';
 import '../data/sync_exception.dart';
@@ -30,6 +31,7 @@ class SyncEngine implements SyncRunner {
   final Uint8List _vaultKey;
   final int _pushBatch;
   final int _pullLimit;
+  final Mutex _lock;
 
   SyncEngine({
     required SyncApi api,
@@ -40,6 +42,7 @@ class SyncEngine implements SyncRunner {
     required Uint8List vaultKey,
     int pushBatch = 100,
     int pullLimit = 500,
+    Mutex? lock,
   }) : _api = api,
        _store = store,
        _pending = pending,
@@ -47,7 +50,9 @@ class SyncEngine implements SyncRunner {
        _reprojector = reprojector,
        _vaultKey = vaultKey,
        _pushBatch = pushBatch,
-       _pullLimit = pullLimit;
+       _pullLimit = pullLimit,
+       // Verrou partagé (par session) avec `VaultCrdt` — sérialise les RMW du doc.
+       _lock = lock ?? Mutex();
 
   /// Un cycle complet : push puis pull.
   @override
@@ -73,11 +78,12 @@ class SyncEngine implements SyncRunner {
   /// (curseur antérieur au snapshot), repart du snapshot.
   Future<void> pull() async {
     while (true) {
-      final state = await _loadOrEmpty();
+      // Curseur de départ (hors verrou) : sert au paramètre réseau `since`.
+      final since = (await _loadOrEmpty()).cursor;
 
       final DeltaPage page;
       try {
-        page = await _api.pullDeltas(since: state.cursor, limit: _pullLimit);
+        page = await _api.pullDeltas(since: since, limit: _pullLimit);
       } on SyncException catch (e) {
         if (e.kind == SyncErrorKind.cursorGone) {
           await _resetFromSnapshot();
@@ -88,31 +94,40 @@ class SyncEngine implements SyncRunner {
 
       if (page.deltas.isEmpty) return;
 
-      var doc = state.doc;
-      var cursor = state.cursor;
-      for (final delta in page.deltas) {
-        doc = _ffi.merge(doc, delta.payload);
-        if (delta.seq > cursor) cursor = delta.seq;
-      }
-      await _applyMerged(state, doc, cursor);
+      // Section critique : rechargement **frais** du doc (une écriture locale a
+      // pu tomber pendant l'attente réseau), merge, sauvegarde et reprojection —
+      // atomiques vis-à-vis des écritures locales grâce au verrou partagé.
+      final caughtUp = await _lock.run(() async {
+        final state = await _loadOrEmpty();
+        var doc = state.doc;
+        var cursor = state.cursor;
+        for (final delta in page.deltas) {
+          doc = _ffi.merge(doc, delta.payload);
+          if (delta.seq > cursor) cursor = delta.seq;
+        }
+        await _applyMerged(state, doc, cursor);
+        return cursor >= page.latest;
+      });
 
-      if (cursor >= page.latest) return; // rattrapé
+      if (caughtUp) return; // rattrapé
     }
   }
 
   Future<void> _resetFromSnapshot() async {
-    final snapshot = await _api.getSnapshot();
-    final state = await _loadOrEmpty();
-    if (snapshot == null) {
-      // Curseur trop ancien mais aucun snapshot : repartir de zéro pour re-tirer
-      // tout le log (il reste disponible).
-      await _store.save(state.copyWith(cursor: 0));
-      return;
-    }
-    // Le snapshot est un état complet, join-compatible : on le **fusionne** (sans
-    // écraser d'éventuelles écritures locales non encore poussées).
-    final doc = _ffi.merge(state.doc, snapshot.payload);
-    await _applyMerged(state, doc, snapshot.coversSeq);
+    final snapshot = await _api.getSnapshot(); // réseau, hors verrou
+    await _lock.run(() async {
+      final state = await _loadOrEmpty();
+      if (snapshot == null) {
+        // Curseur trop ancien mais aucun snapshot : repartir de zéro pour re-tirer
+        // tout le log (il reste disponible).
+        await _store.save(state.copyWith(cursor: 0));
+        return;
+      }
+      // Le snapshot est un état complet, join-compatible : on le **fusionne** (sans
+      // écraser d'éventuelles écritures locales non encore poussées).
+      final doc = _ffi.merge(state.doc, snapshot.payload);
+      await _applyMerged(state, doc, snapshot.coversSeq);
+    });
   }
 
   /// Persiste le doc fusionné + l'horloge **avancée au-delà du max reçu** + le

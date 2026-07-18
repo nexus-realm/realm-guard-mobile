@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'crdt_ffi.dart';
 import 'field_value.dart';
+import 'mutex.dart';
 import 'pending_delta_store.dart';
 import 'vault_doc_store.dart';
 import 'vault_projection.dart';
@@ -30,6 +31,7 @@ class VaultCrdt {
   final Uint8List _deviceId;
   final DateTime Function() _now;
   final void Function()? _onChanged;
+  final Mutex _lock;
 
   VaultCrdt({
     required CrdtFfi ffi,
@@ -39,6 +41,7 @@ class VaultCrdt {
     required Uint8List deviceId,
     DateTime Function() now = DateTime.now,
     void Function()? onChanged,
+    Mutex? lock,
   }) : _ffi = ffi,
        _store = store,
        _pending = pending,
@@ -46,7 +49,10 @@ class VaultCrdt {
        _vaultKey = vaultKey,
        _deviceId = deviceId,
        _now = now,
-       _onChanged = onChanged;
+       _onChanged = onChanged,
+       // Verrou partagé (par session) pour sérialiser les RMW du doc avec le
+       // moteur de sync ; à défaut, un verrou propre (sérialise au moins soi-même).
+       _lock = lock ?? Mutex();
 
   /// Applique une entrée (création si [isNew], sinon mise à jour) : chiffre et
   /// écrit ses [fields] dans le doc persisté. Renvoie les deltas produits.
@@ -55,60 +61,68 @@ class VaultCrdt {
     required Map<int, FieldValue> fields,
     required bool isNew,
   }) async {
-    final state = await _loadOrEmpty();
-    final result = _writer.putFields(
-      doc: state.doc,
-      entryId: entryId,
-      deviceId: _deviceId,
-      vaultKey: _vaultKey,
-      fields: fields,
-      clock: state.clock,
-      nowMs: _nowMs(),
-      markPresent: isNew,
-    );
-    // Curseur préservé : une écriture locale ne change pas la progression de tirage.
-    await _store.save(state.copyWith(doc: result.doc, clock: result.clock));
-    await _enqueue(result.deltas);
+    final deltas = await _lock.run(() async {
+      final state = await _loadOrEmpty();
+      final result = _writer.putFields(
+        doc: state.doc,
+        entryId: entryId,
+        deviceId: _deviceId,
+        vaultKey: _vaultKey,
+        fields: fields,
+        clock: state.clock,
+        nowMs: _nowMs(),
+        markPresent: isNew,
+      );
+      // Curseur préservé : une écriture locale ne change pas la progression de tirage.
+      await _store.save(state.copyWith(doc: result.doc, clock: result.clock));
+      await _enqueue(result.deltas);
+      return result.deltas;
+    });
     _onChanged?.call();
-    return result.deltas;
+    return deltas;
   }
 
   /// Retire une entrée du coffre (tombstone add-wins). Renvoie le delta produit,
   /// ou vide si le coffre CRDT n'existe pas encore.
   Future<List<Uint8List>> removeEntry(Uint8List entryId) async {
-    final state = await _store.load();
-    if (state == null) return const [];
-    final mutation = _ffi.removeEntry(state.doc, entryId);
-    // La suppression n'émet pas d'HLC de champ : horloge et curseur conservés.
-    await _store.save(state.copyWith(doc: mutation.doc));
-    await _enqueue([mutation.delta]);
-    _onChanged?.call();
-    return [mutation.delta];
+    final deltas = await _lock.run(() async {
+      final state = await _store.load();
+      if (state == null) return const <Uint8List>[];
+      final mutation = _ffi.removeEntry(state.doc, entryId);
+      // La suppression n'émet pas d'HLC de champ : horloge et curseur conservés.
+      await _store.save(state.copyWith(doc: mutation.doc));
+      await _enqueue([mutation.delta]);
+      return [mutation.delta];
+    });
+    if (deltas.isNotEmpty) _onChanged?.call();
+    return deltas;
   }
 
   /// Sème un doc **neuf** à partir des [entries] existantes (migration v1→doc).
   /// Construit tout en mémoire puis persiste une seule fois. À n'appeler que
   /// lorsque le coffre CRDT n'existe pas encore.
   Future<void> seed(List<SeedEntry> entries) async {
-    var state = _empty();
-    final now = _nowMs();
-    final deltas = <Uint8List>[];
-    for (final entry in entries) {
-      final result = _writer.putFields(
-        doc: state.doc,
-        entryId: entry.entryId,
-        deviceId: _deviceId,
-        vaultKey: _vaultKey,
-        fields: entry.fields,
-        clock: state.clock,
-        nowMs: now,
-        markPresent: true,
-      );
-      state = VaultDocState(doc: result.doc, clock: result.clock);
-      deltas.addAll(result.deltas);
-    }
-    await _store.save(state);
-    await _enqueue(deltas);
+    await _lock.run(() async {
+      var state = _empty();
+      final now = _nowMs();
+      final deltas = <Uint8List>[];
+      for (final entry in entries) {
+        final result = _writer.putFields(
+          doc: state.doc,
+          entryId: entry.entryId,
+          deviceId: _deviceId,
+          vaultKey: _vaultKey,
+          fields: entry.fields,
+          clock: state.clock,
+          nowMs: now,
+          markPresent: true,
+        );
+        state = VaultDocState(doc: result.doc, clock: result.clock);
+        deltas.addAll(result.deltas);
+      }
+      await _store.save(state);
+      await _enqueue(deltas);
+    });
     _onChanged?.call();
   }
 
