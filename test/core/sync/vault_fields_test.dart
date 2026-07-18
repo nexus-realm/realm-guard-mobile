@@ -129,4 +129,32 @@ void main() {
       );
     });
   });
+
+  group('VaultFieldMap — clearNulls (mise à jour)', () {
+    test('émet NullValue pour les optionnels null au lieu de les omettre', () {
+      final fields = VaultFieldMap.ofCredential(_credential(), clearNulls: true);
+      expect(fields[VaultFields.credentialUsername], const NullValue());
+      expect(fields[VaultFields.credentialPassword], const NullValue());
+      expect(fields[VaultFields.credentialProfileId], const NullValue());
+    });
+
+    test('FK profil dissociée (profileSyncId null) ⇒ NullValue', () {
+      final fields = VaultFieldMap.ofTotp(
+        _totp(account: 'x'),
+        clearNulls: true,
+      );
+      // account fourni ⇒ valeur ; profil absent ⇒ effacement explicite.
+      expect(fields[VaultFields.totpAccount], const TextValue('x'));
+      expect(fields[VaultFields.totpProfileId], const NullValue());
+    });
+
+    test('valeurs non-null inchangées par clearNulls', () {
+      final fields = VaultFieldMap.ofProfile(
+        _profile(color: 42, note: 'n'),
+        clearNulls: true,
+      );
+      expect(fields[VaultFields.profileColor], const IntValue(42));
+      expect(fields[VaultFields.profileNote], const TextValue('n'));
+    });
+  });
 }

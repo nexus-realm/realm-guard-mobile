@@ -5,6 +5,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../database/app_database.dart';
 import '../exceptions/vault_unlock_exception.dart';
+import '../sync/crdt_device_id_store.dart';
+import '../sync/crdt_ffi.dart';
+import '../sync/vault_crdt.dart';
+import '../sync/vault_doc_store.dart';
+import '../sync/vault_seed.dart';
 import 'biometric_storage_service.dart';
 import 'key_derivator.dart';
 import 'salt_manager.dart';
@@ -50,11 +55,17 @@ class VaultService {
     VaultKeyCrypto? vaultKeyCrypto,
     WrappedVaultKeyStore? wrappedKeyStore,
     BiometricStorageService? biometricService,
+    CrdtFfi? crdtFfi,
+    CrdtDeviceIdStore? crdtDeviceIdStore,
   }) : _vaultKeyCrypto = vaultKeyCrypto ?? const FrbVaultKeyCrypto(),
        _wrappedKeyStore =
            wrappedKeyStore ??
            const SecureWrappedVaultKeyStore(FlutterSecureStorage()),
        _biometricService = biometricService ?? BiometricStorageService(),
+       _crdtFfi = crdtFfi ?? const FrbCrdtFfi(),
+       _crdtDeviceIdStore =
+           crdtDeviceIdStore ??
+           const SecureCrdtDeviceIdStore(FlutterSecureStorage()),
        _migrator = VaultMigrator(
          vaultKeyCrypto ?? const FrbVaultKeyCrypto(),
          wrappedKeyStore ??
@@ -68,6 +79,11 @@ class VaultService {
   final WrappedVaultKeyStore _wrappedKeyStore;
   final BiometricStorageService _biometricService;
   final VaultMigrator _migrator;
+  final CrdtFfi _crdtFfi;
+  final CrdtDeviceIdStore _crdtDeviceIdStore;
+  // Session CRDT de la session courante (write-through de la synchro). Construite
+  // paresseusement à la première écriture, remise à zéro à la fermeture.
+  VaultCrdt? _vaultCrdt;
 
   /// Ouverture initiale ou manuelle avec le mot de passe maître. Migre le coffre
   /// vers le modèle VaultKey au premier déverrouillage (cf. [VaultMigrator]).
@@ -296,7 +312,58 @@ class VaultService {
     final db = _database;
     _database = null;
     _currentKey = null;
+    _vaultCrdt = null;
     await db?.close();
+  }
+
+  /// Session CRDT de la session courante (write-through de la synchronisation),
+  /// construite **paresseusement** au premier accès et mise en cache. Sème le doc
+  /// depuis les lignes existantes s'il n'existe pas encore (migration v1 → doc).
+  ///
+  /// **Best-effort et non fatal** : le doc CRDT est un artefact *fantôme* (les
+  /// lectures restent servies par drift). Tout échec — y compris un coffre
+  /// verrouillé — renvoie `null` sans perturber le coffre ; on réessaie à la
+  /// prochaine écriture / au prochain déverrouillage.
+  Future<VaultCrdt?> ensureCrdtSession() async {
+    if (_vaultCrdt != null) return _vaultCrdt;
+    final db = _database;
+    final key = _currentKey;
+    if (db == null || key == null) return null;
+    try {
+      final store = DriftVaultDocStore(db);
+      final crdt = VaultCrdt(
+        ffi: _crdtFfi,
+        store: store,
+        vaultKey: Uint8List.fromList(key),
+        deviceId: await _crdtDeviceIdStore.getOrCreate(),
+      );
+      await _seedCrdtIfNeeded(db, store, crdt);
+      _vaultCrdt = crdt;
+      return crdt;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Sème le doc CRDT depuis les lignes drift existantes, une seule fois (si le
+  /// doc n'existe pas encore et que le coffre n'est pas vide).
+  Future<void> _seedCrdtIfNeeded(
+    AppDatabase db,
+    VaultDocStore store,
+    VaultCrdt crdt,
+  ) async {
+    if (await store.load() != null) return;
+    final profiles = await db.select(db.profiles).get();
+    final credentials = await db.select(db.credentials).get();
+    final totps = await db.select(db.totps).get();
+    if (profiles.isEmpty && credentials.isEmpty && totps.isEmpty) return;
+    await crdt.seed(
+      buildSeedEntries(
+        profiles: profiles,
+        credentials: credentials,
+        totps: totps,
+      ),
+    );
   }
 
   /// Verrouille activement le coffre. Fermeture best-effort non bloquante :

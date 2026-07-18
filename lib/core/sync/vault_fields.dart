@@ -62,17 +62,23 @@ abstract final class VaultFields {
 }
 
 /// Projection **ligne drift → carte de champs CRDT** (chiffrée ensuite champ par
-/// champ). Les optionnels `null` sont **omis** — LWW n'écrase pas ce qui n'est
-/// pas émis ; un effacement explicite passe par [NullValue], décidé par
-/// l'appelant (chemin d'écriture différentiel, P3.3c). Les emails / usernames /
-/// numéros / champs perso voyagent tels quels (chaînes JSON déjà stockées).
+/// champ). Les emails / usernames / numéros / champs perso voyagent tels quels
+/// (chaînes JSON déjà stockées).
 ///
-/// Les FK profil voyagent en **UUID** (le `syncId` du profil référencé),
-/// résolu depuis la PK locale par l'appelant et passé via `profileSyncId` ;
-/// `null` ⇒ champ omis (profil non associé).
+/// **[clearNulls]** gouverne le sort des optionnels `null` :
+/// - `false` (création) : le champ est **omis** — LWW n'écrase pas ce qui n'est
+///   pas émis, donc rien à effacer sur une entrée neuve.
+/// - `true` (mise à jour) : le champ est émis en **[NullValue]** — un effacement
+///   explicite, pour propager qu'un champ vidé le reste sur les autres appareils.
+///
+/// Les FK profil voyagent en **UUID** (le `syncId` du profil référencé), résolu
+/// depuis la PK locale par l'appelant et passé via `profileSyncId`.
 abstract final class VaultFieldMap {
   /// Champs d'un [Profile].
-  static Map<int, FieldValue> ofProfile(Profile profile) {
+  static Map<int, FieldValue> ofProfile(
+    Profile profile, {
+    bool clearNulls = false,
+  }) {
     final fields = <int, FieldValue>{
       VaultFields.kind: const IntValue(0),
       VaultFields.profileName: TextValue(profile.name),
@@ -83,10 +89,8 @@ abstract final class VaultFieldMap {
         profile.createdAt.millisecondsSinceEpoch,
       ),
     };
-    final color = profile.color;
-    if (color != null) fields[VaultFields.profileColor] = IntValue(color);
-    final note = profile.note;
-    if (note != null) fields[VaultFields.profileNote] = TextValue(note);
+    _optInt(fields, VaultFields.profileColor, profile.color, clearNulls);
+    _optText(fields, VaultFields.profileNote, profile.note, clearNulls);
     return fields;
   }
 
@@ -94,6 +98,7 @@ abstract final class VaultFieldMap {
   static Map<int, FieldValue> ofCredential(
     Credential credential, {
     Uint8List? profileSyncId,
+    bool clearNulls = false,
   }) {
     final fields = <int, FieldValue>{
       VaultFields.kind: const IntValue(1),
@@ -104,26 +109,20 @@ abstract final class VaultFieldMap {
         credential.createdAt.millisecondsSinceEpoch,
       ),
     };
-    final username = credential.username;
-    if (username != null) {
-      fields[VaultFields.credentialUsername] = TextValue(username);
-    }
-    final password = credential.password;
-    if (password != null) {
-      fields[VaultFields.credentialPassword] = TextValue(password);
-    }
-    final uri = credential.uri;
-    if (uri != null) fields[VaultFields.credentialUri] = TextValue(uri);
-    final notes = credential.notes;
-    if (notes != null) fields[VaultFields.credentialNotes] = TextValue(notes);
-    if (profileSyncId != null) {
-      fields[VaultFields.credentialProfileId] = UuidValue(profileSyncId);
-    }
+    _optText(fields, VaultFields.credentialUsername, credential.username, clearNulls);
+    _optText(fields, VaultFields.credentialPassword, credential.password, clearNulls);
+    _optText(fields, VaultFields.credentialUri, credential.uri, clearNulls);
+    _optText(fields, VaultFields.credentialNotes, credential.notes, clearNulls);
+    _optUuid(fields, VaultFields.credentialProfileId, profileSyncId, clearNulls);
     return fields;
   }
 
   /// Champs d'un [Totp]. `profileSyncId` = `syncId` du profil associé.
-  static Map<int, FieldValue> ofTotp(Totp totp, {Uint8List? profileSyncId}) {
+  static Map<int, FieldValue> ofTotp(
+    Totp totp, {
+    Uint8List? profileSyncId,
+    bool clearNulls = false,
+  }) {
     final fields = <int, FieldValue>{
       VaultFields.kind: const IntValue(2),
       VaultFields.totpLabel: TextValue(totp.label),
@@ -134,11 +133,47 @@ abstract final class VaultFieldMap {
       VaultFields.totpFavorite: BoolValue(totp.favorite),
       VaultFields.totpCreatedAt: IntValue(totp.createdAt.millisecondsSinceEpoch),
     };
-    final account = totp.account;
-    if (account != null) fields[VaultFields.totpAccount] = TextValue(account);
-    if (profileSyncId != null) {
-      fields[VaultFields.totpProfileId] = UuidValue(profileSyncId);
-    }
+    _optText(fields, VaultFields.totpAccount, totp.account, clearNulls);
+    _optUuid(fields, VaultFields.totpProfileId, profileSyncId, clearNulls);
     return fields;
+  }
+
+  static void _optText(
+    Map<int, FieldValue> fields,
+    int id,
+    String? value,
+    bool clearNulls,
+  ) {
+    if (value != null) {
+      fields[id] = TextValue(value);
+    } else if (clearNulls) {
+      fields[id] = const NullValue();
+    }
+  }
+
+  static void _optInt(
+    Map<int, FieldValue> fields,
+    int id,
+    int? value,
+    bool clearNulls,
+  ) {
+    if (value != null) {
+      fields[id] = IntValue(value);
+    } else if (clearNulls) {
+      fields[id] = const NullValue();
+    }
+  }
+
+  static void _optUuid(
+    Map<int, FieldValue> fields,
+    int id,
+    Uint8List? value,
+    bool clearNulls,
+  ) {
+    if (value != null) {
+      fields[id] = UuidValue(value);
+    } else if (clearNulls) {
+      fields[id] = const NullValue();
+    }
   }
 }

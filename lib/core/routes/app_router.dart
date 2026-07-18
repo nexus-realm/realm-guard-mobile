@@ -112,6 +112,12 @@ final PairingService _pairingService = PairingService(
   config: const ServerConfig.dev(),
 );
 
+/// Un `VaultRepository` câblé sur la session CRDT (write-through de la synchro).
+/// La session est résolue paresseusement à la première écriture ; les repos en
+/// lecture seule (accueil, autofill-fill) n'en ont pas besoin.
+VaultRepository _vaultRepository() =>
+    VaultRepository(_vaultService.db, crdtSession: _vaultService.ensureCrdtSession);
+
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.startup,
   redirect: (context, state) => vaultRouteGuard(
@@ -178,13 +184,13 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.addProfile,
       name: 'addProfile',
       builder: (context, state) =>
-          AddProfilePage(repository: VaultRepository(_vaultService.db)),
+          AddProfilePage(repository: _vaultRepository()),
     ),
     GoRoute(
       path: AppRoutes.addCredential,
       name: 'addCredential',
       builder: (context, state) =>
-          AddCredentialPage(repository: VaultRepository(_vaultService.db)),
+          AddCredentialPage(repository: _vaultRepository()),
     ),
     GoRoute(
       path: '${AppRoutes.credentialDetail}/:id',
@@ -192,7 +198,7 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final id = int.parse(state.pathParameters['id']!);
         return CredentialDetailPage(
-          repository: VaultRepository(_vaultService.db),
+          repository: _vaultRepository(),
           credentialId: id,
         );
       },
@@ -201,7 +207,7 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.profiles,
       name: 'profiles',
       builder: (context, state) =>
-          ProfilesPage(repository: VaultRepository(_vaultService.db)),
+          ProfilesPage(repository: _vaultRepository()),
     ),
     GoRoute(
       path: '${AppRoutes.profileDetail}/:id',
@@ -209,7 +215,7 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final id = int.parse(state.pathParameters['id']!);
         return ProfileDetailPage(
-          repository: VaultRepository(_vaultService.db),
+          repository: _vaultRepository(),
           profileId: id,
           featureFlagsController: featureFlagsController,
         );
@@ -219,7 +225,7 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.addTotp,
       name: 'addTotp',
       builder: (context, state) =>
-          AddTotpPage(repository: VaultRepository(_vaultService.db)),
+          AddTotpPage(repository: _vaultRepository()),
     ),
     GoRoute(
       path: '${AppRoutes.totpDetail}/:id',
@@ -227,7 +233,7 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final id = int.parse(state.pathParameters['id']!);
         return TotpDetailPage(
-          repository: VaultRepository(_vaultService.db),
+          repository: _vaultRepository(),
           totpId: id,
         );
       },
