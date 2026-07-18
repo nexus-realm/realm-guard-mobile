@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'crdt_ffi.dart';
 import 'field_value.dart';
+import 'pending_delta_store.dart';
 import 'vault_doc_store.dart';
 import 'vault_projection.dart';
 
@@ -23,6 +24,7 @@ class SeedEntry {
 class VaultCrdt {
   final CrdtFfi _ffi;
   final VaultDocStore _store;
+  final PendingDeltaStore _pending;
   final VaultDocWriter _writer;
   final Uint8List _vaultKey;
   final Uint8List _deviceId;
@@ -31,11 +33,13 @@ class VaultCrdt {
   VaultCrdt({
     required CrdtFfi ffi,
     required VaultDocStore store,
+    required PendingDeltaStore pending,
     required Uint8List vaultKey,
     required Uint8List deviceId,
     DateTime Function() now = DateTime.now,
   }) : _ffi = ffi,
        _store = store,
+       _pending = pending,
        _writer = VaultDocWriter(ffi),
        _vaultKey = vaultKey,
        _deviceId = deviceId,
@@ -59,7 +63,9 @@ class VaultCrdt {
       nowMs: _nowMs(),
       markPresent: isNew,
     );
-    await _store.save(VaultDocState(doc: result.doc, clock: result.clock));
+    // Curseur préservé : une écriture locale ne change pas la progression de tirage.
+    await _store.save(state.copyWith(doc: result.doc, clock: result.clock));
+    await _enqueue(result.deltas);
     return result.deltas;
   }
 
@@ -69,8 +75,9 @@ class VaultCrdt {
     final state = await _store.load();
     if (state == null) return const [];
     final mutation = _ffi.removeEntry(state.doc, entryId);
-    // La suppression n'émet pas d'HLC de champ : l'horloge est conservée.
-    await _store.save(VaultDocState(doc: mutation.doc, clock: state.clock));
+    // La suppression n'émet pas d'HLC de champ : horloge et curseur conservés.
+    await _store.save(state.copyWith(doc: mutation.doc));
+    await _enqueue([mutation.delta]);
     return [mutation.delta];
   }
 
@@ -80,6 +87,7 @@ class VaultCrdt {
   Future<void> seed(List<SeedEntry> entries) async {
     var state = _empty();
     final now = _nowMs();
+    final deltas = <Uint8List>[];
     for (final entry in entries) {
       final result = _writer.putFields(
         doc: state.doc,
@@ -92,8 +100,16 @@ class VaultCrdt {
         markPresent: true,
       );
       state = VaultDocState(doc: result.doc, clock: result.clock);
+      deltas.addAll(result.deltas);
     }
     await _store.save(state);
+    await _enqueue(deltas);
+  }
+
+  Future<void> _enqueue(List<Uint8List> deltas) async {
+    for (final delta in deltas) {
+      await _pending.enqueue(delta);
+    }
   }
 
   Future<VaultDocState> _loadOrEmpty() async => await _store.load() ?? _empty();

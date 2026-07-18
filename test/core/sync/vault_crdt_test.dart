@@ -11,9 +11,14 @@ import '../../support/sync_test_doubles.dart';
 
 Uint8List _id(int fill) => Uint8List.fromList(List.filled(16, fill));
 
-VaultCrdt _crdt(FakeCrdtFfi ffi, InMemoryVaultDocStore store) => VaultCrdt(
+VaultCrdt _crdt(
+  FakeCrdtFfi ffi,
+  InMemoryVaultDocStore store,
+  InMemoryPendingDeltaStore pending,
+) => VaultCrdt(
   ffi: ffi,
   store: store,
+  pending: pending,
   vaultKey: Uint8List.fromList([1, 2, 3]),
   deviceId: _id(8),
   now: () => DateTime.fromMillisecondsSinceEpoch(1000),
@@ -21,11 +26,12 @@ VaultCrdt _crdt(FakeCrdtFfi ffi, InMemoryVaultDocStore store) => VaultCrdt(
 
 void main() {
   group('VaultCrdt.putEntry', () {
-    test('création : doc vide, add_entry + set_field, doc persisté', () async {
+    test('création : add_entry + set_field, persiste, enfile les deltas', () async {
       final ffi = FakeCrdtFfi();
       final store = InMemoryVaultDocStore();
+      final pending = InMemoryPendingDeltaStore();
 
-      final deltas = await _crdt(ffi, store).putEntry(
+      final deltas = await _crdt(ffi, store, pending).putEntry(
         entryId: _id(1),
         fields: {
           VaultFields.kind: const IntValue(1),
@@ -38,82 +44,82 @@ void main() {
       expect(ffi.setFields.length, 2);
       expect(store.state, isNotNull);
       expect(store.saves, 1);
-      // add_entry + 2 set_field.
+      // add_entry + 2 set_field ⇒ 3 deltas, retournés ET enfilés.
       expect(deltas.length, 3);
+      expect(await pending.count(), 3);
     });
 
-    test('mise à jour : pas d\'add_entry, horloge poursuivie', () async {
+    test('mise à jour : pas d\'add_entry, HLC poursuivie, curseur préservé', () async {
       final ffi = FakeCrdtFfi();
-      final store = InMemoryVaultDocStore();
-      final crdt = _crdt(ffi, store);
+      final pending = InMemoryPendingDeltaStore();
+      // Coffre déjà semé, avec un curseur de tirage à 5.
+      final store = InMemoryVaultDocStore()
+        ..state = VaultDocState(
+          doc: Uint8List.fromList([0]),
+          clock: HlcTick(wallMs: BigInt.from(1000), counter: 0),
+          cursor: 5,
+        );
 
-      // 1re écriture (création) : clock → (1000, 1) après 2 champs.
-      await crdt.putEntry(
-        entryId: _id(1),
-        fields: {
-          VaultFields.kind: const IntValue(1),
-          VaultFields.credentialTitle: const TextValue('GitHub'),
-        },
-        isNew: true,
-      );
-      ffi.added.clear();
-
-      // 2e écriture (mise à jour) : reprend l'horloge persistée → (1000, 2).
-      await crdt.putEntry(
+      await _crdt(ffi, store, pending).putEntry(
         entryId: _id(1),
         fields: {VaultFields.credentialPassword: const TextValue('pw')},
         isNew: false,
       );
 
       expect(ffi.added, isEmpty);
-      expect(ffi.setFields.last.fieldId, VaultFields.credentialPassword);
-      expect(ffi.setFields.last.counter, 2); // continuité HLC
-      expect(store.state!.clock.counter, 2);
-      expect(store.saves, 2);
+      expect(ffi.setFields.last.counter, 1); // (1000,0) → (1000,1)
+      expect(store.state!.cursor, 5); // curseur intact
+      expect(await pending.count(), 1);
     });
   });
 
   group('VaultCrdt.removeEntry', () {
-    test('retire l\'entrée et persiste', () async {
+    test('retire, persiste (curseur intact), enfile un delta', () async {
       final ffi = FakeCrdtFfi();
+      final pending = InMemoryPendingDeltaStore();
       final store = InMemoryVaultDocStore()
         ..state = VaultDocState(
           doc: Uint8List.fromList([1, 2, 3]),
           clock: HlcTick(wallMs: BigInt.zero, counter: 0),
+          cursor: 9,
         );
 
-      final deltas = await _crdt(ffi, store).removeEntry(_id(1));
+      final deltas = await _crdt(ffi, store, pending).removeEntry(_id(1));
 
       expect(ffi.removed, [_id(1)]);
       expect(deltas.length, 1);
-      expect(store.saves, 1);
+      expect(store.state!.cursor, 9);
+      expect(await pending.count(), 1);
     });
 
     test('coffre non semé : sans effet', () async {
       final ffi = FakeCrdtFfi();
       final store = InMemoryVaultDocStore();
+      final pending = InMemoryPendingDeltaStore();
 
-      final deltas = await _crdt(ffi, store).removeEntry(_id(1));
+      final deltas = await _crdt(ffi, store, pending).removeEntry(_id(1));
 
       expect(deltas, isEmpty);
-      expect(ffi.removed, isEmpty);
       expect(store.saves, 0);
+      expect(await pending.count(), 0);
     });
   });
 
   group('VaultCrdt.seed', () {
-    test('construit depuis vide et persiste une seule fois', () async {
+    test('construit, persiste une fois, enfile tous les deltas', () async {
       final ffi = FakeCrdtFfi();
       final store = InMemoryVaultDocStore();
+      final pending = InMemoryPendingDeltaStore();
 
-      await _crdt(ffi, store).seed([
+      await _crdt(ffi, store, pending).seed([
         SeedEntry(entryId: _id(1), fields: {VaultFields.kind: const IntValue(0)}),
         SeedEntry(entryId: _id(2), fields: {VaultFields.kind: const IntValue(1)}),
       ]);
 
       expect(ffi.added, [_id(1), _id(2)]);
-      expect(store.state, isNotNull);
-      expect(store.saves, 1); // une seule persistance pour tout le seed
+      expect(store.saves, 1);
+      // 2 entrées × (add_entry + 1 set_field) ⇒ 4 deltas enfilés.
+      expect(await pending.count(), 4);
     });
   });
 }

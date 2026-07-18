@@ -16,6 +16,11 @@ class CrdtDocs extends Table {
   IntColumn get hlcWall => integer().withDefault(const Constant(0))();
   IntColumn get hlcCounter => integer().withDefault(const Constant(0))();
 
+  /// Curseur de synchronisation : plus grand `seq` serveur déjà appliqué au doc.
+  /// Le tirage repart de là. Le re-merge étant idempotent, un curseur en retard
+  /// est sans danger (au pire, quelques deltas retirés à nouveau).
+  IntColumn get cursor => integer().withDefault(const Constant(0))();
+
   @override
   Set<Column> get primaryKey => {id};
 }

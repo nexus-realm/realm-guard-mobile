@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:realmguard/core/sync/crdt_ffi.dart';
+import 'package:realmguard/core/sync/pending_delta_store.dart';
 import 'package:realmguard/core/sync/vault_doc_store.dart';
 
 /// Un appel enregistré à `setField`.
@@ -118,4 +119,26 @@ class InMemoryVaultDocStore implements VaultDocStore {
     state = newState;
     saves++;
   }
+}
+
+/// File de deltas en mémoire (FIFO), pour tester l'enfilement sans drift.
+class InMemoryPendingDeltaStore implements PendingDeltaStore {
+  final List<PendingDelta> deltas = [];
+  int _nextId = 1;
+
+  @override
+  Future<void> enqueue(Uint8List payload) async {
+    deltas.add(PendingDelta(id: _nextId++, payload: payload));
+  }
+
+  @override
+  Future<List<PendingDelta>> peek(int limit) async =>
+      deltas.take(limit).toList(growable: false);
+
+  @override
+  Future<void> ack(List<int> ids) async =>
+      deltas.removeWhere((d) => ids.contains(d.id));
+
+  @override
+  Future<int> count() async => deltas.length;
 }

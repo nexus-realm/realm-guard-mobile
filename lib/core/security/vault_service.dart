@@ -7,6 +7,7 @@ import '../database/app_database.dart';
 import '../exceptions/vault_unlock_exception.dart';
 import '../sync/crdt_device_id_store.dart';
 import '../sync/crdt_ffi.dart';
+import '../sync/pending_delta_store.dart';
 import '../sync/vault_crdt.dart';
 import '../sync/vault_doc_store.dart';
 import '../sync/vault_seed.dart';
@@ -334,6 +335,7 @@ class VaultService {
       final crdt = VaultCrdt(
         ffi: _crdtFfi,
         store: store,
+        pending: DriftPendingDeltaStore(db),
         vaultKey: Uint8List.fromList(key),
         deviceId: await _crdtDeviceIdStore.getOrCreate(),
       );

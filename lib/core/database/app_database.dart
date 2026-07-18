@@ -7,19 +7,20 @@ import 'package:path_provider/path_provider.dart';
 
 import 'models/crdt_docs.dart';
 import 'models/credentials.dart';
+import 'models/pending_deltas.dart';
 import 'models/profiles.dart';
 import 'models/sync_id.dart';
 import 'models/totps.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Profiles, Credentials, Totps, CrdtDocs])
+@DriftDatabase(tables: [Profiles, Credentials, Totps, CrdtDocs, PendingDeltas])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(List<int> encryptionKeyBytes)
     : super(_openConnection(encryptionKeyBytes));
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -87,6 +88,11 @@ class AppDatabase extends _$AppDatabase {
       if (from < 6) {
         // Synchronisation CRDT : doc du coffre + état d'horloge HLC (ligne unique).
         await migrator.createTable(crdtDocs);
+      }
+      if (from < 7) {
+        // File de deltas en attente de push + curseur de tirage.
+        await migrator.createTable(pendingDeltas);
+        await migrator.addColumn(crdtDocs, crdtDocs.cursor);
       }
     },
   );

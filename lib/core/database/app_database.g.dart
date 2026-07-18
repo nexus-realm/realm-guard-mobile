@@ -2041,8 +2041,18 @@ class $CrdtDocsTable extends CrdtDocs with TableInfo<$CrdtDocsTable, CrdtDoc> {
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _cursorMeta = const VerificationMeta('cursor');
   @override
-  List<GeneratedColumn> get $columns => [id, doc, hlcWall, hlcCounter];
+  late final GeneratedColumn<int> cursor = GeneratedColumn<int>(
+    'cursor',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, doc, hlcWall, hlcCounter, cursor];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2078,6 +2088,12 @@ class $CrdtDocsTable extends CrdtDocs with TableInfo<$CrdtDocsTable, CrdtDoc> {
         hlcCounter.isAcceptableOrUnknown(data['hlc_counter']!, _hlcCounterMeta),
       );
     }
+    if (data.containsKey('cursor')) {
+      context.handle(
+        _cursorMeta,
+        cursor.isAcceptableOrUnknown(data['cursor']!, _cursorMeta),
+      );
+    }
     return context;
   }
 
@@ -2103,6 +2119,10 @@ class $CrdtDocsTable extends CrdtDocs with TableInfo<$CrdtDocsTable, CrdtDoc> {
         DriftSqlType.int,
         data['${effectivePrefix}hlc_counter'],
       )!,
+      cursor: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cursor'],
+      )!,
     );
   }
 
@@ -2123,11 +2143,17 @@ class CrdtDoc extends DataClass implements Insertable<CrdtDoc> {
   /// stricte monotonie des écritures à travers les redémarrages.
   final int hlcWall;
   final int hlcCounter;
+
+  /// Curseur de synchronisation : plus grand `seq` serveur déjà appliqué au doc.
+  /// Le tirage repart de là. Le re-merge étant idempotent, un curseur en retard
+  /// est sans danger (au pire, quelques deltas retirés à nouveau).
+  final int cursor;
   const CrdtDoc({
     required this.id,
     required this.doc,
     required this.hlcWall,
     required this.hlcCounter,
+    required this.cursor,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2136,6 +2162,7 @@ class CrdtDoc extends DataClass implements Insertable<CrdtDoc> {
     map['doc'] = Variable<Uint8List>(doc);
     map['hlc_wall'] = Variable<int>(hlcWall);
     map['hlc_counter'] = Variable<int>(hlcCounter);
+    map['cursor'] = Variable<int>(cursor);
     return map;
   }
 
@@ -2145,6 +2172,7 @@ class CrdtDoc extends DataClass implements Insertable<CrdtDoc> {
       doc: Value(doc),
       hlcWall: Value(hlcWall),
       hlcCounter: Value(hlcCounter),
+      cursor: Value(cursor),
     );
   }
 
@@ -2158,6 +2186,7 @@ class CrdtDoc extends DataClass implements Insertable<CrdtDoc> {
       doc: serializer.fromJson<Uint8List>(json['doc']),
       hlcWall: serializer.fromJson<int>(json['hlcWall']),
       hlcCounter: serializer.fromJson<int>(json['hlcCounter']),
+      cursor: serializer.fromJson<int>(json['cursor']),
     );
   }
   @override
@@ -2168,16 +2197,23 @@ class CrdtDoc extends DataClass implements Insertable<CrdtDoc> {
       'doc': serializer.toJson<Uint8List>(doc),
       'hlcWall': serializer.toJson<int>(hlcWall),
       'hlcCounter': serializer.toJson<int>(hlcCounter),
+      'cursor': serializer.toJson<int>(cursor),
     };
   }
 
-  CrdtDoc copyWith({int? id, Uint8List? doc, int? hlcWall, int? hlcCounter}) =>
-      CrdtDoc(
-        id: id ?? this.id,
-        doc: doc ?? this.doc,
-        hlcWall: hlcWall ?? this.hlcWall,
-        hlcCounter: hlcCounter ?? this.hlcCounter,
-      );
+  CrdtDoc copyWith({
+    int? id,
+    Uint8List? doc,
+    int? hlcWall,
+    int? hlcCounter,
+    int? cursor,
+  }) => CrdtDoc(
+    id: id ?? this.id,
+    doc: doc ?? this.doc,
+    hlcWall: hlcWall ?? this.hlcWall,
+    hlcCounter: hlcCounter ?? this.hlcCounter,
+    cursor: cursor ?? this.cursor,
+  );
   CrdtDoc copyWithCompanion(CrdtDocsCompanion data) {
     return CrdtDoc(
       id: data.id.present ? data.id.value : this.id,
@@ -2186,6 +2222,7 @@ class CrdtDoc extends DataClass implements Insertable<CrdtDoc> {
       hlcCounter: data.hlcCounter.present
           ? data.hlcCounter.value
           : this.hlcCounter,
+      cursor: data.cursor.present ? data.cursor.value : this.cursor,
     );
   }
 
@@ -2195,14 +2232,20 @@ class CrdtDoc extends DataClass implements Insertable<CrdtDoc> {
           ..write('id: $id, ')
           ..write('doc: $doc, ')
           ..write('hlcWall: $hlcWall, ')
-          ..write('hlcCounter: $hlcCounter')
+          ..write('hlcCounter: $hlcCounter, ')
+          ..write('cursor: $cursor')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, $driftBlobEquality.hash(doc), hlcWall, hlcCounter);
+  int get hashCode => Object.hash(
+    id,
+    $driftBlobEquality.hash(doc),
+    hlcWall,
+    hlcCounter,
+    cursor,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2210,7 +2253,8 @@ class CrdtDoc extends DataClass implements Insertable<CrdtDoc> {
           other.id == this.id &&
           $driftBlobEquality.equals(other.doc, this.doc) &&
           other.hlcWall == this.hlcWall &&
-          other.hlcCounter == this.hlcCounter);
+          other.hlcCounter == this.hlcCounter &&
+          other.cursor == this.cursor);
 }
 
 class CrdtDocsCompanion extends UpdateCompanion<CrdtDoc> {
@@ -2218,29 +2262,34 @@ class CrdtDocsCompanion extends UpdateCompanion<CrdtDoc> {
   final Value<Uint8List> doc;
   final Value<int> hlcWall;
   final Value<int> hlcCounter;
+  final Value<int> cursor;
   const CrdtDocsCompanion({
     this.id = const Value.absent(),
     this.doc = const Value.absent(),
     this.hlcWall = const Value.absent(),
     this.hlcCounter = const Value.absent(),
+    this.cursor = const Value.absent(),
   });
   CrdtDocsCompanion.insert({
     this.id = const Value.absent(),
     required Uint8List doc,
     this.hlcWall = const Value.absent(),
     this.hlcCounter = const Value.absent(),
+    this.cursor = const Value.absent(),
   }) : doc = Value(doc);
   static Insertable<CrdtDoc> custom({
     Expression<int>? id,
     Expression<Uint8List>? doc,
     Expression<int>? hlcWall,
     Expression<int>? hlcCounter,
+    Expression<int>? cursor,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (doc != null) 'doc': doc,
       if (hlcWall != null) 'hlc_wall': hlcWall,
       if (hlcCounter != null) 'hlc_counter': hlcCounter,
+      if (cursor != null) 'cursor': cursor,
     });
   }
 
@@ -2249,12 +2298,14 @@ class CrdtDocsCompanion extends UpdateCompanion<CrdtDoc> {
     Value<Uint8List>? doc,
     Value<int>? hlcWall,
     Value<int>? hlcCounter,
+    Value<int>? cursor,
   }) {
     return CrdtDocsCompanion(
       id: id ?? this.id,
       doc: doc ?? this.doc,
       hlcWall: hlcWall ?? this.hlcWall,
       hlcCounter: hlcCounter ?? this.hlcCounter,
+      cursor: cursor ?? this.cursor,
     );
   }
 
@@ -2273,6 +2324,9 @@ class CrdtDocsCompanion extends UpdateCompanion<CrdtDoc> {
     if (hlcCounter.present) {
       map['hlc_counter'] = Variable<int>(hlcCounter.value);
     }
+    if (cursor.present) {
+      map['cursor'] = Variable<int>(cursor.value);
+    }
     return map;
   }
 
@@ -2282,7 +2336,204 @@ class CrdtDocsCompanion extends UpdateCompanion<CrdtDoc> {
           ..write('id: $id, ')
           ..write('doc: $doc, ')
           ..write('hlcWall: $hlcWall, ')
-          ..write('hlcCounter: $hlcCounter')
+          ..write('hlcCounter: $hlcCounter, ')
+          ..write('cursor: $cursor')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PendingDeltasTable extends PendingDeltas
+    with TableInfo<$PendingDeltasTable, PendingDeltaRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PendingDeltasTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _payloadMeta = const VerificationMeta(
+    'payload',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> payload = GeneratedColumn<Uint8List>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, payload];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pending_deltas';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PendingDeltaRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('payload')) {
+      context.handle(
+        _payloadMeta,
+        payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PendingDeltaRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PendingDeltaRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      payload: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}payload'],
+      )!,
+    );
+  }
+
+  @override
+  $PendingDeltasTable createAlias(String alias) {
+    return $PendingDeltasTable(attachedDatabase, alias);
+  }
+}
+
+class PendingDeltaRow extends DataClass implements Insertable<PendingDeltaRow> {
+  final int id;
+
+  /// Delta encodé (opaque), tel que produit par le write-through.
+  final Uint8List payload;
+  const PendingDeltaRow({required this.id, required this.payload});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['payload'] = Variable<Uint8List>(payload);
+    return map;
+  }
+
+  PendingDeltasCompanion toCompanion(bool nullToAbsent) {
+    return PendingDeltasCompanion(id: Value(id), payload: Value(payload));
+  }
+
+  factory PendingDeltaRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PendingDeltaRow(
+      id: serializer.fromJson<int>(json['id']),
+      payload: serializer.fromJson<Uint8List>(json['payload']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'payload': serializer.toJson<Uint8List>(payload),
+    };
+  }
+
+  PendingDeltaRow copyWith({int? id, Uint8List? payload}) =>
+      PendingDeltaRow(id: id ?? this.id, payload: payload ?? this.payload);
+  PendingDeltaRow copyWithCompanion(PendingDeltasCompanion data) {
+    return PendingDeltaRow(
+      id: data.id.present ? data.id.value : this.id,
+      payload: data.payload.present ? data.payload.value : this.payload,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PendingDeltaRow(')
+          ..write('id: $id, ')
+          ..write('payload: $payload')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, $driftBlobEquality.hash(payload));
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PendingDeltaRow &&
+          other.id == this.id &&
+          $driftBlobEquality.equals(other.payload, this.payload));
+}
+
+class PendingDeltasCompanion extends UpdateCompanion<PendingDeltaRow> {
+  final Value<int> id;
+  final Value<Uint8List> payload;
+  const PendingDeltasCompanion({
+    this.id = const Value.absent(),
+    this.payload = const Value.absent(),
+  });
+  PendingDeltasCompanion.insert({
+    this.id = const Value.absent(),
+    required Uint8List payload,
+  }) : payload = Value(payload);
+  static Insertable<PendingDeltaRow> custom({
+    Expression<int>? id,
+    Expression<Uint8List>? payload,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (payload != null) 'payload': payload,
+    });
+  }
+
+  PendingDeltasCompanion copyWith({Value<int>? id, Value<Uint8List>? payload}) {
+    return PendingDeltasCompanion(
+      id: id ?? this.id,
+      payload: payload ?? this.payload,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (payload.present) {
+      map['payload'] = Variable<Uint8List>(payload.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PendingDeltasCompanion(')
+          ..write('id: $id, ')
+          ..write('payload: $payload')
           ..write(')'))
         .toString();
   }
@@ -2295,6 +2546,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CredentialsTable credentials = $CredentialsTable(this);
   late final $TotpsTable totps = $TotpsTable(this);
   late final $CrdtDocsTable crdtDocs = $CrdtDocsTable(this);
+  late final $PendingDeltasTable pendingDeltas = $PendingDeltasTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2304,6 +2556,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     credentials,
     totps,
     crdtDocs,
+    pendingDeltas,
   ];
 }
 
@@ -3690,6 +3943,7 @@ typedef $$CrdtDocsTableCreateCompanionBuilder =
       required Uint8List doc,
       Value<int> hlcWall,
       Value<int> hlcCounter,
+      Value<int> cursor,
     });
 typedef $$CrdtDocsTableUpdateCompanionBuilder =
     CrdtDocsCompanion Function({
@@ -3697,6 +3951,7 @@ typedef $$CrdtDocsTableUpdateCompanionBuilder =
       Value<Uint8List> doc,
       Value<int> hlcWall,
       Value<int> hlcCounter,
+      Value<int> cursor,
     });
 
 class $$CrdtDocsTableFilterComposer
@@ -3725,6 +3980,11 @@ class $$CrdtDocsTableFilterComposer
 
   ColumnFilters<int> get hlcCounter => $composableBuilder(
     column: $table.hlcCounter,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cursor => $composableBuilder(
+    column: $table.cursor,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3757,6 +4017,11 @@ class $$CrdtDocsTableOrderingComposer
     column: $table.hlcCounter,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get cursor => $composableBuilder(
+    column: $table.cursor,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CrdtDocsTableAnnotationComposer
@@ -3781,6 +4046,9 @@ class $$CrdtDocsTableAnnotationComposer
     column: $table.hlcCounter,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get cursor =>
+      $composableBuilder(column: $table.cursor, builder: (column) => column);
 }
 
 class $$CrdtDocsTableTableManager
@@ -3815,11 +4083,13 @@ class $$CrdtDocsTableTableManager
                 Value<Uint8List> doc = const Value.absent(),
                 Value<int> hlcWall = const Value.absent(),
                 Value<int> hlcCounter = const Value.absent(),
+                Value<int> cursor = const Value.absent(),
               }) => CrdtDocsCompanion(
                 id: id,
                 doc: doc,
                 hlcWall: hlcWall,
                 hlcCounter: hlcCounter,
+                cursor: cursor,
               ),
           createCompanionCallback:
               ({
@@ -3827,11 +4097,13 @@ class $$CrdtDocsTableTableManager
                 required Uint8List doc,
                 Value<int> hlcWall = const Value.absent(),
                 Value<int> hlcCounter = const Value.absent(),
+                Value<int> cursor = const Value.absent(),
               }) => CrdtDocsCompanion.insert(
                 id: id,
                 doc: doc,
                 hlcWall: hlcWall,
                 hlcCounter: hlcCounter,
+                cursor: cursor,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -3855,6 +4127,134 @@ typedef $$CrdtDocsTableProcessedTableManager =
       CrdtDoc,
       PrefetchHooks Function()
     >;
+typedef $$PendingDeltasTableCreateCompanionBuilder =
+    PendingDeltasCompanion Function({
+      Value<int> id,
+      required Uint8List payload,
+    });
+typedef $$PendingDeltasTableUpdateCompanionBuilder =
+    PendingDeltasCompanion Function({Value<int> id, Value<Uint8List> payload});
+
+class $$PendingDeltasTableFilterComposer
+    extends Composer<_$AppDatabase, $PendingDeltasTable> {
+  $$PendingDeltasTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PendingDeltasTableOrderingComposer
+    extends Composer<_$AppDatabase, $PendingDeltasTable> {
+  $$PendingDeltasTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PendingDeltasTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PendingDeltasTable> {
+  $$PendingDeltasTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => column);
+}
+
+class $$PendingDeltasTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PendingDeltasTable,
+          PendingDeltaRow,
+          $$PendingDeltasTableFilterComposer,
+          $$PendingDeltasTableOrderingComposer,
+          $$PendingDeltasTableAnnotationComposer,
+          $$PendingDeltasTableCreateCompanionBuilder,
+          $$PendingDeltasTableUpdateCompanionBuilder,
+          (
+            PendingDeltaRow,
+            BaseReferences<_$AppDatabase, $PendingDeltasTable, PendingDeltaRow>,
+          ),
+          PendingDeltaRow,
+          PrefetchHooks Function()
+        > {
+  $$PendingDeltasTableTableManager(_$AppDatabase db, $PendingDeltasTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PendingDeltasTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PendingDeltasTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PendingDeltasTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<Uint8List> payload = const Value.absent(),
+              }) => PendingDeltasCompanion(id: id, payload: payload),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required Uint8List payload,
+              }) => PendingDeltasCompanion.insert(id: id, payload: payload),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PendingDeltasTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PendingDeltasTable,
+      PendingDeltaRow,
+      $$PendingDeltasTableFilterComposer,
+      $$PendingDeltasTableOrderingComposer,
+      $$PendingDeltasTableAnnotationComposer,
+      $$PendingDeltasTableCreateCompanionBuilder,
+      $$PendingDeltasTableUpdateCompanionBuilder,
+      (
+        PendingDeltaRow,
+        BaseReferences<_$AppDatabase, $PendingDeltasTable, PendingDeltaRow>,
+      ),
+      PendingDeltaRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3867,4 +4267,6 @@ class $AppDatabaseManager {
       $$TotpsTableTableManager(_db, _db.totps);
   $$CrdtDocsTableTableManager get crdtDocs =>
       $$CrdtDocsTableTableManager(_db, _db.crdtDocs);
+  $$PendingDeltasTableTableManager get pendingDeltas =>
+      $$PendingDeltasTableTableManager(_db, _db.pendingDeltas);
 }
