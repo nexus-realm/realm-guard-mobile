@@ -8,6 +8,12 @@ import '../data/sync_exception.dart';
 import '../data/sync_models.dart';
 import 'sync_api.dart';
 
+/// Un cycle de synchronisation complet (push + pull). Abstrait pour que le
+/// `SyncController` (d-5) se teste sans engine réel.
+abstract interface class SyncRunner {
+  Future<void> sync();
+}
+
 /// Orchestrateur de synchronisation : **pousse** les deltas locaux en attente et
 /// **tire** ceux des autres appareils depuis le curseur, en fusionnant dans le
 /// doc puis en reprojetant en base. Le doc reste la source de vérité ; drift est
@@ -15,7 +21,7 @@ import 'sync_api.dart';
 ///
 /// À déclencher au déverrouillage, au retour au premier plan, et sur *nudge* WS
 /// (d-5). Suppose un appel sérialisé (pas de sync concurrente sur le même coffre).
-class SyncEngine {
+class SyncEngine implements SyncRunner {
   final SyncApi _api;
   final VaultDocStore _store;
   final PendingDeltaStore _pending;
@@ -44,6 +50,7 @@ class SyncEngine {
        _pullLimit = pullLimit;
 
   /// Un cycle complet : push puis pull.
+  @override
   Future<void> sync() async {
     await push();
     await pull();
