@@ -61,6 +61,10 @@ abstract interface class CrdtFfi {
 
   /// Fait avancer l'horloge HLC locale portée par `(wallMs, counter)`.
   HlcTick hlcTick(BigInt lastWallMs, int lastCounter, BigInt nowMs);
+
+  /// Plus grand HLC du doc (tous registres, présents ou tombstonés) ; `(0, 0)`
+  /// si vide. Pour avancer l'horloge locale après un merge distant.
+  HlcTick maxHlc(Uint8List doc);
 }
 
 /// Implémentation réelle : appelle les fonctions FFI générées.
@@ -136,4 +140,7 @@ class FrbCrdtFfi implements CrdtFfi {
   @override
   HlcTick hlcTick(BigInt lastWallMs, int lastCounter, BigInt nowMs) =>
       crdtHlcTick(lastWallMs: lastWallMs, lastCounter: lastCounter, nowMs: nowMs);
+
+  @override
+  HlcTick maxHlc(Uint8List doc) => crdtMaxHlc(doc: doc);
 }

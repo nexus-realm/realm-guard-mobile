@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:realmguard/core/sync/crdt_ffi.dart';
+import 'package:realmguard/core/sync/drift_projector.dart';
 import 'package:realmguard/core/sync/pending_delta_store.dart';
 import 'package:realmguard/core/sync/vault_doc_store.dart';
 
@@ -28,6 +29,10 @@ class FakeCrdtFfi implements CrdtFfi {
   final List<SetFieldCall> setFields = [];
   final List<Uint8List> added = [];
   final List<Uint8List> removed = [];
+  final List<Uint8List> merged = [];
+
+  /// Valeur renvoyée par [maxHlc] (configurable pour l'avancée d'horloge).
+  HlcTick maxHlcValue = HlcTick(wallMs: BigInt.zero, counter: 0);
 
   FakeCrdtFfi({
     this.ids = const [],
@@ -97,13 +102,30 @@ class FakeCrdtFfi implements CrdtFfi {
       ? HlcTick(wallMs: nowMs, counter: 0)
       : HlcTick(wallMs: lastWallMs, counter: lastCounter + 1);
 
+  @override
+  Uint8List merge(Uint8List doc, Uint8List delta) {
+    merged.add(delta);
+    return doc; // merge identité : l'orchestration est ce qu'on teste.
+  }
+
+  @override
+  HlcTick maxHlc(Uint8List doc) => maxHlcValue;
+
   // Non utilisés par les tests.
   @override
   Uint8List newEntryId() => throw UnimplementedError();
   @override
   Uint8List deviceIdFromKey(Uint8List publicKey) => throw UnimplementedError();
+}
+
+/// Reprojecteur qui enregistre ses appels (sans drift).
+class FakeReprojector implements VaultReprojector {
+  final List<Uint8List> reprojected = [];
+
   @override
-  Uint8List merge(Uint8List doc, Uint8List delta) => throw UnimplementedError();
+  Future<void> reproject(Uint8List docBytes, Uint8List vaultKey) async {
+    reprojected.add(docBytes);
+  }
 }
 
 /// Store de doc en mémoire, pour tester le coordinateur sans drift.

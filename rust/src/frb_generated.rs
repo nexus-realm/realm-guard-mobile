@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1716280252;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 757497289;
 
 // Section: executor
 
@@ -299,6 +299,36 @@ fn wire__crate__api__crdt__crdt_hlc_tick_impl(
                     api_last_counter,
                     api_now_ms,
                 ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__crdt__crdt_max_hlc_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "crdt_max_hlc",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_doc = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok = crate::api::crdt::crdt_max_hlc(api_doc)?;
                 Ok(output_ok)
             })())
         },
@@ -1263,13 +1293,13 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        17 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__opaque__opaque_login_finish_impl(port, ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__opaque__opaque_login_start_impl(port, ptr, rust_vec_len, data_len),
-        20 => {
+        18 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__opaque__opaque_login_finish_impl(port, ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__opaque__opaque_login_start_impl(port, ptr, rust_vec_len, data_len),
+        21 => {
             wire__crate__api__opaque__opaque_register_finish_impl(port, ptr, rust_vec_len, data_len)
         }
-        21 => {
+        22 => {
             wire__crate__api__opaque__opaque_register_start_impl(port, ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -1292,33 +1322,34 @@ fn pde_ffi_dispatcher_sync_impl(
         6 => wire__crate__api__crdt__crdt_entry_fields_impl(ptr, rust_vec_len, data_len),
         7 => wire__crate__api__crdt__crdt_entry_ids_impl(ptr, rust_vec_len, data_len),
         8 => wire__crate__api__crdt__crdt_hlc_tick_impl(ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__crdt__crdt_merge_impl(ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__crdt__crdt_new_impl(ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__crdt__crdt_new_entry_id_impl(ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__crdt__crdt_remove_entry_impl(ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__crdt__crdt_set_field_impl(ptr, rust_vec_len, data_len),
-        14 => {
+        9 => wire__crate__api__crdt__crdt_max_hlc_impl(ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__crdt__crdt_merge_impl(ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__crdt__crdt_new_impl(ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__crdt__crdt_new_entry_id_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__crdt__crdt_remove_entry_impl(ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__crdt__crdt_set_field_impl(ptr, rust_vec_len, data_len),
+        15 => {
             wire__crate__api__device_key__device_generate_keypair_impl(ptr, rust_vec_len, data_len)
         }
-        15 => wire__crate__api__device_key__device_sign_challenge_impl(ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__vault_key__generate_vault_key_impl(ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__vault_key__open_vault_key_impl(ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__pairing__pairing_new_device_confirm_round_impl(
+        16 => wire__crate__api__device_key__device_sign_challenge_impl(ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__vault_key__generate_vault_key_impl(ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__vault_key__open_vault_key_impl(ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__pairing__pairing_new_device_confirm_round_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        24 => wire__crate__api__pairing__pairing_new_device_open_impl(ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__pairing__pairing_new_device_start_impl(ptr, rust_vec_len, data_len),
-        26 => {
+        25 => wire__crate__api__pairing__pairing_new_device_open_impl(ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__pairing__pairing_new_device_start_impl(ptr, rust_vec_len, data_len),
+        27 => {
             wire__crate__api__pairing__pairing_source_begin_round_impl(ptr, rust_vec_len, data_len)
         }
-        27 => {
+        28 => {
             wire__crate__api__pairing__pairing_source_seal_round_impl(ptr, rust_vec_len, data_len)
         }
-        28 => wire__crate__api__vault_key__seal_vault_key_impl(ptr, rust_vec_len, data_len),
-        29 => wire__crate__api__vault_key__unwrap_vault_key_impl(ptr, rust_vec_len, data_len),
-        30 => wire__crate__api__vault_key__wrap_vault_key_impl(ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__vault_key__seal_vault_key_impl(ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__vault_key__unwrap_vault_key_impl(ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__vault_key__wrap_vault_key_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }

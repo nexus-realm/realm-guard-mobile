@@ -189,6 +189,23 @@ pub fn crdt_decrypt_field(
     decrypt_entry_bytes(&vault_key, &entry_id, &value).map_err(|e| e.to_string())
 }
 
+/// Plus grand HLC du doc (tous les registres, présents ou tombstonés) →
+/// `(wall_ms, counter)` ; `(0, 0)` si aucun champ n'a été écrit.
+///
+/// Après un merge distant, Dart avance son horloge locale au-delà de cette
+/// valeur (via [`crdt_hlc_tick`] au prochain write) : sinon une écriture locale
+/// estampillée d'un HLC inférieur à une valeur distante déjà fusionnée la
+/// perdrait en LWW.
+#[flutter_rust_bridge::frb(sync)]
+pub fn crdt_max_hlc(doc: Vec<u8>) -> Result<HlcTick, String> {
+    let doc = decode_doc(&doc)?;
+    let hlc = doc.max_hlc().unwrap_or_default();
+    Ok(HlcTick {
+        wall_ms: hlc.wall_ms,
+        counter: hlc.counter,
+    })
+}
+
 /// Fait avancer l'horloge HLC locale : renvoie le prochain `(wall_ms, counter)`
 /// strictement supérieur, à persister par Dart et à passer à [`crdt_set_field`].
 #[flutter_rust_bridge::frb(sync)]

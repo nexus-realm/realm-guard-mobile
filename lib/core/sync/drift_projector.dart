@@ -6,6 +6,12 @@ import 'vault_fields.dart';
 import 'vault_projection.dart';
 import 'vault_row_map.dart';
 
+/// Rend la base locale conforme au doc CRDT (abstrait pour tester l'orchestrateur
+/// de synchro sans drift natif).
+abstract interface class VaultReprojector {
+  Future<void> reproject(Uint8List docBytes, Uint8List vaultKey);
+}
+
 /// Reprojection **doc CRDT → base drift** après un merge distant : la base locale
 /// est rendue conforme au doc (source de vérité de la synchro). Upsert par
 /// `syncId`, résolution des FK profil (UUID→int local), et **suppression** des
@@ -14,12 +20,13 @@ import 'vault_row_map.dart';
 /// ⚠️ **Destructif** : supprime les lignes dont le `syncId` n'est plus dans le
 /// doc. À n'appeler qu'après un merge/tirage réussi (doc autoritaire). Toute
 /// l'opération est **transactionnelle**. Drift-couplé → couvert on-device.
-class DriftProjector {
+class DriftProjector implements VaultReprojector {
   final AppDatabase _db;
   final CrdtFfi _ffi;
 
   DriftProjector(this._db, this._ffi);
 
+  @override
   Future<void> reproject(Uint8List docBytes, Uint8List vaultKey) async {
     final entries = VaultProjection(_ffi).decode(docBytes, vaultKey);
     await _db.transaction(() async {

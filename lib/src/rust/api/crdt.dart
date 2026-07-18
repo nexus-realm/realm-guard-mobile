@@ -103,6 +103,16 @@ Uint8List crdtDecryptField({
   value: value,
 );
 
+/// Plus grand HLC du doc (tous les registres, présents ou tombstonés) →
+/// `(wall_ms, counter)` ; `(0, 0)` si aucun champ n'a été écrit.
+///
+/// Après un merge distant, Dart avance son horloge locale au-delà de cette
+/// valeur (via [`crdt_hlc_tick`] au prochain write) : sinon une écriture locale
+/// estampillée d'un HLC inférieur à une valeur distante déjà fusionnée la
+/// perdrait en LWW.
+HlcTick crdtMaxHlc({required List<int> doc}) =>
+    RustLib.instance.api.crateApiCrdtCrdtMaxHlc(doc: doc);
+
 /// Fait avancer l'horloge HLC locale : renvoie le prochain `(wall_ms, counter)`
 /// strictement supérieur, à persister par Dart et à passer à [`crdt_set_field`].
 HlcTick crdtHlcTick({
