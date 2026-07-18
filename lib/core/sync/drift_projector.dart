@@ -1,0 +1,164 @@
+import 'package:drift/drift.dart';
+
+import '../database/app_database.dart';
+import 'crdt_ffi.dart';
+import 'vault_fields.dart';
+import 'vault_projection.dart';
+import 'vault_row_map.dart';
+
+/// Reprojection **doc CRDT → base drift** après un merge distant : la base locale
+/// est rendue conforme au doc (source de vérité de la synchro). Upsert par
+/// `syncId`, résolution des FK profil (UUID→int local), et **suppression** des
+/// lignes drift absentes du doc (une entrée retirée n'est plus énumérée).
+///
+/// ⚠️ **Destructif** : supprime les lignes dont le `syncId` n'est plus dans le
+/// doc. À n'appeler qu'après un merge/tirage réussi (doc autoritaire). Toute
+/// l'opération est **transactionnelle**. Drift-couplé → couvert on-device.
+class DriftProjector {
+  final AppDatabase _db;
+  final CrdtFfi _ffi;
+
+  DriftProjector(this._db, this._ffi);
+
+  Future<void> reproject(Uint8List docBytes, Uint8List vaultKey) async {
+    final entries = VaultProjection(_ffi).decode(docBytes, vaultKey);
+    await _db.transaction(() async {
+      // 1. Profils d'abord : leurs id locaux servent à résoudre les FK.
+      for (final entry in entries) {
+        if (entry.kind == VaultKind.profile) {
+          await _upsertProfile(entry);
+        }
+      }
+      final profileIds = await _profileIdBySyncId();
+
+      // 2. Credentials + TOTP, FK profil résolue en id local.
+      for (final entry in entries) {
+        switch (entry.kind) {
+          case VaultKind.credential:
+            await _upsertCredential(entry, profileIds);
+          case VaultKind.totp:
+            await _upsertTotp(entry, profileIds);
+          case VaultKind.profile:
+            break;
+        }
+      }
+
+      // 3. Suppressions : lignes dont le syncId n'est plus dans le doc.
+      await _deleteMissing(entries);
+    });
+  }
+
+  int? _resolveProfile(DecodedEntry entry, Map<String, int> profileIds) {
+    final ref = VaultRowMap.profileRef(entry);
+    return ref == null ? null : profileIds[_hex(ref)];
+  }
+
+  Future<void> _upsertProfile(DecodedEntry entry) async {
+    final companion = VaultRowMap.profile(entry);
+    final existing =
+        await (_db.select(_db.profiles)
+              ..where((t) => t.syncId.equals(entry.syncId)))
+            .getSingleOrNull();
+    if (existing == null) {
+      await _db.into(_db.profiles).insert(companion);
+    } else {
+      await (_db.update(_db.profiles)
+            ..where((t) => t.id.equals(existing.id)))
+          .write(companion);
+    }
+  }
+
+  Future<void> _upsertCredential(
+    DecodedEntry entry,
+    Map<String, int> profileIds,
+  ) async {
+    final companion = VaultRowMap.credential(
+      entry,
+      profileId: _resolveProfile(entry, profileIds),
+    );
+    final existing =
+        await (_db.select(_db.credentials)
+              ..where((t) => t.syncId.equals(entry.syncId)))
+            .getSingleOrNull();
+    if (existing == null) {
+      await _db.into(_db.credentials).insert(companion);
+    } else {
+      await (_db.update(_db.credentials)
+            ..where((t) => t.id.equals(existing.id)))
+          .write(companion);
+    }
+  }
+
+  Future<void> _upsertTotp(
+    DecodedEntry entry,
+    Map<String, int> profileIds,
+  ) async {
+    final companion = VaultRowMap.totp(
+      entry,
+      profileId: _resolveProfile(entry, profileIds),
+    );
+    final existing =
+        await (_db.select(_db.totps)
+              ..where((t) => t.syncId.equals(entry.syncId)))
+            .getSingleOrNull();
+    if (existing == null) {
+      await _db.into(_db.totps).insert(companion);
+    } else {
+      await (_db.update(_db.totps)..where((t) => t.id.equals(existing.id)))
+          .write(companion);
+    }
+  }
+
+  Future<Map<String, int>> _profileIdBySyncId() async {
+    final rows = await _db.select(_db.profiles).get();
+    return {
+      for (final row in rows)
+        if (row.syncId != null) _hex(row.syncId!): row.id,
+    };
+  }
+
+  Future<void> _deleteMissing(List<DecodedEntry> entries) async {
+    Set<String> keep(VaultKind kind) => {
+      for (final entry in entries)
+        if (entry.kind == kind) _hex(entry.syncId),
+    };
+
+    await _deleteProfilesExcept(keep(VaultKind.profile));
+    await _deleteCredentialsExcept(keep(VaultKind.credential));
+    await _deleteTotpsExcept(keep(VaultKind.totp));
+  }
+
+  Future<void> _deleteProfilesExcept(Set<String> keep) async {
+    final rows = await _db.select(_db.profiles).get();
+    final ids = _idsToDelete(rows.map((r) => (r.id, r.syncId)), keep);
+    if (ids.isNotEmpty) {
+      await (_db.delete(_db.profiles)..where((t) => t.id.isIn(ids))).go();
+    }
+  }
+
+  Future<void> _deleteCredentialsExcept(Set<String> keep) async {
+    final rows = await _db.select(_db.credentials).get();
+    final ids = _idsToDelete(rows.map((r) => (r.id, r.syncId)), keep);
+    if (ids.isNotEmpty) {
+      await (_db.delete(_db.credentials)..where((t) => t.id.isIn(ids))).go();
+    }
+  }
+
+  Future<void> _deleteTotpsExcept(Set<String> keep) async {
+    final rows = await _db.select(_db.totps).get();
+    final ids = _idsToDelete(rows.map((r) => (r.id, r.syncId)), keep);
+    if (ids.isNotEmpty) {
+      await (_db.delete(_db.totps)..where((t) => t.id.isIn(ids))).go();
+    }
+  }
+
+  /// Ids des lignes à supprimer : celles dont le `syncId` n'est pas dans [keep]
+  /// (y compris un `syncId` nul — cas théorique post-migration).
+  List<int> _idsToDelete(Iterable<(int, Uint8List?)> rows, Set<String> keep) => [
+    for (final (id, syncId) in rows)
+      if (syncId == null || !keep.contains(_hex(syncId))) id,
+  ];
+
+  String _hex(Uint8List bytes) =>
+      bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+}
