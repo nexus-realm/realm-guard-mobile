@@ -1993,12 +1993,308 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
   }
 }
 
+class $CrdtDocsTable extends CrdtDocs with TableInfo<$CrdtDocsTable, CrdtDoc> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CrdtDocsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _docMeta = const VerificationMeta('doc');
+  @override
+  late final GeneratedColumn<Uint8List> doc = GeneratedColumn<Uint8List>(
+    'doc',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hlcWallMeta = const VerificationMeta(
+    'hlcWall',
+  );
+  @override
+  late final GeneratedColumn<int> hlcWall = GeneratedColumn<int>(
+    'hlc_wall',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _hlcCounterMeta = const VerificationMeta(
+    'hlcCounter',
+  );
+  @override
+  late final GeneratedColumn<int> hlcCounter = GeneratedColumn<int>(
+    'hlc_counter',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, doc, hlcWall, hlcCounter];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'crdt_docs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CrdtDoc> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('doc')) {
+      context.handle(
+        _docMeta,
+        doc.isAcceptableOrUnknown(data['doc']!, _docMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_docMeta);
+    }
+    if (data.containsKey('hlc_wall')) {
+      context.handle(
+        _hlcWallMeta,
+        hlcWall.isAcceptableOrUnknown(data['hlc_wall']!, _hlcWallMeta),
+      );
+    }
+    if (data.containsKey('hlc_counter')) {
+      context.handle(
+        _hlcCounterMeta,
+        hlcCounter.isAcceptableOrUnknown(data['hlc_counter']!, _hlcCounterMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CrdtDoc map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CrdtDoc(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      doc: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}doc'],
+      )!,
+      hlcWall: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}hlc_wall'],
+      )!,
+      hlcCounter: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}hlc_counter'],
+      )!,
+    );
+  }
+
+  @override
+  $CrdtDocsTable createAlias(String alias) {
+    return $CrdtDocsTable(attachedDatabase, alias);
+  }
+}
+
+class CrdtDoc extends DataClass implements Insertable<CrdtDoc> {
+  /// Toujours `0` : la table ne contient qu'une ligne.
+  final int id;
+
+  /// `VaultDoc` encodé (postcard). Absent tant que le coffre CRDT n'est pas semé.
+  final Uint8List doc;
+
+  /// Dernier HLC local émis — mur (ms epoch) + compteur — pour garantir la
+  /// stricte monotonie des écritures à travers les redémarrages.
+  final int hlcWall;
+  final int hlcCounter;
+  const CrdtDoc({
+    required this.id,
+    required this.doc,
+    required this.hlcWall,
+    required this.hlcCounter,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['doc'] = Variable<Uint8List>(doc);
+    map['hlc_wall'] = Variable<int>(hlcWall);
+    map['hlc_counter'] = Variable<int>(hlcCounter);
+    return map;
+  }
+
+  CrdtDocsCompanion toCompanion(bool nullToAbsent) {
+    return CrdtDocsCompanion(
+      id: Value(id),
+      doc: Value(doc),
+      hlcWall: Value(hlcWall),
+      hlcCounter: Value(hlcCounter),
+    );
+  }
+
+  factory CrdtDoc.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CrdtDoc(
+      id: serializer.fromJson<int>(json['id']),
+      doc: serializer.fromJson<Uint8List>(json['doc']),
+      hlcWall: serializer.fromJson<int>(json['hlcWall']),
+      hlcCounter: serializer.fromJson<int>(json['hlcCounter']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'doc': serializer.toJson<Uint8List>(doc),
+      'hlcWall': serializer.toJson<int>(hlcWall),
+      'hlcCounter': serializer.toJson<int>(hlcCounter),
+    };
+  }
+
+  CrdtDoc copyWith({int? id, Uint8List? doc, int? hlcWall, int? hlcCounter}) =>
+      CrdtDoc(
+        id: id ?? this.id,
+        doc: doc ?? this.doc,
+        hlcWall: hlcWall ?? this.hlcWall,
+        hlcCounter: hlcCounter ?? this.hlcCounter,
+      );
+  CrdtDoc copyWithCompanion(CrdtDocsCompanion data) {
+    return CrdtDoc(
+      id: data.id.present ? data.id.value : this.id,
+      doc: data.doc.present ? data.doc.value : this.doc,
+      hlcWall: data.hlcWall.present ? data.hlcWall.value : this.hlcWall,
+      hlcCounter: data.hlcCounter.present
+          ? data.hlcCounter.value
+          : this.hlcCounter,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CrdtDoc(')
+          ..write('id: $id, ')
+          ..write('doc: $doc, ')
+          ..write('hlcWall: $hlcWall, ')
+          ..write('hlcCounter: $hlcCounter')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, $driftBlobEquality.hash(doc), hlcWall, hlcCounter);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CrdtDoc &&
+          other.id == this.id &&
+          $driftBlobEquality.equals(other.doc, this.doc) &&
+          other.hlcWall == this.hlcWall &&
+          other.hlcCounter == this.hlcCounter);
+}
+
+class CrdtDocsCompanion extends UpdateCompanion<CrdtDoc> {
+  final Value<int> id;
+  final Value<Uint8List> doc;
+  final Value<int> hlcWall;
+  final Value<int> hlcCounter;
+  const CrdtDocsCompanion({
+    this.id = const Value.absent(),
+    this.doc = const Value.absent(),
+    this.hlcWall = const Value.absent(),
+    this.hlcCounter = const Value.absent(),
+  });
+  CrdtDocsCompanion.insert({
+    this.id = const Value.absent(),
+    required Uint8List doc,
+    this.hlcWall = const Value.absent(),
+    this.hlcCounter = const Value.absent(),
+  }) : doc = Value(doc);
+  static Insertable<CrdtDoc> custom({
+    Expression<int>? id,
+    Expression<Uint8List>? doc,
+    Expression<int>? hlcWall,
+    Expression<int>? hlcCounter,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (doc != null) 'doc': doc,
+      if (hlcWall != null) 'hlc_wall': hlcWall,
+      if (hlcCounter != null) 'hlc_counter': hlcCounter,
+    });
+  }
+
+  CrdtDocsCompanion copyWith({
+    Value<int>? id,
+    Value<Uint8List>? doc,
+    Value<int>? hlcWall,
+    Value<int>? hlcCounter,
+  }) {
+    return CrdtDocsCompanion(
+      id: id ?? this.id,
+      doc: doc ?? this.doc,
+      hlcWall: hlcWall ?? this.hlcWall,
+      hlcCounter: hlcCounter ?? this.hlcCounter,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (doc.present) {
+      map['doc'] = Variable<Uint8List>(doc.value);
+    }
+    if (hlcWall.present) {
+      map['hlc_wall'] = Variable<int>(hlcWall.value);
+    }
+    if (hlcCounter.present) {
+      map['hlc_counter'] = Variable<int>(hlcCounter.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CrdtDocsCompanion(')
+          ..write('id: $id, ')
+          ..write('doc: $doc, ')
+          ..write('hlcWall: $hlcWall, ')
+          ..write('hlcCounter: $hlcCounter')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $ProfilesTable profiles = $ProfilesTable(this);
   late final $CredentialsTable credentials = $CredentialsTable(this);
   late final $TotpsTable totps = $TotpsTable(this);
+  late final $CrdtDocsTable crdtDocs = $CrdtDocsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2007,6 +2303,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     profiles,
     credentials,
     totps,
+    crdtDocs,
   ];
 }
 
@@ -3387,6 +3684,177 @@ typedef $$TotpsTableProcessedTableManager =
       Totp,
       PrefetchHooks Function({bool profileId})
     >;
+typedef $$CrdtDocsTableCreateCompanionBuilder =
+    CrdtDocsCompanion Function({
+      Value<int> id,
+      required Uint8List doc,
+      Value<int> hlcWall,
+      Value<int> hlcCounter,
+    });
+typedef $$CrdtDocsTableUpdateCompanionBuilder =
+    CrdtDocsCompanion Function({
+      Value<int> id,
+      Value<Uint8List> doc,
+      Value<int> hlcWall,
+      Value<int> hlcCounter,
+    });
+
+class $$CrdtDocsTableFilterComposer
+    extends Composer<_$AppDatabase, $CrdtDocsTable> {
+  $$CrdtDocsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get doc => $composableBuilder(
+    column: $table.doc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get hlcWall => $composableBuilder(
+    column: $table.hlcWall,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get hlcCounter => $composableBuilder(
+    column: $table.hlcCounter,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CrdtDocsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CrdtDocsTable> {
+  $$CrdtDocsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get doc => $composableBuilder(
+    column: $table.doc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get hlcWall => $composableBuilder(
+    column: $table.hlcWall,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get hlcCounter => $composableBuilder(
+    column: $table.hlcCounter,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CrdtDocsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CrdtDocsTable> {
+  $$CrdtDocsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get doc =>
+      $composableBuilder(column: $table.doc, builder: (column) => column);
+
+  GeneratedColumn<int> get hlcWall =>
+      $composableBuilder(column: $table.hlcWall, builder: (column) => column);
+
+  GeneratedColumn<int> get hlcCounter => $composableBuilder(
+    column: $table.hlcCounter,
+    builder: (column) => column,
+  );
+}
+
+class $$CrdtDocsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CrdtDocsTable,
+          CrdtDoc,
+          $$CrdtDocsTableFilterComposer,
+          $$CrdtDocsTableOrderingComposer,
+          $$CrdtDocsTableAnnotationComposer,
+          $$CrdtDocsTableCreateCompanionBuilder,
+          $$CrdtDocsTableUpdateCompanionBuilder,
+          (CrdtDoc, BaseReferences<_$AppDatabase, $CrdtDocsTable, CrdtDoc>),
+          CrdtDoc,
+          PrefetchHooks Function()
+        > {
+  $$CrdtDocsTableTableManager(_$AppDatabase db, $CrdtDocsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CrdtDocsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CrdtDocsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CrdtDocsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<Uint8List> doc = const Value.absent(),
+                Value<int> hlcWall = const Value.absent(),
+                Value<int> hlcCounter = const Value.absent(),
+              }) => CrdtDocsCompanion(
+                id: id,
+                doc: doc,
+                hlcWall: hlcWall,
+                hlcCounter: hlcCounter,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required Uint8List doc,
+                Value<int> hlcWall = const Value.absent(),
+                Value<int> hlcCounter = const Value.absent(),
+              }) => CrdtDocsCompanion.insert(
+                id: id,
+                doc: doc,
+                hlcWall: hlcWall,
+                hlcCounter: hlcCounter,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CrdtDocsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CrdtDocsTable,
+      CrdtDoc,
+      $$CrdtDocsTableFilterComposer,
+      $$CrdtDocsTableOrderingComposer,
+      $$CrdtDocsTableAnnotationComposer,
+      $$CrdtDocsTableCreateCompanionBuilder,
+      $$CrdtDocsTableUpdateCompanionBuilder,
+      (CrdtDoc, BaseReferences<_$AppDatabase, $CrdtDocsTable, CrdtDoc>),
+      CrdtDoc,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3397,4 +3865,6 @@ class $AppDatabaseManager {
       $$CredentialsTableTableManager(_db, _db.credentials);
   $$TotpsTableTableManager get totps =>
       $$TotpsTableTableManager(_db, _db.totps);
+  $$CrdtDocsTableTableManager get crdtDocs =>
+      $$CrdtDocsTableTableManager(_db, _db.crdtDocs);
 }

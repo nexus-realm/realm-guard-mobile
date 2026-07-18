@@ -6,92 +6,7 @@ import 'package:realmguard/core/sync/field_value.dart';
 import 'package:realmguard/core/sync/vault_fields.dart';
 import 'package:realmguard/core/sync/vault_projection.dart';
 
-typedef _SetFieldCall = ({
-  Uint8List entryId,
-  int fieldId,
-  Uint8List value,
-  BigInt wallMs,
-  int counter,
-});
-
-/// Faux FFI CRDT : le chiffrement est l'**identité** (le « Ciphertext » est le
-/// clair encodé), l'HLC suit la règle du cœur (`next_local`), et les mutations
-/// enregistrent leurs appels. Aucune lib native.
-class _FakeCrdtFfi implements CrdtFfi {
-  final List<Uint8List> ids;
-  final Map<String, List<CrdtField>> fieldsById;
-
-  final List<_SetFieldCall> setFields = [];
-  final List<Uint8List> added = [];
-
-  _FakeCrdtFfi({this.ids = const [], this.fieldsById = const {}});
-
-  static String hex(Uint8List bytes) =>
-      bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-
-  @override
-  List<Uint8List> entryIds(Uint8List doc) => ids;
-
-  @override
-  List<CrdtField> entryFields(Uint8List doc, Uint8List entryId) =>
-      fieldsById[hex(entryId)] ?? const [];
-
-  @override
-  Uint8List decryptField(Uint8List vaultKey, Uint8List entryId, Uint8List value) =>
-      value;
-
-  @override
-  Uint8List encryptField(
-    Uint8List vaultKey,
-    Uint8List entryId,
-    Uint8List plaintext,
-  ) => plaintext;
-
-  @override
-  CrdtMutation addEntry(Uint8List doc, Uint8List entryId, Uint8List deviceId) {
-    added.add(entryId);
-    return CrdtMutation(doc: doc, delta: Uint8List.fromList([0xAD]));
-  }
-
-  @override
-  CrdtMutation setField(
-    Uint8List doc,
-    Uint8List entryId,
-    int fieldId,
-    Uint8List value,
-    BigInt wallMs,
-    int counter,
-    Uint8List deviceId,
-  ) {
-    setFields.add((
-      entryId: entryId,
-      fieldId: fieldId,
-      value: value,
-      wallMs: wallMs,
-      counter: counter,
-    ));
-    return CrdtMutation(doc: doc, delta: Uint8List.fromList([0x5E]));
-  }
-
-  @override
-  HlcTick hlcTick(BigInt lastWallMs, int lastCounter, BigInt nowMs) =>
-      nowMs > lastWallMs
-      ? HlcTick(wallMs: nowMs, counter: 0)
-      : HlcTick(wallMs: lastWallMs, counter: lastCounter + 1);
-
-  // Non utilisés par ces tests.
-  @override
-  Uint8List newDoc() => throw UnimplementedError();
-  @override
-  Uint8List newEntryId() => throw UnimplementedError();
-  @override
-  Uint8List deviceIdFromKey(Uint8List publicKey) => throw UnimplementedError();
-  @override
-  CrdtMutation removeEntry(Uint8List doc, Uint8List entryId) =>
-      throw UnimplementedError();
-  @override
-  Uint8List merge(Uint8List doc, Uint8List delta) => throw UnimplementedError();
-}
+import '../../support/sync_test_doubles.dart';
 
 Uint8List _id(int fill) => Uint8List.fromList(List.filled(16, fill));
 CrdtField _cf(int fieldId, FieldValue value) =>
@@ -106,15 +21,15 @@ void main() {
       final credId = _id(2);
       final refProfile = _id(9);
 
-      final ffi = _FakeCrdtFfi(
+      final ffi = FakeCrdtFfi(
         ids: [profileId, credId],
         fieldsById: {
-          _FakeCrdtFfi.hex(profileId): [
+          FakeCrdtFfi.hex(profileId): [
             _cf(VaultFields.kind, const IntValue(0)),
             _cf(VaultFields.profileName, const TextValue('Perso')),
             _cf(VaultFields.profileEmails, const TextValue('["a@b.c"]')),
           ],
-          _FakeCrdtFfi.hex(credId): [
+          FakeCrdtFfi.hex(credId): [
             _cf(VaultFields.kind, const IntValue(1)),
             _cf(VaultFields.credentialTitle, const TextValue('GitHub')),
             _cf(VaultFields.credentialFavorite, const BoolValue(true)),
@@ -144,13 +59,13 @@ void main() {
     test('ignore une entrée sans kind ou de kind inconnu', () {
       final noKind = _id(3);
       final unknown = _id(4);
-      final ffi = _FakeCrdtFfi(
+      final ffi = FakeCrdtFfi(
         ids: [noKind, unknown],
         fieldsById: {
-          _FakeCrdtFfi.hex(noKind): [
+          FakeCrdtFfi.hex(noKind): [
             _cf(VaultFields.profileName, const TextValue('orphelin')),
           ],
-          _FakeCrdtFfi.hex(unknown): [_cf(VaultFields.kind, const IntValue(99))],
+          FakeCrdtFfi.hex(unknown): [_cf(VaultFields.kind, const IntValue(99))],
         },
       );
       expect(VaultProjection(ffi).decode(Uint8List(0), vaultKey), isEmpty);
@@ -159,7 +74,7 @@ void main() {
 
   group('VaultDocWriter.putFields', () {
     test('chiffre chaque champ, HLC strictement croissant, création marquée', () {
-      final ffi = _FakeCrdtFfi();
+      final ffi = FakeCrdtFfi();
       final entryId = _id(7);
       final deviceId = _id(8);
 
@@ -197,7 +112,7 @@ void main() {
     });
 
     test('sans markPresent : pas d\'add_entry', () {
-      final ffi = _FakeCrdtFfi();
+      final ffi = FakeCrdtFfi();
       VaultDocWriter(ffi).putFields(
         doc: Uint8List(0),
         entryId: _id(7),

@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'models/crdt_docs.dart';
 import 'models/credentials.dart';
 import 'models/profiles.dart';
 import 'models/sync_id.dart';
@@ -12,13 +13,13 @@ import 'models/totps.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Profiles, Credentials, Totps])
+@DriftDatabase(tables: [Profiles, Credentials, Totps, CrdtDocs])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(List<int> encryptionKeyBytes)
     : super(_openConnection(encryptionKeyBytes));
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -82,6 +83,10 @@ class AppDatabase extends _$AppDatabase {
           'UPDATE totps SET sync_id = randomblob(16) WHERE sync_id IS NULL',
         );
         await _createSyncIdIndexes();
+      }
+      if (from < 6) {
+        // Synchronisation CRDT : doc du coffre + état d'horloge HLC (ligne unique).
+        await migrator.createTable(crdtDocs);
       }
     },
   );
