@@ -32,7 +32,9 @@ class SecureCrdtDeviceIdStore implements CrdtDeviceIdStore {
       if (bytes.length == 16) return bytes;
     }
     final rng = Random.secure();
-    final id = Uint8List.fromList(List<int>.generate(16, (_) => rng.nextInt(256)));
+    final id = Uint8List.fromList(
+      List<int>.generate(16, (_) => rng.nextInt(256)),
+    );
     await _storage.write(key: _key, value: base64.encode(id));
     return id;
   }

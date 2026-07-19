@@ -20,16 +20,17 @@ Profile _profile(int id, Uint8List syncId) => Profile(
   updatedAt: _epoch,
 );
 
-Credential _credential(int id, Uint8List syncId, {int? profileId}) => Credential(
-  id: id,
-  syncId: syncId,
-  title: 'GitHub',
-  customFields: '[]',
-  favorite: false,
-  profileId: profileId,
-  createdAt: _epoch,
-  updatedAt: _epoch,
-);
+Credential _credential(int id, Uint8List syncId, {int? profileId}) =>
+    Credential(
+      id: id,
+      syncId: syncId,
+      title: 'GitHub',
+      customFields: '[]',
+      favorite: false,
+      profileId: profileId,
+      createdAt: _epoch,
+      updatedAt: _epoch,
+    );
 
 Totp _totp(int id, Uint8List syncId, {int? profileId}) => Totp(
   id: id,
@@ -70,7 +71,10 @@ void main() {
       // Ordre garanti : profils, puis credentials, puis totps.
       final cred = entries[1];
       final totp = entries[2];
-      expect(cred.fields[VaultFields.credentialProfileId], UuidValue(profileSync));
+      expect(
+        cred.fields[VaultFields.credentialProfileId],
+        UuidValue(profileSync),
+      );
       expect(totp.fields[VaultFields.totpProfileId], UuidValue(profileSync));
     });
 

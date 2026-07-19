@@ -109,11 +109,26 @@ abstract final class VaultFieldMap {
         credential.createdAt.millisecondsSinceEpoch,
       ),
     };
-    _optText(fields, VaultFields.credentialUsername, credential.username, clearNulls);
-    _optText(fields, VaultFields.credentialPassword, credential.password, clearNulls);
+    _optText(
+      fields,
+      VaultFields.credentialUsername,
+      credential.username,
+      clearNulls,
+    );
+    _optText(
+      fields,
+      VaultFields.credentialPassword,
+      credential.password,
+      clearNulls,
+    );
     _optText(fields, VaultFields.credentialUri, credential.uri, clearNulls);
     _optText(fields, VaultFields.credentialNotes, credential.notes, clearNulls);
-    _optUuid(fields, VaultFields.credentialProfileId, profileSyncId, clearNulls);
+    _optUuid(
+      fields,
+      VaultFields.credentialProfileId,
+      profileSyncId,
+      clearNulls,
+    );
     return fields;
   }
 
@@ -131,7 +146,9 @@ abstract final class VaultFieldMap {
       VaultFields.totpPeriod: IntValue(totp.period),
       VaultFields.totpAlgorithm: TextValue(totp.algorithm),
       VaultFields.totpFavorite: BoolValue(totp.favorite),
-      VaultFields.totpCreatedAt: IntValue(totp.createdAt.millisecondsSinceEpoch),
+      VaultFields.totpCreatedAt: IntValue(
+        totp.createdAt.millisecondsSinceEpoch,
+      ),
     };
     _optText(fields, VaultFields.totpAccount, totp.account, clearNulls);
     _optUuid(fields, VaultFields.totpProfileId, profileSyncId, clearNulls);

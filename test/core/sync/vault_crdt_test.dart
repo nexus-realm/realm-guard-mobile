@@ -26,51 +26,57 @@ VaultCrdt _crdt(
 
 void main() {
   group('VaultCrdt.putEntry', () {
-    test('création : add_entry + set_field, persiste, enfile les deltas', () async {
-      final ffi = FakeCrdtFfi();
-      final store = InMemoryVaultDocStore();
-      final pending = InMemoryPendingDeltaStore();
+    test(
+      'création : add_entry + set_field, persiste, enfile les deltas',
+      () async {
+        final ffi = FakeCrdtFfi();
+        final store = InMemoryVaultDocStore();
+        final pending = InMemoryPendingDeltaStore();
 
-      final deltas = await _crdt(ffi, store, pending).putEntry(
-        entryId: _id(1),
-        fields: {
-          VaultFields.kind: const IntValue(1),
-          VaultFields.credentialTitle: const TextValue('GitHub'),
-        },
-        isNew: true,
-      );
-
-      expect(ffi.added, [_id(1)]);
-      expect(ffi.setFields.length, 2);
-      expect(store.state, isNotNull);
-      expect(store.saves, 1);
-      // add_entry + 2 set_field ⇒ 3 deltas, retournés ET enfilés.
-      expect(deltas.length, 3);
-      expect(await pending.count(), 3);
-    });
-
-    test('mise à jour : pas d\'add_entry, HLC poursuivie, curseur préservé', () async {
-      final ffi = FakeCrdtFfi();
-      final pending = InMemoryPendingDeltaStore();
-      // Coffre déjà semé, avec un curseur de tirage à 5.
-      final store = InMemoryVaultDocStore()
-        ..state = VaultDocState(
-          doc: Uint8List.fromList([0]),
-          clock: HlcTick(wallMs: BigInt.from(1000), counter: 0),
-          cursor: 5,
+        final deltas = await _crdt(ffi, store, pending).putEntry(
+          entryId: _id(1),
+          fields: {
+            VaultFields.kind: const IntValue(1),
+            VaultFields.credentialTitle: const TextValue('GitHub'),
+          },
+          isNew: true,
         );
 
-      await _crdt(ffi, store, pending).putEntry(
-        entryId: _id(1),
-        fields: {VaultFields.credentialPassword: const TextValue('pw')},
-        isNew: false,
-      );
+        expect(ffi.added, [_id(1)]);
+        expect(ffi.setFields.length, 2);
+        expect(store.state, isNotNull);
+        expect(store.saves, 1);
+        // add_entry + 2 set_field ⇒ 3 deltas, retournés ET enfilés.
+        expect(deltas.length, 3);
+        expect(await pending.count(), 3);
+      },
+    );
 
-      expect(ffi.added, isEmpty);
-      expect(ffi.setFields.last.counter, 1); // (1000,0) → (1000,1)
-      expect(store.state!.cursor, 5); // curseur intact
-      expect(await pending.count(), 1);
-    });
+    test(
+      'mise à jour : pas d\'add_entry, HLC poursuivie, curseur préservé',
+      () async {
+        final ffi = FakeCrdtFfi();
+        final pending = InMemoryPendingDeltaStore();
+        // Coffre déjà semé, avec un curseur de tirage à 5.
+        final store = InMemoryVaultDocStore()
+          ..state = VaultDocState(
+            doc: Uint8List.fromList([0]),
+            clock: HlcTick(wallMs: BigInt.from(1000), counter: 0),
+            cursor: 5,
+          );
+
+        await _crdt(ffi, store, pending).putEntry(
+          entryId: _id(1),
+          fields: {VaultFields.credentialPassword: const TextValue('pw')},
+          isNew: false,
+        );
+
+        expect(ffi.added, isEmpty);
+        expect(ffi.setFields.last.counter, 1); // (1000,0) → (1000,1)
+        expect(store.state!.cursor, 5); // curseur intact
+        expect(await pending.count(), 1);
+      },
+    );
 
     test('onChanged notifié après une écriture locale', () async {
       var changes = 0;
@@ -161,8 +167,14 @@ void main() {
       final pending = InMemoryPendingDeltaStore();
 
       await _crdt(ffi, store, pending).seed([
-        SeedEntry(entryId: _id(1), fields: {VaultFields.kind: const IntValue(0)}),
-        SeedEntry(entryId: _id(2), fields: {VaultFields.kind: const IntValue(1)}),
+        SeedEntry(
+          entryId: _id(1),
+          fields: {VaultFields.kind: const IntValue(0)},
+        ),
+        SeedEntry(
+          entryId: _id(2),
+          fields: {VaultFields.kind: const IntValue(1)},
+        ),
       ]);
 
       expect(ffi.added, [_id(1), _id(2)]);

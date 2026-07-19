@@ -139,7 +139,11 @@ class FrbCrdtFfi implements CrdtFfi {
 
   @override
   HlcTick hlcTick(BigInt lastWallMs, int lastCounter, BigInt nowMs) =>
-      crdtHlcTick(lastWallMs: lastWallMs, lastCounter: lastCounter, nowMs: nowMs);
+      crdtHlcTick(
+        lastWallMs: lastWallMs,
+        lastCounter: lastCounter,
+        nowMs: nowMs,
+      );
 
   @override
   HlcTick maxHlc(Uint8List doc) => crdtMaxHlc(doc: doc);

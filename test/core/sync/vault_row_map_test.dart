@@ -115,9 +115,7 @@ void main() {
         _id(3),
       );
       expect(
-        VaultRowMap.profileRef(
-          _entry(VaultKind.credential, const {}),
-        ),
+        VaultRowMap.profileRef(_entry(VaultKind.credential, const {})),
         isNull,
       );
     });

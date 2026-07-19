@@ -16,11 +16,7 @@ void main() {
     // Lancées "en même temps" : doivent quand même s'exécuter l'une après l'autre.
     await Future.wait([op('a'), op('b'), op('c')]);
 
-    expect(log, [
-      'a-start', 'a-end',
-      'b-start', 'b-end',
-      'c-start', 'c-end',
-    ]);
+    expect(log, ['a-start', 'a-end', 'b-start', 'b-end', 'c-start', 'c-end']);
   });
 
   test('ordre FIFO préservé', () async {

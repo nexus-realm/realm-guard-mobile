@@ -140,8 +140,10 @@ final SyncSessionController syncSessionController = SyncSessionController(
 /// Un `VaultRepository` câblé sur la session CRDT (write-through de la synchro).
 /// La session est résolue paresseusement à la première écriture ; les repos en
 /// lecture seule (accueil, autofill-fill) n'en ont pas besoin.
-VaultRepository _vaultRepository() =>
-    VaultRepository(_vaultService.db, crdtSession: _vaultService.ensureCrdtSession);
+VaultRepository _vaultRepository() => VaultRepository(
+  _vaultService.db,
+  crdtSession: _vaultService.ensureCrdtSession,
+);
 
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.startup,
@@ -236,8 +238,7 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.profiles,
       name: 'profiles',
-      builder: (context, state) =>
-          ProfilesPage(repository: _vaultRepository()),
+      builder: (context, state) => ProfilesPage(repository: _vaultRepository()),
     ),
     GoRoute(
       path: '${AppRoutes.profileDetail}/:id',
@@ -254,18 +255,14 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.addTotp,
       name: 'addTotp',
-      builder: (context, state) =>
-          AddTotpPage(repository: _vaultRepository()),
+      builder: (context, state) => AddTotpPage(repository: _vaultRepository()),
     ),
     GoRoute(
       path: '${AppRoutes.totpDetail}/:id',
       name: 'totpDetail',
       builder: (context, state) {
         final id = int.parse(state.pathParameters['id']!);
-        return TotpDetailPage(
-          repository: _vaultRepository(),
-          totpId: id,
-        );
+        return TotpDetailPage(repository: _vaultRepository(), totpId: id);
       },
     ),
     GoRoute(

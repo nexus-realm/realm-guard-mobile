@@ -82,7 +82,11 @@ class DriftProjector implements VaultReprojector {
       // 3. Suppressions : lignes dont le syncId n'est plus dans le doc.
       final removed = await _deleteMissing(entries);
 
-      return ReprojectionSummary(added: added, updated: updated, removed: removed);
+      return ReprojectionSummary(
+        added: added,
+        updated: updated,
+        removed: removed,
+      );
     });
   }
 
@@ -93,17 +97,17 @@ class DriftProjector implements VaultReprojector {
 
   Future<_Outcome> _upsertProfile(DecodedEntry entry) async {
     final companion = VaultRowMap.profile(entry);
-    final existing =
-        await (_db.select(_db.profiles)
-              ..where((t) => t.syncId.equals(entry.syncId)))
-            .getSingleOrNull();
+    final existing = await (_db.select(
+      _db.profiles,
+    )..where((t) => t.syncId.equals(entry.syncId))).getSingleOrNull();
     if (existing == null) {
       await _db.into(_db.profiles).insert(companion);
       return _Outcome.inserted;
     }
     if (_profileUnchanged(existing, companion)) return _Outcome.unchanged;
-    await (_db.update(_db.profiles)..where((t) => t.id.equals(existing.id)))
-        .write(companion);
+    await (_db.update(
+      _db.profiles,
+    )..where((t) => t.id.equals(existing.id))).write(companion);
     return _Outcome.updated;
   }
 
@@ -115,17 +119,17 @@ class DriftProjector implements VaultReprojector {
       entry,
       profileId: _resolveProfile(entry, profileIds),
     );
-    final existing =
-        await (_db.select(_db.credentials)
-              ..where((t) => t.syncId.equals(entry.syncId)))
-            .getSingleOrNull();
+    final existing = await (_db.select(
+      _db.credentials,
+    )..where((t) => t.syncId.equals(entry.syncId))).getSingleOrNull();
     if (existing == null) {
       await _db.into(_db.credentials).insert(companion);
       return _Outcome.inserted;
     }
     if (_credentialUnchanged(existing, companion)) return _Outcome.unchanged;
-    await (_db.update(_db.credentials)..where((t) => t.id.equals(existing.id)))
-        .write(companion);
+    await (_db.update(
+      _db.credentials,
+    )..where((t) => t.id.equals(existing.id))).write(companion);
     return _Outcome.updated;
   }
 
@@ -137,17 +141,17 @@ class DriftProjector implements VaultReprojector {
       entry,
       profileId: _resolveProfile(entry, profileIds),
     );
-    final existing =
-        await (_db.select(_db.totps)
-              ..where((t) => t.syncId.equals(entry.syncId)))
-            .getSingleOrNull();
+    final existing = await (_db.select(
+      _db.totps,
+    )..where((t) => t.syncId.equals(entry.syncId))).getSingleOrNull();
     if (existing == null) {
       await _db.into(_db.totps).insert(companion);
       return _Outcome.inserted;
     }
     if (_totpUnchanged(existing, companion)) return _Outcome.unchanged;
-    await (_db.update(_db.totps)..where((t) => t.id.equals(existing.id)))
-        .write(companion);
+    await (_db.update(
+      _db.totps,
+    )..where((t) => t.id.equals(existing.id))).write(companion);
     return _Outcome.updated;
   }
 
@@ -226,10 +230,11 @@ class DriftProjector implements VaultReprojector {
 
   /// Ids des lignes à supprimer : celles dont le `syncId` n'est pas dans [keep]
   /// (y compris un `syncId` nul — cas théorique post-migration).
-  List<int> _idsToDelete(Iterable<(int, Uint8List?)> rows, Set<String> keep) => [
-    for (final (id, syncId) in rows)
-      if (syncId == null || !keep.contains(_hex(syncId))) id,
-  ];
+  List<int> _idsToDelete(Iterable<(int, Uint8List?)> rows, Set<String> keep) =>
+      [
+        for (final (id, syncId) in rows)
+          if (syncId == null || !keep.contains(_hex(syncId))) id,
+      ];
 
   String _hex(Uint8List bytes) =>
       bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();

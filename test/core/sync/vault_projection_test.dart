@@ -48,8 +48,14 @@ void main() {
       expect(profile.fields.containsKey(VaultFields.kind), isFalse);
 
       final cred = decoded.firstWhere((e) => e.kind == VaultKind.credential);
-      expect(cred.fields[VaultFields.credentialFavorite], const BoolValue(true));
-      expect(cred.fields[VaultFields.credentialProfileId], UuidValue(refProfile));
+      expect(
+        cred.fields[VaultFields.credentialFavorite],
+        const BoolValue(true),
+      );
+      expect(
+        cred.fields[VaultFields.credentialProfileId],
+        UuidValue(refProfile),
+      );
       expect(
         (cred.fields[VaultFields.credentialCreatedAt] as IntValue).value,
         1700000000000,
@@ -73,43 +79,49 @@ void main() {
   });
 
   group('VaultDocWriter.putFields', () {
-    test('chiffre chaque champ, HLC strictement croissant, création marquée', () {
-      final ffi = FakeCrdtFfi();
-      final entryId = _id(7);
-      final deviceId = _id(8);
+    test(
+      'chiffre chaque champ, HLC strictement croissant, création marquée',
+      () {
+        final ffi = FakeCrdtFfi();
+        final entryId = _id(7);
+        final deviceId = _id(8);
 
-      final result = VaultDocWriter(ffi).putFields(
-        doc: Uint8List(0),
-        entryId: entryId,
-        deviceId: deviceId,
-        vaultKey: vaultKey,
-        fields: {
-          VaultFields.kind: const IntValue(1),
-          VaultFields.credentialTitle: const TextValue('GH'),
-        },
-        clock: HlcTick(wallMs: BigInt.from(100), counter: 0),
-        nowMs: BigInt.from(100), // now == wall ⇒ le compteur s'incrémente
-        markPresent: true,
-      );
+        final result = VaultDocWriter(ffi).putFields(
+          doc: Uint8List(0),
+          entryId: entryId,
+          deviceId: deviceId,
+          vaultKey: vaultKey,
+          fields: {
+            VaultFields.kind: const IntValue(1),
+            VaultFields.credentialTitle: const TextValue('GH'),
+          },
+          clock: HlcTick(wallMs: BigInt.from(100), counter: 0),
+          nowMs: BigInt.from(100), // now == wall ⇒ le compteur s'incrémente
+          markPresent: true,
+        );
 
-      // Présence marquée puis un set_field par champ (ordre d'insertion).
-      expect(ffi.added, [entryId]);
-      expect(ffi.setFields.length, 2);
-      expect(ffi.setFields[0].fieldId, VaultFields.kind);
-      expect(ffi.setFields[1].fieldId, VaultFields.credentialTitle);
+        // Présence marquée puis un set_field par champ (ordre d'insertion).
+        expect(ffi.added, [entryId]);
+        expect(ffi.setFields.length, 2);
+        expect(ffi.setFields[0].fieldId, VaultFields.kind);
+        expect(ffi.setFields[1].fieldId, VaultFields.credentialTitle);
 
-      // HLC : (100,1) puis (100,2) — strictement croissant.
-      expect(ffi.setFields[0].wallMs, BigInt.from(100));
-      expect(ffi.setFields[0].counter, 1);
-      expect(ffi.setFields[1].counter, 2);
-      expect(result.clock.counter, 2);
+        // HLC : (100,1) puis (100,2) — strictement croissant.
+        expect(ffi.setFields[0].wallMs, BigInt.from(100));
+        expect(ffi.setFields[0].counter, 1);
+        expect(ffi.setFields[1].counter, 2);
+        expect(result.clock.counter, 2);
 
-      // Les valeurs chiffrées (identité) redonnent les FieldValue d'origine.
-      expect(FieldValue.decode(ffi.setFields[1].value), const TextValue('GH'));
+        // Les valeurs chiffrées (identité) redonnent les FieldValue d'origine.
+        expect(
+          FieldValue.decode(ffi.setFields[1].value),
+          const TextValue('GH'),
+        );
 
-      // add_entry + 2 set_field ⇒ 3 deltas.
-      expect(result.deltas.length, 3);
-    });
+        // add_entry + 2 set_field ⇒ 3 deltas.
+        expect(result.deltas.length, 3);
+      },
+    );
 
     test('sans markPresent : pas d\'add_entry', () {
       final ffi = FakeCrdtFfi();

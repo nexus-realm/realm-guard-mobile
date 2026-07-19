@@ -48,7 +48,9 @@ sealed class FieldValue {
             'entier de ${payload.length} octets (8 attendus)',
           );
         }
-        return IntValue(ByteData.sublistView(payload).getInt64(0, Endian.little));
+        return IntValue(
+          ByteData.sublistView(payload).getInt64(0, Endian.little),
+        );
       case tagBool:
         if (payload.length != 1) {
           throw FormatException(
@@ -58,7 +60,9 @@ sealed class FieldValue {
         return BoolValue(payload[0] != 0);
       case tagUuid:
         if (payload.length != 16) {
-          throw FormatException('uuid de ${payload.length} octets (16 attendus)');
+          throw FormatException(
+            'uuid de ${payload.length} octets (16 attendus)',
+          );
         }
         return UuidValue(Uint8List.fromList(payload));
       default:
@@ -131,8 +135,7 @@ final class BoolValue extends FieldValue {
   const BoolValue(this.value);
 
   @override
-  Uint8List encode() =>
-      Uint8List.fromList([FieldValue.tagBool, value ? 1 : 0]);
+  Uint8List encode() => Uint8List.fromList([FieldValue.tagBool, value ? 1 : 0]);
 
   @override
   bool operator ==(Object other) => other is BoolValue && other.value == value;
@@ -145,8 +148,7 @@ final class BoolValue extends FieldValue {
 final class UuidValue extends FieldValue {
   final Uint8List value;
 
-  UuidValue(this.value)
-    : assert(value.length == 16, 'un UUID fait 16 octets');
+  UuidValue(this.value) : assert(value.length == 16, 'un UUID fait 16 octets');
 
   @override
   Uint8List encode() {

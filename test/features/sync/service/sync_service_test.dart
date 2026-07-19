@@ -33,8 +33,7 @@ SyncService _service(
     httpClient: client,
     session: session,
     config: _config,
-    ensureSession:
-        ensureSession ?? () async => session.token = 'refreshed',
+    ensureSession: ensureSession ?? () async => session.token = 'refreshed',
   );
 }
 
@@ -55,10 +54,9 @@ void main() {
       expect(captured.method, 'POST');
       expect(captured.url.toString(), 'http://test/sync/deltas');
       expect(captured.headers['authorization'], 'Bearer tok');
-      expect(
-        jsonDecode(captured.body),
-        {'payload': base64.encode([1, 2, 3])},
-      );
+      expect(jsonDecode(captured.body), {
+        'payload': base64.encode([1, 2, 3]),
+      });
     });
 
     test('401 ⇒ sessionExpired', () async {
@@ -85,8 +83,14 @@ void main() {
           return http.Response(
             jsonEncode({
               'deltas': [
-                {'seq': 5, 'payload': base64.encode([9])},
-                {'seq': 6, 'payload': base64.encode([8, 7])},
+                {
+                  'seq': 5,
+                  'payload': base64.encode([9]),
+                },
+                {
+                  'seq': 6,
+                  'payload': base64.encode([8, 7]),
+                },
               ],
               'latest': 6,
             }),

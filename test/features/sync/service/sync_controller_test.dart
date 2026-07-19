@@ -59,36 +59,42 @@ void main() {
     expect(runner.calls, 2);
   });
 
-  test('coalescence : les déclencheurs pendant un cycle en fusionnent un seul', () async {
-    final gate = Completer<void>();
-    final runner = _FakeRunner(gates: [gate]); // le cycle #0 se bloque
-    final controller = SyncController(engine: runner, socket: _FakeSocket());
+  test(
+    'coalescence : les déclencheurs pendant un cycle en fusionnent un seul',
+    () async {
+      final gate = Completer<void>();
+      final runner = _FakeRunner(gates: [gate]); // le cycle #0 se bloque
+      final controller = SyncController(engine: runner, socket: _FakeSocket());
 
-    final first = controller.requestSync(); // #0 démarre et se bloque
-    await pumpEventQueue();
-    expect(runner.calls, 1);
+      final first = controller.requestSync(); // #0 démarre et se bloque
+      await pumpEventQueue();
+      expect(runner.calls, 1);
 
-    controller.requestSync(); // en cours → pending
-    controller.requestSync(); // pending reste
-    await pumpEventQueue();
-    expect(runner.calls, 1); // aucun cycle concurrent
+      controller.requestSync(); // en cours → pending
+      controller.requestSync(); // pending reste
+      await pumpEventQueue();
+      expect(runner.calls, 1); // aucun cycle concurrent
 
-    gate.complete();
-    await first;
-    await pumpEventQueue();
-    expect(runner.calls, 2); // exactement un cycle de rattrapage
-  });
+      gate.complete();
+      await first;
+      await pumpEventQueue();
+      expect(runner.calls, 2); // exactement un cycle de rattrapage
+    },
+  );
 
-  test('best-effort : une erreur est avalée, le contrôleur reste utilisable', () async {
-    final runner = _FakeRunner()..throwOn = 0;
-    final controller = SyncController(engine: runner, socket: _FakeSocket());
+  test(
+    'best-effort : une erreur est avalée, le contrôleur reste utilisable',
+    () async {
+      final runner = _FakeRunner()..throwOn = 0;
+      final controller = SyncController(engine: runner, socket: _FakeSocket());
 
-    await controller.requestSync(); // #0 lève, avalé
-    expect(runner.calls, 1);
+      await controller.requestSync(); // #0 lève, avalé
+      expect(runner.calls, 1);
 
-    await controller.requestSync(); // toujours fonctionnel
-    expect(runner.calls, 2);
-  });
+      await controller.requestSync(); // toujours fonctionnel
+      expect(runner.calls, 2);
+    },
+  );
 
   test('stop : coupe le WS et cesse de réagir aux nudges', () async {
     final runner = _FakeRunner();

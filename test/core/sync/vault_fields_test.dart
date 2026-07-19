@@ -78,7 +78,9 @@ void main() {
 
     test('optionnels null omis, sinon présents', () {
       expect(
-        VaultFieldMap.ofProfile(_profile()).containsKey(VaultFields.profileColor),
+        VaultFieldMap.ofProfile(
+          _profile(),
+        ).containsKey(VaultFields.profileColor),
         isFalse,
       );
       final withColor = VaultFieldMap.ofProfile(_profile(color: 42, note: 'x'));
@@ -114,11 +116,17 @@ void main() {
         profileSyncId: _profileUuid,
       );
       expect(fields[VaultFields.kind], const IntValue(2));
-      expect(fields[VaultFields.totpSecret], const TextValue('JBSWY3DPEHPK3PXP'));
+      expect(
+        fields[VaultFields.totpSecret],
+        const TextValue('JBSWY3DPEHPK3PXP'),
+      );
       expect(fields[VaultFields.totpDigits], const IntValue(6));
       expect(fields[VaultFields.totpPeriod], const IntValue(30));
       expect(fields[VaultFields.totpAlgorithm], const TextValue('SHA1'));
-      expect(fields[VaultFields.totpAccount], const TextValue('me@example.com'));
+      expect(
+        fields[VaultFields.totpAccount],
+        const TextValue('me@example.com'),
+      );
       expect(fields[VaultFields.totpProfileId], UuidValue(_profileUuid));
     });
 
@@ -132,7 +140,10 @@ void main() {
 
   group('VaultFieldMap — clearNulls (mise à jour)', () {
     test('émet NullValue pour les optionnels null au lieu de les omettre', () {
-      final fields = VaultFieldMap.ofCredential(_credential(), clearNulls: true);
+      final fields = VaultFieldMap.ofCredential(
+        _credential(),
+        clearNulls: true,
+      );
       expect(fields[VaultFields.credentialUsername], const NullValue());
       expect(fields[VaultFields.credentialPassword], const NullValue());
       expect(fields[VaultFields.credentialProfileId], const NullValue());

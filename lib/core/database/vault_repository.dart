@@ -97,8 +97,7 @@ class VaultRepository
   Future<Uint8List?> _profileSyncId(int? profileId) async {
     if (profileId == null) return null;
     final row =
-        await (_db.profiles.select()
-              ..where((t) => t.id.equals(profileId)))
+        await (_db.profiles.select()..where((t) => t.id.equals(profileId)))
             .getSingleOrNull();
     return row?.syncId;
   }
@@ -107,9 +106,8 @@ class VaultRepository
       _bestEffort(() async {
         final crdt = await _crdt();
         if (crdt == null) return;
-        final row =
-            await (_db.profiles.select()..where((t) => t.id.equals(id)))
-                .getSingleOrNull();
+        final row = await (_db.profiles.select()..where((t) => t.id.equals(id)))
+            .getSingleOrNull();
         final syncId = row?.syncId;
         if (row == null || syncId == null) return;
         await crdt.putEntry(
@@ -187,8 +185,9 @@ class VaultRepository
   @override
   Future<bool> updateProfile(int id, ProfileDraft draft) async {
     final rows =
-        await (_db.profiles.update()..where((tbl) => tbl.id.equals(id)))
-            .write(_profileCompanion(draft, updatedAt: DateTime.now()));
+        await (_db.profiles.update()..where((tbl) => tbl.id.equals(id))).write(
+          _profileCompanion(draft, updatedAt: DateTime.now()),
+        );
     if (rows > 0) await _syncProfile(id, isNew: false);
     return rows > 0;
   }

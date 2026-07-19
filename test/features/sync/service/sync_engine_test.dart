@@ -175,10 +175,7 @@ void main() {
     test('publie un snapshot quand le curseur dépasse le seuil', () async {
       final api = _FakeSyncApi(
         pullPages: [
-          DeltaPage(
-            deltas: [RemoteDelta(seq: 5, payload: _b(1))],
-            latest: 5,
-          ),
+          DeltaPage(deltas: [RemoteDelta(seq: 5, payload: _b(1))], latest: 5),
         ],
       );
       final store = InMemoryVaultDocStore();
@@ -199,10 +196,7 @@ void main() {
     test('ne publie pas sous le seuil', () async {
       final api = _FakeSyncApi(
         pullPages: [
-          DeltaPage(
-            deltas: [RemoteDelta(seq: 1, payload: _b(1))],
-            latest: 1,
-          ),
+          DeltaPage(deltas: [RemoteDelta(seq: 1, payload: _b(1))], latest: 1),
         ],
       );
 

@@ -27,7 +27,9 @@ void main() {
     });
 
     test('uuid (16 octets)', () {
-      roundTrip(UuidValue(Uint8List.fromList(List.generate(16, (i) => i * 7 % 256))));
+      roundTrip(
+        UuidValue(Uint8List.fromList(List.generate(16, (i) => i * 7 % 256))),
+      );
     });
 
     test('null', () {

@@ -54,8 +54,11 @@ class FakeCrdtFfi implements CrdtFfi {
       fieldsById[hex(entryId)] ?? const [];
 
   @override
-  Uint8List decryptField(Uint8List vaultKey, Uint8List entryId, Uint8List value) =>
-      value;
+  Uint8List decryptField(
+    Uint8List vaultKey,
+    Uint8List entryId,
+    Uint8List value,
+  ) => value;
 
   @override
   Uint8List encryptField(
