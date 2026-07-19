@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/security/vault_service.dart';
-import '../../onboarding/data/password_validation_rules.dart';
+import '../../../core/security/password_validation_rules.dart';
 
 /// ViewModel de la page de changement du mot de passe maître.
 class ChangePasswordViewModel extends ChangeNotifier {

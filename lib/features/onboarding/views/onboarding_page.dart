@@ -4,13 +4,14 @@ import 'package:go_router/go_router.dart';
 import '../../../core/feature_flags/feature_flags_controller.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/vault_service.dart';
+import '../../auth/data/account_credential_rules.dart';
 import '../../auth/service/auth_service.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../../../shared/widgets/password_form.dart';
 import '../../../shared/widgets/view_title.dart';
+import '../../../core/security/password_validation_rule.dart';
+import '../../../core/security/password_validation_rules.dart';
 import '../data/onboarding_step.dart';
-import '../data/password_validation_rule.dart';
-import '../data/password_validation_rules.dart';
 import '../service/onboarding_storage_service.dart';
 import '../viewmodels/onboarding_view_model.dart';
 
@@ -517,9 +518,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       prefixIcon: Icon(Icons.person_outline),
                     ),
                     validator: (value) =>
-                        (value == null || value.trim().isEmpty)
-                        ? 'Champ requis'
-                        : null,
+                        AccountCredentialRules.validateUsername(value ?? ''),
                   ),
                   TextFormField(
                     controller: _syncPasswordController,
@@ -530,9 +529,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       prefixIcon: Icon(Icons.lock_outline),
                     ),
                     validator: (value) =>
-                        (value == null || value.trim().length < 12)
-                        ? 'Au moins 12 caractères'
-                        : null,
+                        AccountCredentialRules.validatePassword(value ?? ''),
                     onFieldSubmitted: (_) => _submitSyncAccount(),
                   ),
                   if (_viewModel.errorMessage != null)

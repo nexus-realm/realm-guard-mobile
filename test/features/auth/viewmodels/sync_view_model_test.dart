@@ -76,6 +76,43 @@ void main() {
     expect(backedUp, isEmpty);
   });
 
+  test(
+    'register refuse un mot de passe faible sans appeler le serveur',
+    () async {
+      final auth = FakeAuthService();
+      final (:vm, backedUp: _) = build(auth);
+      vm.setMode(AuthMode.register);
+
+      await vm.submit(username: 'alice', password: 'court');
+
+      expect(vm.error, isNotNull);
+      expect(vm.isLoggedIn, isFalse);
+      expect(auth.registeredUsernames, isEmpty);
+    },
+  );
+
+  test('register refuse un nom d\'utilisateur invalide', () async {
+    final auth = FakeAuthService();
+    final (:vm, backedUp: _) = build(auth);
+    vm.setMode(AuthMode.register);
+
+    await vm.submit(username: 'a b', password: 'Motdepasse1!');
+
+    expect(vm.error, isNotNull);
+    expect(auth.registeredUsernames, isEmpty);
+  });
+
+  test('login n\'impose aucun format (compte préexistant)', () async {
+    final auth = FakeAuthService();
+    final (:vm, backedUp: _) = build(auth);
+    // Mode login par défaut : un identifiant « court » doit passer côté client.
+    await vm.submit(username: 'ab', password: 'court');
+
+    expect(vm.error, isNull);
+    expect(vm.isLoggedIn, isTrue);
+    expect(auth.loggedInUsernames, ['ab']);
+  });
+
   test('initialize remonte le statut de backup quand connecté', () async {
     final auth = FakeAuthService()
       ..loggedIn = true

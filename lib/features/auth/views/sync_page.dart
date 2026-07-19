@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../../../shared/widgets/view_title.dart';
+import '../data/account_credential_rules.dart';
 import '../service/auth_service.dart';
 import '../viewmodels/sync_view_model.dart';
 
@@ -178,9 +179,14 @@ class _SyncPageState extends State<SyncPage> {
                 labelText: "Nom d'utilisateur",
                 prefixIcon: Icon(Icons.person_outline),
               ),
-              validator: (value) => (value == null || value.trim().isEmpty)
-                  ? 'Champ requis'
-                  : null,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Champ requis';
+                }
+                return isRegister
+                    ? AccountCredentialRules.validateUsername(value)
+                    : null;
+              },
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -191,8 +197,12 @@ class _SyncPageState extends State<SyncPage> {
                 labelText: 'Mot de passe du compte',
                 prefixIcon: Icon(Icons.lock_outline),
               ),
-              validator: (value) =>
-                  (value == null || value.isEmpty) ? 'Champ requis' : null,
+              validator: (value) {
+                if (value == null || value.isEmpty) return 'Champ requis';
+                return isRegister
+                    ? AccountCredentialRules.validatePassword(value)
+                    : null;
+              },
               onFieldSubmitted: (_) => _submit(),
             ),
             if (_viewModel.error != null) ...[

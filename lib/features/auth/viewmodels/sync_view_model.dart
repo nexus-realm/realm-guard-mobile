@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../data/account_credential_rules.dart';
 import '../data/auth_exception.dart';
 import '../service/auth_service.dart';
 
@@ -64,6 +65,20 @@ class SyncViewModel extends ChangeNotifier {
     required String password,
   }) async {
     if (_isLoading) return;
+
+    // À l'inscription, on applique la politique d'identifiants (le serveur
+    // n'impose rien). En connexion, on n'impose aucun format : un compte
+    // existant pourrait précéder ces règles.
+    if (_mode == AuthMode.register) {
+      final usernameError = AccountCredentialRules.validateUsername(username);
+      final passwordError = AccountCredentialRules.validatePassword(password);
+      if (usernameError != null || passwordError != null) {
+        _error = usernameError ?? passwordError;
+        notifyListeners();
+        return;
+      }
+    }
+
     _isLoading = true;
     _error = null;
     notifyListeners();
