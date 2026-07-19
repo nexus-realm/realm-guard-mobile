@@ -193,7 +193,11 @@ final GoRouter appRouter = GoRouter(
       ),
     ),
     ShellRoute(
-      builder: (context, state, child) => HomeShell(child: child),
+      builder: (context, state, child) => HomeShell(
+        onRemoteChange: syncSessionController.onRemoteChange,
+        remoteChangeCount: () => syncSessionController.lastRemoteChangeCount,
+        child: child,
+      ),
       routes: [
         GoRoute(
           path: AppRoutes.home,

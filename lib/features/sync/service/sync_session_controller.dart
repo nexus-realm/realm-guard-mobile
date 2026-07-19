@@ -32,6 +32,17 @@ class SyncSessionController with WidgetsBindingObserver {
   bool _attached = false;
   bool _starting = false;
 
+  // Notifie l'UI après un tirage ayant modifié le coffre depuis un autre appareil
+  // (notification passive). `count` = nb d'entrées changées du dernier tirage.
+  final _RemoteChanges _remoteChanges = _RemoteChanges();
+
+  /// S'abonner pour signaler à l'utilisateur une mise à jour reçue d'un autre
+  /// appareil. Lire [lastRemoteChangeCount] à la notification.
+  Listenable get onRemoteChange => _remoteChanges;
+
+  /// Nombre d'entrées changées au dernier tirage distant.
+  int get lastRemoteChangeCount => _remoteChanges.count;
+
   SyncSessionController({
     required VaultService vaultService,
     required SyncApi api,
@@ -90,6 +101,8 @@ class SyncSessionController with WidgetsBindingObserver {
         // Verrou partagé avec VaultCrdt (créé par ensureCrdtSession) → sérialise
         // les tirages et les écritures locales sur le même doc.
         lock: _vaultService.docLock,
+        // Notification passive : nb d'entrées modifiées par un tirage distant.
+        onRemoteChange: _remoteChanges.report,
       );
       final controller = SyncController(
         engine: engine,
@@ -132,5 +145,16 @@ class SyncSessionController with WidgetsBindingObserver {
   Future<void> _onResumed() async {
     await ensureStarted();
     await _controller?.requestSync();
+  }
+}
+
+/// Notifie ses abonnés qu'un tirage a modifié le coffre depuis un autre appareil.
+/// Expose [report] car `notifyListeners` est protégé.
+class _RemoteChanges extends ChangeNotifier {
+  int count = 0;
+
+  void report(int changedEntries) {
+    count = changedEntries;
+    notifyListeners();
   }
 }

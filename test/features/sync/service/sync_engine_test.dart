@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:realmguard/core/sync/crdt_ffi.dart';
+import 'package:realmguard/core/sync/drift_projector.dart';
 import 'package:realmguard/features/sync/data/sync_exception.dart';
 import 'package:realmguard/features/sync/data/sync_models.dart';
 import 'package:realmguard/features/sync/service/sync_api.dart';
@@ -63,6 +64,7 @@ SyncEngine _engine(
   required FakeCrdtFfi ffi,
   required FakeReprojector reprojector,
   int snapshotThreshold = 200,
+  void Function(int)? onRemoteChange,
 }) => SyncEngine(
   api: api,
   store: store,
@@ -71,6 +73,7 @@ SyncEngine _engine(
   reprojector: reprojector,
   vaultKey: _vaultKey,
   snapshotThreshold: snapshotThreshold,
+  onRemoteChange: onRemoteChange,
 );
 
 void main() {
@@ -213,6 +216,54 @@ void main() {
       ).sync(); // curseur 1 ; 1 - 0 < 100 → pas de snapshot
 
       expect(api.snapshotsPut, isEmpty);
+    });
+  });
+
+  group('SyncEngine notification distante', () {
+    test('remonte le nombre d\'entrées changées via onRemoteChange', () async {
+      var reported = 0;
+      final api = _FakeSyncApi(
+        pullPages: [
+          DeltaPage(deltas: [RemoteDelta(seq: 1, payload: _b(1))], latest: 1),
+        ],
+      );
+      final reprojector = FakeReprojector()
+        ..summary = const ReprojectionSummary(added: 1, updated: 2);
+
+      await _engine(
+        api,
+        store: InMemoryVaultDocStore(),
+        pending: InMemoryPendingDeltaStore(),
+        ffi: FakeCrdtFfi(),
+        reprojector: reprojector,
+        snapshotThreshold: 1000,
+        onRemoteChange: (n) => reported = n,
+      ).sync();
+
+      expect(reported, 3); // 1 ajout + 2 màj
+    });
+
+    test('pas de signal si le tirage ne change rien', () async {
+      var reported = -1;
+      final api = _FakeSyncApi(
+        pullPages: [
+          DeltaPage(deltas: [RemoteDelta(seq: 1, payload: _b(1))], latest: 1),
+        ],
+      );
+      final reprojector = FakeReprojector()
+        ..summary = const ReprojectionSummary(); // 0 changement
+
+      await _engine(
+        api,
+        store: InMemoryVaultDocStore(),
+        pending: InMemoryPendingDeltaStore(),
+        ffi: FakeCrdtFfi(),
+        reprojector: reprojector,
+        snapshotThreshold: 1000,
+        onRemoteChange: (n) => reported = n,
+      ).sync();
+
+      expect(reported, -1); // callback jamais appelé
     });
   });
 }

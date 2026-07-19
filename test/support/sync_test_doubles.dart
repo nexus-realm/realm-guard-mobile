@@ -118,13 +118,21 @@ class FakeCrdtFfi implements CrdtFfi {
   Uint8List deviceIdFromKey(Uint8List publicKey) => throw UnimplementedError();
 }
 
-/// Reprojecteur qui enregistre ses appels (sans drift).
+/// Reprojecteur qui enregistre ses appels (sans drift) et renvoie un bilan
+/// configurable.
 class FakeReprojector implements VaultReprojector {
   final List<Uint8List> reprojected = [];
 
+  /// Bilan renvoyé à chaque reprojection (par défaut : 1 entrée modifiée).
+  ReprojectionSummary summary = const ReprojectionSummary(updated: 1);
+
   @override
-  Future<void> reproject(Uint8List docBytes, Uint8List vaultKey) async {
+  Future<ReprojectionSummary> reproject(
+    Uint8List docBytes,
+    Uint8List vaultKey,
+  ) async {
     reprojected.add(docBytes);
+    return summary;
   }
 }
 

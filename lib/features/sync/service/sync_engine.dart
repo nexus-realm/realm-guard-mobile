@@ -33,6 +33,7 @@ class SyncEngine implements SyncRunner {
   final int _pullLimit;
   final Mutex _lock;
   final int _snapshotThreshold;
+  final void Function(int changedEntries)? _onRemoteChange;
 
   // Dernier `covers_seq` pour lequel **cet appareil** a publié un snapshot (en
   // mémoire, par session) : borne la fréquence de compaction.
@@ -49,6 +50,7 @@ class SyncEngine implements SyncRunner {
     int pullLimit = 500,
     Mutex? lock,
     int snapshotThreshold = 200,
+    void Function(int changedEntries)? onRemoteChange,
   }) : _api = api,
        _store = store,
        _pending = pending,
@@ -58,15 +60,19 @@ class SyncEngine implements SyncRunner {
        _pushBatch = pushBatch,
        _pullLimit = pullLimit,
        _snapshotThreshold = snapshotThreshold,
+       _onRemoteChange = onRemoteChange,
        // Verrou partagé (par session) avec `VaultCrdt` — sérialise les RMW du doc.
        _lock = lock ?? Mutex();
 
   /// Un cycle complet : push, pull, puis compaction éventuelle par snapshot.
+  /// Signale via `onRemoteChange` le nombre d'entrées **réellement** modifiées
+  /// par le tirage (pour une notification passive à l'utilisateur).
   @override
   Future<void> sync() async {
     await push();
-    await pull();
+    final changed = await pull();
     await _maybeSnapshot();
+    if (changed > 0) _onRemoteChange?.call(changed);
   }
 
   /// Draine la file de deltas locaux vers le serveur (FIFO, `ack` au fil de l'eau
@@ -84,7 +90,9 @@ class SyncEngine implements SyncRunner {
 
   /// Tire et applique les deltas distants jusqu'à rattraper le log. Sur **410**
   /// (curseur antérieur au snapshot), repart du snapshot.
-  Future<void> pull() async {
+  /// Renvoie le nombre total d'entrées **réellement** modifiées par le tirage.
+  Future<int> pull() async {
+    var total = 0;
     while (true) {
       // Curseur de départ (hors verrou) : sert au paramètre réseau `since`.
       final since = (await _loadOrEmpty()).cursor;
@@ -94,18 +102,18 @@ class SyncEngine implements SyncRunner {
         page = await _api.pullDeltas(since: since, limit: _pullLimit);
       } on SyncException catch (e) {
         if (e.kind == SyncErrorKind.cursorGone) {
-          await _resetFromSnapshot();
+          total += await _resetFromSnapshot();
           continue;
         }
         rethrow;
       }
 
-      if (page.deltas.isEmpty) return;
+      if (page.deltas.isEmpty) return total;
 
       // Section critique : rechargement **frais** du doc (une écriture locale a
       // pu tomber pendant l'attente réseau), merge, sauvegarde et reprojection —
       // atomiques vis-à-vis des écritures locales grâce au verrou partagé.
-      final caughtUp = await _lock.run(() async {
+      final result = await _lock.run(() async {
         final state = await _loadOrEmpty();
         var doc = state.doc;
         var cursor = state.cursor;
@@ -113,28 +121,29 @@ class SyncEngine implements SyncRunner {
           doc = _ffi.merge(doc, delta.payload);
           if (delta.seq > cursor) cursor = delta.seq;
         }
-        await _applyMerged(state, doc, cursor);
-        return cursor >= page.latest;
+        final changed = await _applyMerged(state, doc, cursor);
+        return (caughtUp: cursor >= page.latest, changed: changed);
       });
 
-      if (caughtUp) return; // rattrapé
+      total += result.changed;
+      if (result.caughtUp) return total; // rattrapé
     }
   }
 
-  Future<void> _resetFromSnapshot() async {
+  Future<int> _resetFromSnapshot() async {
     final snapshot = await _api.getSnapshot(); // réseau, hors verrou
-    await _lock.run(() async {
+    return _lock.run(() async {
       final state = await _loadOrEmpty();
       if (snapshot == null) {
         // Curseur trop ancien mais aucun snapshot : repartir de zéro pour re-tirer
         // tout le log (il reste disponible).
         await _store.save(state.copyWith(cursor: 0));
-        return;
+        return 0;
       }
       // Le snapshot est un état complet, join-compatible : on le **fusionne** (sans
       // écraser d'éventuelles écritures locales non encore poussées).
       final doc = _ffi.merge(state.doc, snapshot.payload);
-      await _applyMerged(state, doc, snapshot.coversSeq);
+      return _applyMerged(state, doc, snapshot.coversSeq);
     });
   }
 
@@ -160,14 +169,15 @@ class SyncEngine implements SyncRunner {
   /// Persiste le doc fusionné + l'horloge **avancée au-delà du max reçu** + le
   /// curseur, puis reprojette en base. L'avancée d'horloge évite qu'une écriture
   /// locale ultérieure ne perde en LWW face à une valeur distante déjà fusionnée.
-  Future<void> _applyMerged(
+  Future<int> _applyMerged(
     VaultDocState state,
     Uint8List doc,
     int cursor,
   ) async {
     final clock = _maxTick(state.clock, _ffi.maxHlc(doc));
     await _store.save(state.copyWith(doc: doc, clock: clock, cursor: cursor));
-    await _reprojector.reproject(doc, _vaultKey);
+    final summary = await _reprojector.reproject(doc, _vaultKey);
+    return summary.changed;
   }
 
   Future<VaultDocState> _loadOrEmpty() async =>

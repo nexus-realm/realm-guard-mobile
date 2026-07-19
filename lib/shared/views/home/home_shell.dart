@@ -38,7 +38,19 @@ class _ComingSoonView extends StatelessWidget {
 class HomeShell extends StatefulWidget {
   final Widget child;
 
-  const HomeShell({super.key, required this.child});
+  /// Notifie qu'un tirage a modifié le coffre depuis un autre appareil
+  /// (notification passive). `null` en test.
+  final Listenable? onRemoteChange;
+
+  /// Nombre d'entrées changées au dernier tirage, lu à la notification.
+  final int Function()? remoteChangeCount;
+
+  const HomeShell({
+    super.key,
+    required this.child,
+    this.onRemoteChange,
+    this.remoteChangeCount,
+  });
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -77,11 +89,31 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    widget.onRemoteChange?.addListener(_onRemoteChange);
+  }
+
+  @override
   void dispose() {
+    widget.onRemoteChange?.removeListener(_onRemoteChange);
     _fabNotifier.dispose();
     _searchNotifier.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  /// Notification passive : un tirage distant a modifié le coffre.
+  void _onRemoteChange() {
+    if (!mounted) return;
+    final count = widget.remoteChangeCount?.call() ?? 0;
+    if (count <= 0) return;
+    final message = count == 1
+        ? '1 modification reçue d\'un autre appareil'
+        : '$count modifications reçues d\'un autre appareil';
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
