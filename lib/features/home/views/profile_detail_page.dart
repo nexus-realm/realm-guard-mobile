@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../shared/widgets/app_snackbar.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
@@ -76,15 +78,11 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
     final ok = await _viewModel.save(draft);
     if (!mounted) return;
     if (ok) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Profil mis à jour.')));
+      AppSnackbar.success(context, 'Profil mis à jour.');
     } else {
       final message = _viewModel.errorMessage;
       if (message != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        AppSnackbar.error(context, message);
       }
     }
   }
@@ -113,9 +111,7 @@ class _ProfileDetailPageState extends State<ProfileDetailPage> {
     } else {
       final message = _viewModel.errorMessage;
       if (message != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        AppSnackbar.error(context, message);
       }
     }
   }

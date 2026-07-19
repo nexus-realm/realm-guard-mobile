@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../../../../shared/widgets/app_snackbar.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -98,9 +100,7 @@ class _TotpListTileState extends State<TotpListTile> {
   void _copyCode() {
     if (_code.isEmpty || _code == 'Secret invalide') return;
     Clipboard.setData(ClipboardData(text: _code));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Code copié dans le presse-papiers.')),
-    );
+    AppSnackbar.info(context, 'Code copié dans le presse-papiers.');
   }
 
   @override

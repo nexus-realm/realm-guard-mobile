@@ -135,6 +135,9 @@ final SyncSessionController syncSessionController = SyncSessionController(
     config: const ServerConfig.dev(),
     ensureSession: () => _pairingService.authenticateDevice(),
   ),
+  // Ne proposer la synchro manuelle (pull-to-refresh) que si un compte de
+  // synchronisation est actif sur cet appareil.
+  isSyncEnabled: _authService.isLoggedIn,
 );
 
 /// Un `VaultRepository` câblé sur la session CRDT (write-through de la synchro).

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../widgets/app_snackbar.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/routes/app_routes.dart';
@@ -111,9 +113,7 @@ class _HomeShellState extends State<HomeShell> {
     final message = count == 1
         ? '1 modification reçue d\'un autre appareil'
         : '$count modifications reçues d\'un autre appareil';
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    AppSnackbar.info(context, message);
   }
 
   @override

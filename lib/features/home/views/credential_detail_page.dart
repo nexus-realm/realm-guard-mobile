@@ -8,6 +8,7 @@ import '../../../core/database/vault_repository.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../../../shared/widgets/secondary_button.dart';
 import '../data/custom_field.dart';
@@ -74,15 +75,11 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
     final ok = await _viewModel.save(draft);
     if (!mounted) return;
     if (ok) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Identifiant mis à jour.')));
+      AppSnackbar.success(context, 'Identifiant mis à jour.');
     } else {
       final message = _viewModel.errorMessage;
       if (message != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        AppSnackbar.error(context, message);
       }
     }
   }
@@ -108,9 +105,7 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
     } else {
       final message = _viewModel.errorMessage;
       if (message != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        AppSnackbar.error(context, message);
       }
     }
   }
@@ -335,9 +330,7 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
   void _copy(String value) {
     Clipboard.setData(ClipboardData(text: value));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Copié dans le presse-papiers.')),
-    );
+    AppSnackbar.info(context, 'Copié dans le presse-papiers.');
   }
 
   /// Action rapide depuis la lecture seule : choisir/changer le profil associé
@@ -353,15 +346,11 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
     final ok = await _viewModel.setProfile(selected.profileId);
     if (!mounted) return;
     if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profil associé mis à jour.')),
-      );
+      AppSnackbar.success(context, 'Profil associé mis à jour.');
     } else {
       final message = _viewModel.errorMessage;
       if (message != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        AppSnackbar.error(context, message);
       }
     }
   }
@@ -375,9 +364,7 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
       mode: LaunchMode.externalApplication,
     );
     if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible d\'ouvrir le lien.')),
-      );
+      AppSnackbar.error(context, "Impossible d'ouvrir le lien.");
     }
   }
 }

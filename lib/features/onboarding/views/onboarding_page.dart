@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/feature_flags/feature_flags_controller.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/vault_service.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 import '../../auth/data/account_credential_rules.dart';
 import '../../auth/service/auth_service.dart';
 import '../../../shared/widgets/choice_card.dart';
@@ -130,9 +131,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       final errorMessage = _viewModel.errorMessage;
 
       if (mounted && errorMessage != null && errorMessage.isNotEmpty) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(errorMessage)));
+        AppSnackbar.error(context, errorMessage);
       }
       return;
     }

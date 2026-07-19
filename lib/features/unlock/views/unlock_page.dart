@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../shared/widgets/app_snackbar.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/routes/app_routes.dart';
@@ -80,12 +82,7 @@ class _UnlockPageState extends State<UnlockPage> with WidgetsBindingObserver {
     if (_viewModel.strategy == UnlockStrategy.password &&
         _viewModel.errorMessage != null &&
         _viewModel.errorMessage!.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_viewModel.errorMessage!),
-          backgroundColor: AppColors.darkRed,
-        ),
-      );
+      AppSnackbar.error(context, _viewModel.errorMessage!);
     }
   }
 
@@ -102,9 +99,7 @@ class _UnlockPageState extends State<UnlockPage> with WidgetsBindingObserver {
         'Coffre verrouillé après une période d\'inactivité.',
     };
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    AppSnackbar.info(context, message);
   }
 
   @override

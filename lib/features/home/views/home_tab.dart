@@ -13,6 +13,8 @@ import '../../../shared/notifiers/fab_notifier.dart';
 import '../../../shared/notifiers/fab_notifier_scope.dart';
 import '../../../shared/notifiers/search_notifier_scope.dart';
 import '../../../shared/viewmodels/home_view_model.dart';
+import '../../../shared/widgets/app_snackbar.dart';
+import '../../sync/data/sync_outcome.dart';
 import '../../sync/service/sync_session_controller.dart';
 import 'widgets/credential_avatar.dart';
 import 'widgets/profile_avatar.dart';
@@ -112,6 +114,51 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
     );
   }
 
+  /// Tirer pour synchroniser **manuellement**. Contrairement aux cycles auto
+  /// (best-effort, silencieux), on donne ici un retour explicite : erreur en
+  /// snackbar, « non activée » si aucun compte de sync. Le succès reste discret
+  /// (la liste se met à jour ; les changements distants ont déjà leur snackbar).
+  Future<void> _onRefresh() async {
+    final controller = widget.syncSessionController;
+    if (controller == null) return;
+    final outcome = await controller.syncNow();
+    if (!mounted) return;
+    switch (outcome.status) {
+      case SyncStatus.success:
+        break;
+      case SyncStatus.unavailable:
+        AppSnackbar.info(context, 'Synchronisation non activée.');
+      case SyncStatus.failure:
+        AppSnackbar.error(
+          context,
+          outcome.message ?? 'Échec de la synchronisation.',
+        );
+    }
+  }
+
+  /// Enrobe une liste dans un `RefreshIndicator` (pull-to-refresh → sync manuelle).
+  Widget _refreshable(Widget child) {
+    return RefreshIndicator(
+      onRefresh: _onRefresh,
+      color: AppColors.mainColor,
+      child: child,
+    );
+  }
+
+  /// Rend un état vide **défilable** pour qu'il reste tirable (le pull-to-refresh
+  /// exige un enfant qui défile).
+  Widget _scrollableEmpty(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final totpEnabled = widget.featureFlagsController.isEnabled(
@@ -167,82 +214,97 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
   Widget _buildCredentialsTab() {
     final credentials = _viewModel!.filteredCredentials;
     if (credentials.isEmpty) {
-      return _emptyState(
-        emptyIcon: Icons.vpn_key_outlined,
-        emptyTitle: 'Aucun identifiant',
-        emptyMessage: 'Appuyez sur + pour ajouter un identifiant.',
+      return _refreshable(
+        _scrollableEmpty(
+          _emptyState(
+            emptyIcon: Icons.vpn_key_outlined,
+            emptyTitle: 'Aucun identifiant',
+            emptyMessage: 'Appuyez sur + pour ajouter un identifiant.',
+          ),
+        ),
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      itemCount: credentials.length,
-      itemBuilder: (context, index) {
-        final item = credentials[index];
-        final profile = item.profile;
-        return VaultListTile(
-          leading: CredentialAvatar(
+    return _refreshable(
+      ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        itemCount: credentials.length,
+        itemBuilder: (context, index) {
+          final item = credentials[index];
+          final profile = item.profile;
+          return VaultListTile(
+            leading: CredentialAvatar(
+              title: item.credential.title,
+              uri: item.credential.uri,
+              radius: 18,
+            ),
             title: item.credential.title,
-            uri: item.credential.uri,
-            radius: 18,
-          ),
-          title: item.credential.title,
-          subtitle: profile?.name ?? 'Sans profil',
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (item.credential.favorite)
-                Padding(
-                  padding: const EdgeInsets.only(right: AppSpacing.xs),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: AppDecorations.accentGlow,
-                    ),
-                    child: const Icon(
-                      Icons.star,
-                      size: 18,
-                      color: AppColors.mainColor,
+            subtitle: profile?.name ?? 'Sans profil',
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (item.credential.favorite)
+                  Padding(
+                    padding: const EdgeInsets.only(right: AppSpacing.xs),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: AppDecorations.accentGlow,
+                      ),
+                      child: const Icon(
+                        Icons.star,
+                        size: 18,
+                        color: AppColors.mainColor,
+                      ),
                     ),
                   ),
-                ),
-              if (profile != null)
-                ProfileAvatar(
-                  name: profile.name,
-                  colorValue: profile.color,
-                  radius: 12,
-                ),
-            ],
-          ),
-          onTap: () => context.push(
-            '${AppRoutes.credentialDetail}/${item.credential.id}',
-          ),
-        );
-      },
+                if (profile != null)
+                  ProfileAvatar(
+                    name: profile.name,
+                    colorValue: profile.color,
+                    radius: 12,
+                  ),
+              ],
+            ),
+            onTap: () => context.push(
+              '${AppRoutes.credentialDetail}/${item.credential.id}',
+            ),
+          );
+        },
+      ),
     );
   }
 
   Widget _buildTotpsTab() {
     final totps = _viewModel!.filteredTotps;
     if (totps.isEmpty) {
-      return _emptyState(
-        emptyIcon: Icons.timer_outlined,
-        emptyTitle: 'Aucun code TOTP',
-        emptyMessage:
-            'Appuyez sur + pour ajouter un code à validation en '
-            'deux étapes.',
+      return _refreshable(
+        _scrollableEmpty(
+          _emptyState(
+            emptyIcon: Icons.timer_outlined,
+            emptyTitle: 'Aucun code TOTP',
+            emptyMessage:
+                'Appuyez sur + pour ajouter un code à validation en '
+                'deux étapes.',
+          ),
+        ),
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      itemCount: totps.length,
-      itemBuilder: (context, index) {
-        final item = totps[index];
-        return TotpListTile(
-          totp: item.totp,
-          subtitle: item.totp.account ?? item.profile?.name ?? '',
-          onTap: () => context.push('${AppRoutes.totpDetail}/${item.totp.id}'),
-        );
-      },
+    return _refreshable(
+      ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        itemCount: totps.length,
+        itemBuilder: (context, index) {
+          final item = totps[index];
+          return TotpListTile(
+            totp: item.totp,
+            subtitle: item.totp.account ?? item.profile?.name ?? '',
+            onTap: () =>
+                context.push('${AppRoutes.totpDetail}/${item.totp.id}'),
+          );
+        },
+      ),
     );
   }
 

@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../../../shared/widgets/app_snackbar.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
@@ -72,15 +74,11 @@ class _TotpDetailPageState extends State<TotpDetailPage> {
     final ok = await _viewModel.setProfile(selected.profileId);
     if (!mounted) return;
     if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profil associé mis à jour.')),
-      );
+      AppSnackbar.success(context, 'Profil associé mis à jour.');
     } else {
       final message = _viewModel.errorMessage;
       if (message != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        AppSnackbar.error(context, message);
       }
     }
   }
@@ -99,9 +97,7 @@ class _TotpDetailPageState extends State<TotpDetailPage> {
     final ok = await _viewModel.save(draft);
     if (!mounted) return;
     if (ok) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('TOTP mis à jour.')));
+      AppSnackbar.success(context, 'TOTP mis à jour.');
     } else {
       _showError();
     }
@@ -131,9 +127,7 @@ class _TotpDetailPageState extends State<TotpDetailPage> {
   void _showError() {
     final message = _viewModel.errorMessage;
     if (message != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      AppSnackbar.error(context, message);
     }
   }
 
@@ -356,9 +350,7 @@ class _LiveCodeCardState extends State<_LiveCodeCard> {
   void _copy() {
     if (_code.isEmpty || _code == 'Secret invalide') return;
     Clipboard.setData(ClipboardData(text: _code));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Code copié dans le presse-papiers.')),
-    );
+    AppSnackbar.info(context, 'Code copié dans le presse-papiers.');
   }
 
   @override
