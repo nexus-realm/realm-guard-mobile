@@ -106,6 +106,37 @@ class TotpDetailViewModel extends ChangeNotifier {
     }
   }
 
+  /// Réassocie le profil directement depuis la lecture seule (sans passer en
+  /// mode édition), comme la fiche identifiant. Renvoie `true` en cas de succès.
+  Future<bool> setProfile(int? profileId) async {
+    final totp = _current?.totp;
+    if (totp == null) return false;
+    if (profileId == totp.profileId) return true; // pas de changement
+    _isSubmitting = true;
+    notifyListeners();
+    try {
+      await _repository.updateTotp(
+        _totpId,
+        TotpDraft(
+          label: totp.label,
+          account: totp.account,
+          secret: totp.secret,
+          digits: totp.digits,
+          period: totp.period,
+          algorithm: totp.algorithm,
+          profileId: profileId,
+          favorite: totp.favorite,
+        ),
+      );
+      return true;
+    } catch (_) {
+      return _fail('Impossible de modifier le profil associé.');
+    } finally {
+      _isSubmitting = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> delete() async {
     _isSubmitting = true;
     notifyListeners();

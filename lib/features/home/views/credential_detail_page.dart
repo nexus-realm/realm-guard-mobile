@@ -17,6 +17,7 @@ import 'widgets/credential_avatar.dart';
 import 'widgets/credential_form.dart';
 import 'widgets/discard_changes_dialog.dart';
 import 'widgets/password_strength_indicator.dart';
+import 'widgets/profile_picker.dart';
 
 class CredentialDetailPage extends StatefulWidget {
   const CredentialDetailPage({
@@ -342,36 +343,10 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
   /// Action rapide depuis la lecture seule : choisir/changer le profil associé
   /// via une bottom sheet, puis enregistrement immédiat.
   Future<void> _selectProfile() async {
-    final currentId = _viewModel.current?.credential.profileId;
-    final selected = await showModalBottomSheet<_ProfileChoice>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.block),
-              title: const Text('Aucun profil'),
-              trailing: currentId == null
-                  ? const Icon(Icons.check, color: AppColors.mainColor)
-                  : null,
-              onTap: () =>
-                  Navigator.of(sheetContext).pop(const _ProfileChoice(null)),
-            ),
-            for (final profile in _viewModel.profiles)
-              ListTile(
-                leading: const Icon(Icons.person_outline),
-                title: Text(profile.name),
-                trailing: currentId == profile.id
-                    ? const Icon(Icons.check, color: AppColors.mainColor)
-                    : null,
-                onTap: () =>
-                    Navigator.of(sheetContext).pop(_ProfileChoice(profile.id)),
-              ),
-          ],
-        ),
-      ),
+    final selected = await showProfilePicker(
+      context,
+      profiles: _viewModel.profiles,
+      currentId: _viewModel.current?.credential.profileId,
     );
     if (selected == null || !mounted) return;
 
@@ -432,13 +407,6 @@ class _ReadField extends StatefulWidget {
 
   @override
   State<_ReadField> createState() => _ReadFieldState();
-}
-
-/// Résultat de la bottom sheet de sélection de profil (permet de distinguer
-/// « aucun profil choisi » d'une fermeture sans choix).
-class _ProfileChoice {
-  const _ProfileChoice(this.profileId);
-  final int? profileId;
 }
 
 /// Bouton d'action neutre pour la fin d'une ligne [_ReadField].

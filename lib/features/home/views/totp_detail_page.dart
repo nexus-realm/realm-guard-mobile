@@ -16,6 +16,7 @@ import '../viewmodels/totp_detail_view_model.dart';
 import 'widgets/confirm_delete_dialog.dart';
 import 'widgets/detail_tile.dart';
 import 'widgets/discard_changes_dialog.dart';
+import 'widgets/profile_picker.dart';
 import 'widgets/totp_form.dart';
 
 class TotpDetailPage extends StatefulWidget {
@@ -57,6 +58,31 @@ class _TotpDetailPageState extends State<TotpDetailPage> {
 
   void _onViewModelChanged() {
     if (mounted) setState(() {});
+  }
+
+  /// Réassocie le profil directement depuis la lecture seule (sans mode édition),
+  /// cohérent avec la fiche identifiant.
+  Future<void> _selectProfile() async {
+    final selected = await showProfilePicker(
+      context,
+      profiles: _viewModel.profiles,
+      currentId: _viewModel.current?.totp.profileId,
+    );
+    if (selected == null || !mounted) return;
+    final ok = await _viewModel.setProfile(selected.profileId);
+    if (!mounted) return;
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profil associé mis à jour.')),
+      );
+    } else {
+      final message = _viewModel.errorMessage;
+      if (message != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
+    }
   }
 
   bool get _hasUnsavedChanges {
@@ -239,6 +265,12 @@ class _TotpDetailPageState extends State<TotpDetailPage> {
           icon: Icons.person_pin_outlined,
           label: 'Profil associé',
           value: profileName ?? 'Sans profil',
+          trailing: IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            color: AppColors.neutralAction,
+            tooltip: 'Modifier le profil associé',
+            onPressed: _viewModel.isSubmitting ? null : _selectProfile,
+          ),
         ),
         DetailTile(
           icon: Icons.tune,

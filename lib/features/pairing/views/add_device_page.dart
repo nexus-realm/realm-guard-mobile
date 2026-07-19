@@ -104,6 +104,7 @@ class _AddDevicePageState extends State<AddDevicePage> {
               return const Padding(
                 padding: EdgeInsets.all(24),
                 child: PairingStatusView(
+                  tone: PairingTone.success,
                   icon: Icons.check_circle_outline,
                   title: 'Appareil autorisé',
                   message:

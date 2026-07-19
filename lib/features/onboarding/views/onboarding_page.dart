@@ -168,8 +168,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         switchInCurve: Curves.easeOutCubic,
                         switchOutCurve: Curves.easeInCubic,
                         transitionBuilder: (child, animation) {
+                          // Glissement **latéral** : la nouvelle étape entre par la
+                          // droite en fondu (l'ancienne repart symétriquement).
                           final slideAnimation = Tween<Offset>(
-                            begin: const Offset(0, 0.04),
+                            begin: const Offset(0.15, 0),
                             end: Offset.zero,
                           ).animate(animation);
 
