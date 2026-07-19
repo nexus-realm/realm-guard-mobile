@@ -92,6 +92,34 @@ void main() {
 
       expect(changes, 1);
     });
+
+    test('save + enqueue enveloppés dans la transaction fournie', () async {
+      var txCalls = 0;
+      final store = InMemoryVaultDocStore();
+      final pending = InMemoryPendingDeltaStore();
+      final crdt = VaultCrdt(
+        ffi: FakeCrdtFfi(),
+        store: store,
+        pending: pending,
+        vaultKey: Uint8List.fromList([1, 2, 3]),
+        deviceId: _id(8),
+        now: () => DateTime.fromMillisecondsSinceEpoch(1000),
+        transaction: (action) async {
+          txCalls++;
+          await action();
+        },
+      );
+
+      await crdt.putEntry(
+        entryId: _id(1),
+        fields: {VaultFields.kind: const IntValue(1)},
+        isNew: true,
+      );
+
+      expect(txCalls, 1); // une transaction pour l'écriture
+      expect(store.state, isNotNull); // save fait dedans
+      expect(await pending.count(), greaterThan(0)); // enqueue fait dedans
+    });
   });
 
   group('VaultCrdt.removeEntry', () {

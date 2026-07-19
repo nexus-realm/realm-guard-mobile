@@ -32,6 +32,10 @@ class VaultCrdt {
   final DateTime Function() _now;
   final void Function()? _onChanged;
   final Mutex _lock;
+  // Enveloppe transactionnelle (par session) rendant **atomiques** la sauvegarde
+  // du doc et l'enfilement des deltas ; à défaut, exécution directe (non atomique,
+  // suffisant en test).
+  final Future<void> Function(Future<void> Function())? _transaction;
 
   VaultCrdt({
     required CrdtFfi ffi,
@@ -42,6 +46,7 @@ class VaultCrdt {
     DateTime Function() now = DateTime.now,
     void Function()? onChanged,
     Mutex? lock,
+    Future<void> Function(Future<void> Function())? transaction,
   }) : _ffi = ffi,
        _store = store,
        _pending = pending,
@@ -50,9 +55,14 @@ class VaultCrdt {
        _deviceId = deviceId,
        _now = now,
        _onChanged = onChanged,
+       _transaction = transaction,
        // Verrou partagé (par session) pour sérialiser les RMW du doc avec le
        // moteur de sync ; à défaut, un verrou propre (sérialise au moins soi-même).
        _lock = lock ?? Mutex();
+
+  /// Exécute [action] dans la transaction fournie (atomique) ou directement.
+  Future<void> _atomically(Future<void> Function() action) =>
+      _transaction == null ? action() : _transaction(action);
 
   /// Applique une entrée (création si [isNew], sinon mise à jour) : chiffre et
   /// écrit ses [fields] dans le doc persisté. Renvoie les deltas produits.
@@ -73,9 +83,13 @@ class VaultCrdt {
         nowMs: _nowMs(),
         markPresent: isNew,
       );
-      // Curseur préservé : une écriture locale ne change pas la progression de tirage.
-      await _store.save(state.copyWith(doc: result.doc, clock: result.clock));
-      await _enqueue(result.deltas);
+      // Atomique : doc sauvegardé **et** deltas enfilés, ou rien (pas de delta
+      // orphelin). Curseur préservé : une écriture locale ne change pas la
+      // progression de tirage.
+      await _atomically(() async {
+        await _store.save(state.copyWith(doc: result.doc, clock: result.clock));
+        await _enqueue(result.deltas);
+      });
       return result.deltas;
     });
     _onChanged?.call();
@@ -90,8 +104,10 @@ class VaultCrdt {
       if (state == null) return const <Uint8List>[];
       final mutation = _ffi.removeEntry(state.doc, entryId);
       // La suppression n'émet pas d'HLC de champ : horloge et curseur conservés.
-      await _store.save(state.copyWith(doc: mutation.doc));
-      await _enqueue([mutation.delta]);
+      await _atomically(() async {
+        await _store.save(state.copyWith(doc: mutation.doc));
+        await _enqueue([mutation.delta]);
+      });
       return [mutation.delta];
     });
     if (deltas.isNotEmpty) _onChanged?.call();
@@ -120,8 +136,11 @@ class VaultCrdt {
         state = VaultDocState(doc: result.doc, clock: result.clock);
         deltas.addAll(result.deltas);
       }
-      await _store.save(state);
-      await _enqueue(deltas);
+      final built = state;
+      await _atomically(() async {
+        await _store.save(built);
+        await _enqueue(deltas);
+      });
     });
     _onChanged?.call();
   }

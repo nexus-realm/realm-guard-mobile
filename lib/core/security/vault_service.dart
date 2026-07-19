@@ -357,6 +357,8 @@ class VaultService {
         deviceId: await _crdtDeviceIdStore.getOrCreate(),
         onChanged: _mutations.ping,
         lock: lock,
+        // Sauvegarde du doc + enfilement des deltas dans une même transaction.
+        transaction: (action) => db.transaction(action),
       );
       await _seedCrdtIfNeeded(db, store, crdt);
       _vaultCrdt = crdt;

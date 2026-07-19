@@ -32,6 +32,11 @@ class SyncEngine implements SyncRunner {
   final int _pushBatch;
   final int _pullLimit;
   final Mutex _lock;
+  final int _snapshotThreshold;
+
+  // Dernier `covers_seq` pour lequel **cet appareil** a publié un snapshot (en
+  // mémoire, par session) : borne la fréquence de compaction.
+  int _lastSnapshotCursor = 0;
 
   SyncEngine({
     required SyncApi api,
@@ -43,6 +48,7 @@ class SyncEngine implements SyncRunner {
     int pushBatch = 100,
     int pullLimit = 500,
     Mutex? lock,
+    int snapshotThreshold = 200,
   }) : _api = api,
        _store = store,
        _pending = pending,
@@ -51,14 +57,16 @@ class SyncEngine implements SyncRunner {
        _vaultKey = vaultKey,
        _pushBatch = pushBatch,
        _pullLimit = pullLimit,
+       _snapshotThreshold = snapshotThreshold,
        // Verrou partagé (par session) avec `VaultCrdt` — sérialise les RMW du doc.
        _lock = lock ?? Mutex();
 
-  /// Un cycle complet : push puis pull.
+  /// Un cycle complet : push, pull, puis compaction éventuelle par snapshot.
   @override
   Future<void> sync() async {
     await push();
     await pull();
+    await _maybeSnapshot();
   }
 
   /// Draine la file de deltas locaux vers le serveur (FIFO, `ack` au fil de l'eau
@@ -128,6 +136,25 @@ class SyncEngine implements SyncRunner {
       final doc = _ffi.merge(state.doc, snapshot.payload);
       await _applyMerged(state, doc, snapshot.coversSeq);
     });
+  }
+
+  /// Publie un snapshot du doc courant (**compaction** du log serveur) si le
+  /// curseur a assez avancé depuis le dernier snapshot de cet appareil. Le doc
+  /// couvre `covers_seq = cursor` : il inclut tous les deltas ≤ cursor (un pair en
+  /// retard tombera sur **410** et repartira de ce snapshot). Best-effort — un 409
+  /// (un autre appareil a déjà compacté plus loin) ou une erreur réseau sont sans
+  /// conséquence.
+  Future<void> _maybeSnapshot() async {
+    // Lecture cohérente (doc + curseur) sous le verrou ; l'envoi réseau reste dehors.
+    final state = await _lock.run(() => _store.load());
+    if (state == null) return;
+    if (state.cursor - _lastSnapshotCursor < _snapshotThreshold) return;
+    try {
+      await _api.putSnapshot(state.doc, coversSeq: state.cursor);
+      _lastSnapshotCursor = state.cursor;
+    } on SyncException {
+      // Compaction opportuniste : on retentera au prochain cycle.
+    }
   }
 
   /// Persiste le doc fusionné + l'horloge **avancée au-delà du max reçu** + le

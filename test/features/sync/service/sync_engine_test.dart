@@ -41,9 +41,13 @@ class _FakeSyncApi implements SyncApi {
     return const DeltaPage(deltas: [], latest: 0);
   }
 
+  final List<({Uint8List payload, int coversSeq})> snapshotsPut = [];
+
   @override
-  Future<int> putSnapshot(Uint8List snapshot, {required int coversSeq}) async =>
-      0;
+  Future<int> putSnapshot(Uint8List snapshot, {required int coversSeq}) async {
+    snapshotsPut.add((payload: snapshot, coversSeq: coversSeq));
+    return 0;
+  }
 
   @override
   Future<RemoteSnapshot?> getSnapshot() async => snapshot;
@@ -58,6 +62,7 @@ SyncEngine _engine(
   required InMemoryPendingDeltaStore pending,
   required FakeCrdtFfi ffi,
   required FakeReprojector reprojector,
+  int snapshotThreshold = 200,
 }) => SyncEngine(
   api: api,
   store: store,
@@ -65,6 +70,7 @@ SyncEngine _engine(
   ffi: ffi,
   reprojector: reprojector,
   vaultKey: _vaultKey,
+  snapshotThreshold: snapshotThreshold,
 );
 
 void main() {
@@ -159,6 +165,54 @@ void main() {
       expect(ffi.merged.map((d) => d.first), [200]);
       expect(store.state!.cursor, 10);
       expect(reprojector.reprojected.length, 1);
+    });
+  });
+
+  group('SyncEngine snapshot (compaction)', () {
+    test('publie un snapshot quand le curseur dépasse le seuil', () async {
+      final api = _FakeSyncApi(
+        pullPages: [
+          DeltaPage(
+            deltas: [RemoteDelta(seq: 5, payload: _b(1))],
+            latest: 5,
+          ),
+        ],
+      );
+      final store = InMemoryVaultDocStore();
+
+      await _engine(
+        api,
+        store: store,
+        pending: InMemoryPendingDeltaStore(),
+        ffi: FakeCrdtFfi(),
+        reprojector: FakeReprojector(),
+        snapshotThreshold: 3,
+      ).sync(); // pull → curseur 5 ; 5 - 0 ≥ 3 → snapshot
+
+      expect(api.snapshotsPut.length, 1);
+      expect(api.snapshotsPut.first.coversSeq, 5);
+    });
+
+    test('ne publie pas sous le seuil', () async {
+      final api = _FakeSyncApi(
+        pullPages: [
+          DeltaPage(
+            deltas: [RemoteDelta(seq: 1, payload: _b(1))],
+            latest: 1,
+          ),
+        ],
+      );
+
+      await _engine(
+        api,
+        store: InMemoryVaultDocStore(),
+        pending: InMemoryPendingDeltaStore(),
+        ffi: FakeCrdtFfi(),
+        reprojector: FakeReprojector(),
+        snapshotThreshold: 100,
+      ).sync(); // curseur 1 ; 1 - 0 < 100 → pas de snapshot
+
+      expect(api.snapshotsPut, isEmpty);
     });
   });
 }
