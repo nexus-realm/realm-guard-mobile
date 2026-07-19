@@ -142,8 +142,8 @@ class _PairedSetupPageState extends State<PairedSetupPage> {
         PairingSasView(sas: _viewModel.sas!),
         const SizedBox(height: 32),
         const Text(
-          'Définissez un code de déverrouillage pour CET appareil. Il protège le '
-          'coffre localement et ne remplace pas votre mot de passe maître.',
+          'Définissez le mot de passe maître de cet appareil : il déverrouille '
+          'le coffre localement. Chaque appareil possède le sien.',
         ),
         const SizedBox(height: 20),
         PasswordForm(

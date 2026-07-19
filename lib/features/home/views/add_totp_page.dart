@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../shared/widgets/app_snackbar.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/vault_repository.dart';
@@ -52,9 +54,7 @@ class _AddTotpPageState extends State<AddTotpPage> {
       _formKey = GlobalKey<FormState>();
       _totpFormKey = GlobalKey<TotpFormState>();
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('QR code lu. Vérifiez puis enregistrez.')),
-    );
+    AppSnackbar.info(context, 'QR code lu. Vérifiez puis enregistrez.');
   }
 
   Future<void> _submit() async {
@@ -70,9 +70,7 @@ class _AddTotpPageState extends State<AddTotpPage> {
     } else {
       final message = _viewModel.errorMessage;
       if (message != null && message.isNotEmpty) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(message)));
+        AppSnackbar.error(context, message);
       }
     }
   }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../shared/widgets/app_snackbar.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/security/vault_service.dart';
@@ -53,16 +55,12 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     );
     if (!mounted) return;
     if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mot de passe maître mis à jour.')),
-      );
+      AppSnackbar.success(context, 'Mot de passe maître mis à jour.');
       context.pop();
     } else {
       final message = _viewModel.errorMessage;
       if (message != null) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(message)));
+        AppSnackbar.error(context, message);
       }
     }
   }

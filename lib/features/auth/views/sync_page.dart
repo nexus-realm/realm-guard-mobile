@@ -2,8 +2,10 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/choice_card.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../../../shared/widgets/view_title.dart';
+import '../data/account_credential_rules.dart';
 import '../service/auth_service.dart';
 import '../viewmodels/sync_view_model.dart';
 
@@ -33,6 +35,10 @@ class _SyncPageState extends State<SyncPage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  /// `null` tant qu'aucune carte n'est choisie (on affiche les deux options) ;
+  /// sinon on affiche le formulaire du mode retenu.
+  AuthMode? _selectedMode;
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +57,15 @@ class _SyncPageState extends State<SyncPage> {
     super.dispose();
   }
 
+  void _chooseMode(AuthMode mode) {
+    _viewModel.setMode(mode);
+    setState(() => _selectedMode = mode);
+  }
+
+  void _backToChoice() {
+    setState(() => _selectedMode = null);
+  }
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     FocusScope.of(context).unfocus();
@@ -60,6 +75,11 @@ class _SyncPageState extends State<SyncPage> {
     );
   }
 
+  Future<void> _logout() async {
+    await _viewModel.logout();
+    if (mounted) setState(() => _selectedMode = null);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -67,9 +87,13 @@ class _SyncPageState extends State<SyncPage> {
       body: SafeArea(
         child: ListenableBuilder(
           listenable: _viewModel,
-          builder: (context, _) => _viewModel.isLoggedIn
-              ? _buildConnected(context)
-              : _buildForm(context),
+          builder: (context, _) {
+            if (_viewModel.isLoggedIn) return _buildConnected(context);
+            final mode = _selectedMode;
+            return mode == null
+                ? _buildModeChoice(context)
+                : _buildCredentialsForm(context, mode);
+          },
         ),
       ),
     );
@@ -119,7 +143,7 @@ class _SyncPageState extends State<SyncPage> {
           ),
           const Spacer(),
           OutlinedButton.icon(
-            onPressed: _viewModel.isLoading ? null : _viewModel.logout,
+            onPressed: _viewModel.isLoading ? null : _logout,
             icon: const Icon(Icons.logout),
             label: const Text('Se déconnecter'),
           ),
@@ -128,8 +152,46 @@ class _SyncPageState extends State<SyncPage> {
     );
   }
 
-  Widget _buildForm(BuildContext context) {
-    final isRegister = _viewModel.mode == AuthMode.register;
+  /// Choix du mode : deux cartes explicites (créer / se connecter), à la place
+  /// d'un simple bouton segmenté — cohérent avec l'étape « en ligne » de
+  /// l'onboarding.
+  Widget _buildModeChoice(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const ViewTitle(
+            title: 'Synchroniser',
+            topTitle: 'Chiffré de bout en bout',
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Le mot de passe du compte est distinct de votre mot de passe '
+            'maître. Le serveur ne le voit jamais (OPAQUE) et le coffre reste '
+            'déchiffrable hors-ligne.',
+          ),
+          const SizedBox(height: 24),
+          ChoiceCard(
+            icon: Icons.person_add_alt,
+            title: 'Créer un compte',
+            subtitle: 'Nouveau compte, chiffré de bout en bout.',
+            onTap: () => _chooseMode(AuthMode.register),
+          ),
+          const SizedBox(height: 12),
+          ChoiceCard(
+            icon: Icons.login,
+            title: 'Se connecter',
+            subtitle: "J'ai déjà un compte de synchronisation.",
+            onTap: () => _chooseMode(AuthMode.login),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCredentialsForm(BuildContext context, AuthMode mode) {
+    final isRegister = mode == AuthMode.register;
     final busy = _viewModel.isLoading;
 
     return SingleChildScrollView(
@@ -139,34 +201,9 @@ class _SyncPageState extends State<SyncPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const ViewTitle(
-              title: 'Synchroniser',
-              topTitle: 'Chiffré de bout en bout',
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Le mot de passe du compte est distinct de votre mot de passe '
-              'maître. Le serveur ne le voit jamais (OPAQUE) et le coffre reste '
-              'déchiffrable hors-ligne.',
-            ),
-            const SizedBox(height: 24),
-            SegmentedButton<AuthMode>(
-              segments: const [
-                ButtonSegment(
-                  value: AuthMode.login,
-                  label: Text('Se connecter'),
-                  icon: Icon(Icons.login),
-                ),
-                ButtonSegment(
-                  value: AuthMode.register,
-                  label: Text('Créer un compte'),
-                  icon: Icon(Icons.person_add_alt),
-                ),
-              ],
-              selected: {_viewModel.mode},
-              onSelectionChanged: busy
-                  ? null
-                  : (selection) => _viewModel.setMode(selection.first),
+            ViewTitle(
+              title: isRegister ? 'Créer un compte' : 'Se connecter',
+              topTitle: 'Synchronisation',
             ),
             const SizedBox(height: 24),
             TextFormField(
@@ -178,9 +215,14 @@ class _SyncPageState extends State<SyncPage> {
                 labelText: "Nom d'utilisateur",
                 prefixIcon: Icon(Icons.person_outline),
               ),
-              validator: (value) => (value == null || value.trim().isEmpty)
-                  ? 'Champ requis'
-                  : null,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Champ requis';
+                }
+                return isRegister
+                    ? AccountCredentialRules.validateUsername(value)
+                    : null;
+              },
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -191,8 +233,12 @@ class _SyncPageState extends State<SyncPage> {
                 labelText: 'Mot de passe du compte',
                 prefixIcon: Icon(Icons.lock_outline),
               ),
-              validator: (value) =>
-                  (value == null || value.isEmpty) ? 'Champ requis' : null,
+              validator: (value) {
+                if (value == null || value.isEmpty) return 'Champ requis';
+                return isRegister
+                    ? AccountCredentialRules.validatePassword(value)
+                    : null;
+              },
               onFieldSubmitted: (_) => _submit(),
             ),
             if (_viewModel.error != null) ...[
@@ -212,6 +258,11 @@ class _SyncPageState extends State<SyncPage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : Text(isRegister ? 'Créer le compte' : 'Se connecter'),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: busy ? null : _backToChoice,
+              child: const Text('Retour'),
             ),
           ],
         ),

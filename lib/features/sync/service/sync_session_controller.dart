@@ -8,6 +8,7 @@ import '../../../core/sync/crdt_ffi.dart';
 import '../../../core/sync/drift_projector.dart';
 import '../../../core/sync/pending_delta_store.dart';
 import '../../../core/sync/vault_doc_store.dart';
+import '../data/sync_outcome.dart';
 import 'sync_api.dart';
 import 'sync_controller.dart';
 import 'sync_engine.dart';
@@ -26,6 +27,11 @@ class SyncSessionController with WidgetsBindingObserver {
   final SyncSocket Function() _socketFactory;
   final CrdtFfi _ffi;
   final Duration _tickInterval;
+
+  // Le compte de synchronisation est-il actif sur cet appareil ? Sert à ne
+  // proposer la synchro manuelle (et son retour d'erreur) que si la sync est
+  // configurée. `null` ⇒ considéré actif (tests). Câblé sur `isLoggedIn`.
+  final Future<bool> Function()? _isSyncEnabled;
 
   SyncController? _controller;
   Timer? _ticker;
@@ -49,11 +55,13 @@ class SyncSessionController with WidgetsBindingObserver {
     required SyncSocket Function() socketFactory,
     CrdtFfi ffi = const FrbCrdtFfi(),
     Duration tickInterval = const Duration(seconds: 30),
+    Future<bool> Function()? isSyncEnabled,
   }) : _vaultService = vaultService,
        _api = api,
        _socketFactory = socketFactory,
        _ffi = ffi,
-       _tickInterval = tickInterval;
+       _tickInterval = tickInterval,
+       _isSyncEnabled = isSyncEnabled;
 
   /// Observe le cycle de vie de l'app et les mutations locales du coffre.
   void attach() {
@@ -129,6 +137,19 @@ class SyncSessionController with WidgetsBindingObserver {
     final controller = _controller;
     _controller = null;
     await controller?.stop();
+  }
+
+  /// Synchronisation **manuelle** (pull-to-refresh) : démarre la pile au besoin
+  /// puis lance un cycle attendu et renvoie l'issue à afficher. `unavailable` si
+  /// aucun compte de synchronisation n'est actif — l'app reste utilisable
+  /// hors-ligne, inutile d'afficher une erreur.
+  Future<SyncOutcome> syncNow() async {
+    final enabled = _isSyncEnabled == null ? true : await _isSyncEnabled();
+    if (!enabled) return const SyncOutcome.unavailable();
+    await ensureStarted();
+    final controller = _controller;
+    if (controller == null) return const SyncOutcome.unavailable();
+    return controller.syncNow();
   }
 
   void _onLocalMutation() =>

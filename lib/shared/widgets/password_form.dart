@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../features/onboarding/data/password_validation_rules.dart';
+import '../../core/security/password_validation_rules.dart';
 
 class PasswordForm extends StatefulWidget {
   final GlobalKey<FormState> formKey;

@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+import '../../../shared/widgets/app_snackbar.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -82,9 +84,7 @@ class PairingQrView extends StatelessWidget {
             onPressed: () async {
               await Clipboard.setData(ClipboardData(text: payload));
               if (!context.mounted) return;
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Payload copié')));
+              AppSnackbar.info(context, 'Payload copié');
             },
             icon: const Icon(Icons.copy),
             label: const Text('Copier le payload'),

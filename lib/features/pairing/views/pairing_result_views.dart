@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_colors.dart';
+
+/// Tonalité d'un état terminal : succès (vert) ou erreur (rouge).
+enum PairingTone { success, error }
+
 /// Affichage du **SAS** : le code court à comparer entre les deux appareils.
 class PairingSasView extends StatelessWidget {
   const PairingSasView({required this.sas, this.footer, super.key});
@@ -54,27 +59,33 @@ class PairingSasView extends StatelessWidget {
   }
 }
 
-/// Affichage centré d'un état terminal (erreur / info) : icône + titre + message.
+/// Affichage centré d'un état terminal (succès / erreur) : icône + titre +
+/// message. La couleur de l'icône suit la [tone] (vert = succès, rouge = erreur).
 class PairingStatusView extends StatelessWidget {
   const PairingStatusView({
     required this.icon,
     required this.title,
     required this.message,
+    this.tone = PairingTone.error,
     super.key,
   });
 
   final IconData icon;
   final String title;
   final String message;
+  final PairingTone tone;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = tone == PairingTone.success
+        ? AppColors.success
+        : theme.colorScheme.error;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 48, color: theme.colorScheme.error),
+          Icon(icon, size: 48, color: color),
           const SizedBox(height: 16),
           Text(title, style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),

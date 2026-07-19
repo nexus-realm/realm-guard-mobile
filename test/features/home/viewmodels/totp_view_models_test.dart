@@ -45,21 +45,26 @@ class FakeTotpEditor implements TotpEditor {
 
 const _validSecret = 'JBSWY3DPEHPK3PXP';
 
-TotpWithProfile _totp(int id, String label, {String secret = _validSecret}) =>
-    TotpWithProfile(
-      Totp(
-        id: id,
-        label: label,
-        secret: secret,
-        digits: 6,
-        period: 30,
-        algorithm: 'SHA1',
-        favorite: false,
-        createdAt: DateTime(2026),
-        updatedAt: DateTime(2026),
-      ),
-      null,
-    );
+TotpWithProfile _totp(
+  int id,
+  String label, {
+  String secret = _validSecret,
+  int? profileId,
+}) => TotpWithProfile(
+  Totp(
+    id: id,
+    label: label,
+    secret: secret,
+    digits: 6,
+    period: 30,
+    algorithm: 'SHA1',
+    favorite: false,
+    profileId: profileId,
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+  ),
+  null,
+);
 
 Future<void> _settle() => Future<void>.delayed(Duration.zero);
 
@@ -167,6 +172,48 @@ void main() {
       expect(ok, isTrue);
       expect(repo.deletedId, 9);
       expect(vm.deleted, isTrue);
+    });
+
+    test('setProfile enregistre le profil choisi', () async {
+      final repo = FakeTotpEditor();
+      final vm = TotpDetailViewModel(repository: repo, totpId: 4);
+      addTearDown(vm.dispose);
+      await vm.initialize();
+      repo.controller.add(_totp(4, 'GitHub'));
+      await _settle();
+
+      final ok = await vm.setProfile(9);
+
+      expect(ok, isTrue);
+      expect(repo.updatedDraft?.profileId, 9);
+    });
+
+    test('setProfile à null dissocie le profil', () async {
+      final repo = FakeTotpEditor();
+      final vm = TotpDetailViewModel(repository: repo, totpId: 4);
+      addTearDown(vm.dispose);
+      await vm.initialize();
+      repo.controller.add(_totp(4, 'GitHub', profileId: 3));
+      await _settle();
+
+      final ok = await vm.setProfile(null);
+
+      expect(ok, isTrue);
+      expect(repo.updatedDraft?.profileId, isNull);
+    });
+
+    test('setProfile sans changement n\'appelle pas le dépôt', () async {
+      final repo = FakeTotpEditor();
+      final vm = TotpDetailViewModel(repository: repo, totpId: 4);
+      addTearDown(vm.dispose);
+      await vm.initialize();
+      repo.controller.add(_totp(4, 'GitHub', profileId: 3));
+      await _settle();
+
+      final ok = await vm.setProfile(3); // déjà ce profil
+
+      expect(ok, isTrue);
+      expect(repo.updatedDraft, isNull);
     });
   });
 }

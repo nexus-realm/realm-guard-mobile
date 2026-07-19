@@ -4,6 +4,7 @@ import '../../../core/feature_flags/feature_flag.dart';
 import '../../../core/feature_flags/feature_flags_controller.dart';
 import '../../../core/security/biometric_storage_service.dart';
 import '../../../core/security/vault_service.dart';
+import '../../auth/data/account_credential_rules.dart';
 import '../../auth/data/auth_exception.dart';
 import '../../auth/service/auth_service.dart';
 import 'onboarding_progress.dart';
@@ -188,14 +189,15 @@ class OnboardingFlowController extends ChangeNotifier {
     required String password,
   }) async {
     final handle = username.trim();
-    if (handle.isEmpty) {
-      _errorMessage = "Veuillez saisir un nom d'utilisateur.";
+    final usernameError = AccountCredentialRules.validateUsername(handle);
+    if (usernameError != null) {
+      _errorMessage = usernameError;
       notifyListeners();
       return false;
     }
-    if (password.trim().length < 12) {
-      _errorMessage =
-          'Le mot de passe du compte doit contenir au moins 12 caractères.';
+    final passwordError = AccountCredentialRules.validatePassword(password);
+    if (passwordError != null) {
+      _errorMessage = passwordError;
       notifyListeners();
       return false;
     }

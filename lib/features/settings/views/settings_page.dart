@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../shared/widgets/app_snackbar.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/feature_flags/feature_flag.dart';
@@ -59,13 +61,10 @@ class _SettingsPageState extends State<SettingsPage> {
     await _viewModel.setBiometricEnabled(value);
     if (!mounted) return;
     if (value) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'La biométrie sera active après votre prochaine saisie du mot de '
-            'passe maître.',
-          ),
-        ),
+      AppSnackbar.info(
+        context,
+        'La biométrie sera active après votre prochaine saisie du mot de '
+        'passe maître.',
       );
     }
   }
@@ -84,9 +83,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     await _viewModel.deleteAllData();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Toutes les données ont été supprimées.')),
-    );
+    AppSnackbar.info(context, 'Toutes les données ont été supprimées.');
     context.go(AppRoutes.startup);
   }
 

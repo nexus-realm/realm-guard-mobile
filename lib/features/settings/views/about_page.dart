@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../shared/widgets/app_snackbar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -29,9 +31,7 @@ class _AboutPageState extends State<AboutPage> {
     final uri = Uri.parse(AboutPage._sourceUrl);
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible d\'ouvrir le lien.')),
-      );
+      AppSnackbar.error(context, "Impossible d'ouvrir le lien.");
     }
   }
 

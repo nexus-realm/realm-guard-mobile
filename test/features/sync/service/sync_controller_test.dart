@@ -1,14 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:realmguard/features/sync/data/sync_exception.dart';
+import 'package:realmguard/features/sync/data/sync_outcome.dart';
 import 'package:realmguard/features/sync/service/sync_controller.dart';
 import 'package:realmguard/features/sync/service/sync_engine.dart';
 import 'package:realmguard/features/sync/service/sync_socket.dart';
 
-/// Faux engine : compte les cycles, peut bloquer (gates) ou lever (throwOn).
+/// Faux engine : compte les cycles, peut bloquer (gates) ou lever (throwOn, avec
+/// l'erreur [thrown]).
 class _FakeRunner implements SyncRunner {
   int calls = 0;
   int throwOn = -1;
+  Object thrown = Exception('réseau');
   final List<Completer<void>> gates;
 
   _FakeRunner({this.gates = const []});
@@ -16,7 +20,7 @@ class _FakeRunner implements SyncRunner {
   @override
   Future<void> sync() async {
     final i = calls++;
-    if (i == throwOn) throw Exception('réseau');
+    if (i == throwOn) throw thrown;
     if (i < gates.length) await gates[i].future;
   }
 }
@@ -42,6 +46,7 @@ void main() {
     final socket = _FakeSocket();
 
     await SyncController(engine: runner, socket: socket).start();
+    await pumpEventQueue(); // le cycle initial passe par le verrou (1 microtâche)
 
     expect(socket.connects, 1);
     expect(runner.calls, 1);
@@ -108,5 +113,65 @@ void main() {
     socket.nudge();
     await pumpEventQueue();
     expect(runner.calls, 1); // plus de réaction après stop
+  });
+
+  group('syncNow (manuel)', () {
+    test('succès → SyncStatus.success', () async {
+      final runner = _FakeRunner();
+      final controller = SyncController(engine: runner, socket: _FakeSocket());
+
+      final outcome = await controller.syncNow();
+
+      expect(outcome.status, SyncStatus.success);
+      expect(runner.calls, 1);
+    });
+
+    test('SyncException → failure porte le message utilisateur', () async {
+      final runner = _FakeRunner()
+        ..throwOn = 0
+        ..thrown = const SyncException.network();
+      final controller = SyncController(engine: runner, socket: _FakeSocket());
+
+      final outcome = await controller.syncNow();
+
+      expect(outcome.status, SyncStatus.failure);
+      expect(outcome.message, 'Serveur injoignable. Vérifiez votre connexion.');
+    });
+
+    test('erreur inattendue → failure avec message générique', () async {
+      final runner = _FakeRunner()..throwOn = 0; // Exception générique
+      final controller = SyncController(engine: runner, socket: _FakeSocket());
+
+      final outcome = await controller.syncNow();
+
+      expect(outcome.status, SyncStatus.failure);
+      expect(outcome.message, isNotNull);
+    });
+
+    test(
+      'attend un cycle auto en cours (sérialisé, pas de double-push)',
+      () async {
+        final gate = Completer<void>();
+        final runner = _FakeRunner(gates: [gate]); // cycle auto #0 se bloque
+        final controller = SyncController(
+          engine: runner,
+          socket: _FakeSocket(),
+        );
+
+        controller.requestSync(); // auto #0 démarre, tient le verrou, se bloque
+        await pumpEventQueue();
+        expect(runner.calls, 1);
+
+        final manual = controller.syncNow(); // en file derrière le verrou
+        await pumpEventQueue();
+        expect(runner.calls, 1); // pas encore lancé
+
+        gate.complete();
+        final outcome = await manual;
+
+        expect(outcome.status, SyncStatus.success);
+        expect(runner.calls, 2); // le manuel a tourné après l'auto
+      },
+    );
   });
 }

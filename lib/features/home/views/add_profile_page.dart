@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../shared/widgets/app_snackbar.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/vault_repository.dart';
@@ -46,9 +48,7 @@ class _AddProfilePageState extends State<AddProfilePage> {
     } else {
       final message = _viewModel.errorMessage;
       if (message != null && message.isNotEmpty) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(message)));
+        AppSnackbar.error(context, message);
       }
     }
   }

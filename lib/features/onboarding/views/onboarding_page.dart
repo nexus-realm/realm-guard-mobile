@@ -4,13 +4,16 @@ import 'package:go_router/go_router.dart';
 import '../../../core/feature_flags/feature_flags_controller.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/security/vault_service.dart';
+import '../../../shared/widgets/app_snackbar.dart';
+import '../../auth/data/account_credential_rules.dart';
 import '../../auth/service/auth_service.dart';
+import '../../../shared/widgets/choice_card.dart';
 import '../../../shared/widgets/gradient_elevated_button.dart';
 import '../../../shared/widgets/password_form.dart';
 import '../../../shared/widgets/view_title.dart';
+import '../../../core/security/password_validation_rule.dart';
+import '../../../core/security/password_validation_rules.dart';
 import '../data/onboarding_step.dart';
-import '../data/password_validation_rule.dart';
-import '../data/password_validation_rules.dart';
 import '../service/onboarding_storage_service.dart';
 import '../viewmodels/onboarding_view_model.dart';
 
@@ -128,9 +131,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       final errorMessage = _viewModel.errorMessage;
 
       if (mounted && errorMessage != null && errorMessage.isNotEmpty) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(errorMessage)));
+        AppSnackbar.error(context, errorMessage);
       }
       return;
     }
@@ -168,8 +169,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         switchInCurve: Curves.easeOutCubic,
                         switchOutCurve: Curves.easeInCubic,
                         transitionBuilder: (child, animation) {
+                          // Glissement **latéral** : la nouvelle étape entre par la
+                          // droite en fondu (l'ancienne repart symétriquement).
                           final slideAnimation = Tween<Offset>(
-                            begin: const Offset(0, 0.04),
+                            begin: const Offset(0.15, 0),
                             end: Offset.zero,
                           ).animate(animation);
 
@@ -259,7 +262,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
             const ViewTitle(topTitle: 'Sécurité', title: 'Mot de passe_'),
             const SizedBox(height: 16),
             Text(
-              'Ce mot de passe sert à générer la clé de chiffrement de votre coffre.',
+              'Ce mot de passe maître génère la clé de chiffrement de votre '
+              'coffre et vous permettra de le déverrouiller.',
               style: textTheme.bodyLarge,
             ),
           ],
@@ -402,6 +406,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
     switch (_syncStage) {
       case _SyncStage.choice:
         return _buildSyncChoice();
+      case _SyncStage.online:
+        return _buildSyncOnline();
       case _SyncStage.register:
         return _buildSyncRegister();
       case _SyncStage.success:
@@ -423,21 +429,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
               topTitle: 'Multi-appareils',
               title: 'Synchronisation_',
             ),
-            Column(
-              spacing: 12,
-              children: [
-                Text(
-                  'Realm Guard fonctionne parfaitement hors-ligne. Créez un '
-                  'compte chiffré pour synchroniser, ou liez cet appareil à un '
-                  'compte existant.',
-                  style: textTheme.bodyLarge,
-                ),
-                Text(
-                  'Le mot de passe du compte est distinct du mot de passe maître '
-                  'que vous définirez ensuite ; le serveur ne le voit jamais.',
-                  style: textTheme.bodyLarge,
-                ),
-              ],
+            Text(
+              'Realm Guard fonctionne parfaitement hors-ligne. Activez la '
+              'synchronisation chiffrée pour retrouver votre coffre sur tous '
+              'vos appareils.',
+              style: textTheme.bodyLarge,
             ),
           ],
         ),
@@ -448,24 +444,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
             GradientElevatedButton.icon(
               onPressed: _viewModel.isSubmitting
                   ? null
-                  : () => setState(() => _syncStage = _SyncStage.register),
-              icon: const Icon(Icons.person_add_alt),
-              label: const Text('Créer un compte'),
-            ),
-            OutlinedButton.icon(
-              onPressed: _viewModel.isSubmitting
-                  ? null
-                  : () => context.push(AppRoutes.pairedSetup),
-              icon: const Icon(Icons.qr_code_2),
-              label: const Text('J\'ai déjà un compte — lier cet appareil'),
-            ),
-            // Sans autre appareil sous la main : récupération depuis le backup
-            // serveur (exige le mot de passe du compte **et** le mot de passe maître).
-            TextButton(
-              onPressed: _viewModel.isSubmitting
-                  ? null
-                  : () => context.push(AppRoutes.vaultRecovery),
-              child: const Text('Récupérer mon coffre (aucun autre appareil)'),
+                  : () => setState(() => _syncStage = _SyncStage.online),
+              icon: const Icon(Icons.sync),
+              label: const Text('Activer la synchronisation'),
             ),
             TextButton(
               onPressed: _viewModel.isSubmitting
@@ -474,6 +455,71 @@ class _OnboardingPageState extends State<OnboardingPage> {
               child: const Text('Continuer hors-ligne'),
             ),
           ],
+        ),
+      ],
+    );
+  }
+
+  /// Étape « en ligne » (page dédiée) : les trois façons d'activer la
+  /// synchronisation. « Créer » reste **interne** à l'onboarding (le compte se
+  /// crée avant le mot de passe maître) ; « lier » et « récupérer » poussent leur
+  /// propre écran, qui repasse par la porte de démarrage une fois terminé.
+  Widget _buildSyncOnline() {
+    final textTheme = Theme.of(context).textTheme;
+    final busy = _viewModel.isSubmitting;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const ViewTitle(topTitle: 'Synchronisation', title: 'En ligne_'),
+        const SizedBox(height: 16),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Choisissez comment relier cet appareil à la synchronisation '
+                  'chiffrée.',
+                  style: textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 24),
+                ChoiceCard(
+                  icon: Icons.person_add_alt,
+                  title: 'Créer un compte',
+                  subtitle: 'Nouveau compte, chiffré de bout en bout.',
+                  enabled: !busy,
+                  onTap: () => setState(() => _syncStage = _SyncStage.register),
+                ),
+                const SizedBox(height: 12),
+                ChoiceCard(
+                  icon: Icons.qr_code_2,
+                  title: 'Lier cet appareil',
+                  subtitle:
+                      "J'ai déjà un compte : recevoir le coffre d'un autre "
+                      'appareil via QR code.',
+                  enabled: !busy,
+                  onTap: () => context.push(AppRoutes.pairedSetup),
+                ),
+                const SizedBox(height: 12),
+                ChoiceCard(
+                  icon: Icons.cloud_download_outlined,
+                  title: 'Récupérer mon coffre',
+                  subtitle:
+                      'Aucun autre appareil : restaurer depuis la sauvegarde '
+                      'serveur.',
+                  enabled: !busy,
+                  onTap: () => context.push(AppRoutes.vaultRecovery),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextButton(
+          onPressed: busy
+              ? null
+              : () => setState(() => _syncStage = _SyncStage.choice),
+          child: const Text('Retour'),
         ),
       ],
     );
@@ -515,9 +561,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       prefixIcon: Icon(Icons.person_outline),
                     ),
                     validator: (value) =>
-                        (value == null || value.trim().isEmpty)
-                        ? 'Champ requis'
-                        : null,
+                        AccountCredentialRules.validateUsername(value ?? ''),
                   ),
                   TextFormField(
                     controller: _syncPasswordController,
@@ -528,9 +572,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       prefixIcon: Icon(Icons.lock_outline),
                     ),
                     validator: (value) =>
-                        (value == null || value.trim().length < 12)
-                        ? 'Au moins 12 caractères'
-                        : null,
+                        AccountCredentialRules.validatePassword(value ?? ''),
                     onFieldSubmitted: (_) => _submitSyncAccount(),
                   ),
                   if (_viewModel.errorMessage != null)
@@ -561,7 +603,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             TextButton(
               onPressed: _viewModel.isSubmitting
                   ? null
-                  : () => setState(() => _syncStage = _SyncStage.choice),
+                  : () => setState(() => _syncStage = _SyncStage.online),
               child: const Text('Retour'),
             ),
           ],
@@ -625,4 +667,4 @@ class _OnboardingPageState extends State<OnboardingPage> {
 }
 
 /// Sous-étapes locales de l'écran de synchronisation d'onboarding.
-enum _SyncStage { choice, register, success }
+enum _SyncStage { choice, online, register, success }
