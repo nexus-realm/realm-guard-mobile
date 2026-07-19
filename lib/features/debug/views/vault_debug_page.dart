@@ -167,7 +167,7 @@ class _VaultDebugPageState extends State<VaultDebugPage> {
             TextField(
               controller: _passwordController,
               decoration: const InputDecoration(
-                labelText: 'Mot de passe Maître',
+                labelText: 'Mot de passe maître',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.password),
               ),
