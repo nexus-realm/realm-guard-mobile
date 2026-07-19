@@ -65,8 +65,10 @@ class _VaultRecoveryPageState extends State<VaultRecoveryPage> {
     FocusScope.of(context).unfocus();
     final restored = await _viewModel.restore(_masterPasswordController.text);
     if (!mounted || !restored) return;
-    // Coffre restauré : l'onboarding reprend (biométrie, préférences).
-    context.go(AppRoutes.onboarding);
+    // Coffre restauré : on repasse par la **porte de démarrage** pour ré-évaluer
+    // le progrès à neuf (l'onboarding reprend à la biométrie). Aller directement
+    // sur `/onboarding` réutiliserait la page périmée restée sous ce `push`.
+    context.go(AppRoutes.startup);
   }
 
   @override

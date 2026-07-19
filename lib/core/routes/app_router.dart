@@ -35,6 +35,9 @@ import '../../features/pairing/views/paired_setup_page.dart';
 import '../../features/pairing/views/receive_device_page.dart';
 import '../../features/settings/data/legal_documents.dart';
 import '../../features/settings/service/app_reset_service.dart';
+import '../../features/sync/service/sync_api.dart';
+import '../../features/sync/service/sync_session_controller.dart';
+import '../../features/sync/service/sync_socket.dart';
 import '../../features/settings/views/about_page.dart';
 import '../../features/settings/views/change_password_page.dart';
 import '../../features/settings/views/legal_page.dart';
@@ -112,6 +115,36 @@ final PairingService _pairingService = PairingService(
   config: const ServerConfig.dev(),
 );
 
+/// Client du log de synchronisation (`/sync/*`), gated par session (ré-auth par
+/// clé d'appareil à la volée).
+final SyncApi _syncApi = SyncService(
+  httpClient: http.Client(),
+  session: const SecureSessionStore(FlutterSecureStorage()),
+  config: const ServerConfig.dev(),
+  ensureSession: () => _pairingService.authenticateDevice(),
+);
+
+/// Cycle de vie de la synchronisation temps réel. Attaché au démarrage
+/// (`main.dart`) ; ne démarre la pile qu'une fois le coffre déverrouillé
+/// (déclenché par `HomeTab`), la coupe au verrouillage.
+final SyncSessionController syncSessionController = SyncSessionController(
+  vaultService: _vaultService,
+  api: _syncApi,
+  socketFactory: () => WsSyncSocket(
+    session: const SecureSessionStore(FlutterSecureStorage()),
+    config: const ServerConfig.dev(),
+    ensureSession: () => _pairingService.authenticateDevice(),
+  ),
+);
+
+/// Un `VaultRepository` câblé sur la session CRDT (write-through de la synchro).
+/// La session est résolue paresseusement à la première écriture ; les repos en
+/// lecture seule (accueil, autofill-fill) n'en ont pas besoin.
+VaultRepository _vaultRepository() => VaultRepository(
+  _vaultService.db,
+  crdtSession: _vaultService.ensureCrdtSession,
+);
+
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.startup,
   redirect: (context, state) => vaultRouteGuard(
@@ -162,7 +195,11 @@ final GoRouter appRouter = GoRouter(
       ),
     ),
     ShellRoute(
-      builder: (context, state, child) => HomeShell(child: child),
+      builder: (context, state, child) => HomeShell(
+        onRemoteChange: syncSessionController.onRemoteChange,
+        remoteChangeCount: () => syncSessionController.lastRemoteChangeCount,
+        child: child,
+      ),
       routes: [
         GoRoute(
           path: AppRoutes.home,
@@ -170,6 +207,7 @@ final GoRouter appRouter = GoRouter(
           builder: (context, state) => HomeTab(
             vaultService: _vaultService,
             featureFlagsController: featureFlagsController,
+            syncSessionController: syncSessionController,
           ),
         ),
       ],
@@ -178,13 +216,13 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.addProfile,
       name: 'addProfile',
       builder: (context, state) =>
-          AddProfilePage(repository: VaultRepository(_vaultService.db)),
+          AddProfilePage(repository: _vaultRepository()),
     ),
     GoRoute(
       path: AppRoutes.addCredential,
       name: 'addCredential',
       builder: (context, state) =>
-          AddCredentialPage(repository: VaultRepository(_vaultService.db)),
+          AddCredentialPage(repository: _vaultRepository()),
     ),
     GoRoute(
       path: '${AppRoutes.credentialDetail}/:id',
@@ -192,7 +230,7 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final id = int.parse(state.pathParameters['id']!);
         return CredentialDetailPage(
-          repository: VaultRepository(_vaultService.db),
+          repository: _vaultRepository(),
           credentialId: id,
         );
       },
@@ -200,8 +238,7 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.profiles,
       name: 'profiles',
-      builder: (context, state) =>
-          ProfilesPage(repository: VaultRepository(_vaultService.db)),
+      builder: (context, state) => ProfilesPage(repository: _vaultRepository()),
     ),
     GoRoute(
       path: '${AppRoutes.profileDetail}/:id',
@@ -209,7 +246,7 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final id = int.parse(state.pathParameters['id']!);
         return ProfileDetailPage(
-          repository: VaultRepository(_vaultService.db),
+          repository: _vaultRepository(),
           profileId: id,
           featureFlagsController: featureFlagsController,
         );
@@ -218,18 +255,14 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.addTotp,
       name: 'addTotp',
-      builder: (context, state) =>
-          AddTotpPage(repository: VaultRepository(_vaultService.db)),
+      builder: (context, state) => AddTotpPage(repository: _vaultRepository()),
     ),
     GoRoute(
       path: '${AppRoutes.totpDetail}/:id',
       name: 'totpDetail',
       builder: (context, state) {
         final id = int.parse(state.pathParameters['id']!);
-        return TotpDetailPage(
-          repository: VaultRepository(_vaultService.db),
-          totpId: id,
-        );
+        return TotpDetailPage(repository: _vaultRepository(), totpId: id);
       },
     ),
     GoRoute(

@@ -61,8 +61,13 @@ class _PairedSetupPageState extends State<PairedSetupPage> {
       _confirmationController.text,
     );
     if (!mounted || !installed) return;
-    // Coffre installé : l'onboarding reprend (biométrie, préférences).
-    context.go(AppRoutes.onboarding);
+    // Coffre installé : on repasse par la **porte de démarrage** pour ré-évaluer
+    // le progrès à neuf (l'onboarding reprend alors à la biométrie). Aller
+    // directement sur `/onboarding` réutiliserait la page onboarding restée
+    // vivante sous ce `push` — son ViewModel a un progrès en mémoire périmé
+    // (ignorant que le pairing a marqué le mot de passe maître) et rebasculerait
+    // sur le choix de synchronisation, puis redemanderait le mot de passe maître.
+    context.go(AppRoutes.startup);
   }
 
   @override

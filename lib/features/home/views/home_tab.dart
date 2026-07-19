@@ -13,6 +13,7 @@ import '../../../shared/notifiers/fab_notifier.dart';
 import '../../../shared/notifiers/fab_notifier_scope.dart';
 import '../../../shared/notifiers/search_notifier_scope.dart';
 import '../../../shared/viewmodels/home_view_model.dart';
+import '../../sync/service/sync_session_controller.dart';
 import 'widgets/credential_avatar.dart';
 import 'widgets/profile_avatar.dart';
 import 'widgets/totp_list_tile.dart';
@@ -27,9 +28,15 @@ class HomeTab extends StatefulWidget {
   final VaultService vaultService;
   final FeatureFlagsController featureFlagsController;
 
+  /// Démarre la synchronisation (si un compte est configuré) une fois le coffre
+  /// déverrouillé — l'accueil est le point de convergence de tous les chemins de
+  /// déverrouillage. `null` en test.
+  final SyncSessionController? syncSessionController;
+
   const HomeTab({
     required this.vaultService,
     required this.featureFlagsController,
+    this.syncSessionController,
     super.key,
   });
 
@@ -51,6 +58,8 @@ class _HomeTabState extends State<HomeTab> with SingleTickerProviderStateMixin {
     _tabController = TabController(length: 2, vsync: this)
       ..addListener(_onTabChanged);
     widget.featureFlagsController.addListener(_onFlagsChanged);
+    // Coffre déverrouillé : démarre la synchro (best-effort, no-op sans compte).
+    widget.syncSessionController?.ensureStarted();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

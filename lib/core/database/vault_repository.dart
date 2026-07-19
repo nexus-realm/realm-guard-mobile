@@ -7,6 +7,8 @@ import '../../features/home/data/custom_field.dart';
 import '../../features/home/data/profile_deletion_strategy.dart';
 import '../../features/home/data/profile_draft.dart';
 import '../../features/home/data/totp_draft.dart';
+import '../sync/vault_crdt.dart';
+import '../sync/vault_fields.dart';
 import 'app_database.dart';
 
 /// Lecture réactive dont la vue Home a besoin. Permet d'injecter un faux
@@ -71,7 +73,95 @@ class VaultRepository
         TotpEditor {
   final AppDatabase _db;
 
-  VaultRepository(this._db);
+  /// Ouvre la session CRDT (write-through de la synchro), ou `null` si la synchro
+  /// n'est pas câblée (tests) / coffre verrouillé. Résolue paresseusement.
+  final Future<VaultCrdt?> Function()? _crdtSession;
+
+  VaultRepository(this._db, {Future<VaultCrdt?> Function()? crdtSession})
+    : _crdtSession = crdtSession;
+
+  Future<VaultCrdt?> _crdt() async =>
+      _crdtSession == null ? null : await _crdtSession();
+
+  /// Exécute une écriture **de synchro** best-effort : le doc CRDT est un artefact
+  /// *fantôme* (les lectures restent servies par drift), donc tout échec est
+  /// avalé — il ne doit jamais casser l'opération drift déjà réussie.
+  Future<void> _bestEffort(Future<void> Function() action) async {
+    try {
+      await action();
+    } catch (_) {
+      // Non fatal : la synchro rattrapera (reprojection / reseed) ultérieurement.
+    }
+  }
+
+  Future<Uint8List?> _profileSyncId(int? profileId) async {
+    if (profileId == null) return null;
+    final row =
+        await (_db.profiles.select()..where((t) => t.id.equals(profileId)))
+            .getSingleOrNull();
+    return row?.syncId;
+  }
+
+  Future<void> _syncProfile(int id, {required bool isNew}) =>
+      _bestEffort(() async {
+        final crdt = await _crdt();
+        if (crdt == null) return;
+        final row = await (_db.profiles.select()..where((t) => t.id.equals(id)))
+            .getSingleOrNull();
+        final syncId = row?.syncId;
+        if (row == null || syncId == null) return;
+        await crdt.putEntry(
+          entryId: syncId,
+          fields: VaultFieldMap.ofProfile(row, clearNulls: !isNew),
+          isNew: isNew,
+        );
+      });
+
+  Future<void> _syncCredential(int id, {required bool isNew}) =>
+      _bestEffort(() async {
+        final crdt = await _crdt();
+        if (crdt == null) return;
+        final row =
+            await (_db.credentials.select()..where((t) => t.id.equals(id)))
+                .getSingleOrNull();
+        final syncId = row?.syncId;
+        if (row == null || syncId == null) return;
+        await crdt.putEntry(
+          entryId: syncId,
+          fields: VaultFieldMap.ofCredential(
+            row,
+            profileSyncId: await _profileSyncId(row.profileId),
+            clearNulls: !isNew,
+          ),
+          isNew: isNew,
+        );
+      });
+
+  Future<void> _syncTotp(int id, {required bool isNew}) =>
+      _bestEffort(() async {
+        final crdt = await _crdt();
+        if (crdt == null) return;
+        final row = await (_db.totps.select()..where((t) => t.id.equals(id)))
+            .getSingleOrNull();
+        final syncId = row?.syncId;
+        if (row == null || syncId == null) return;
+        await crdt.putEntry(
+          entryId: syncId,
+          fields: VaultFieldMap.ofTotp(
+            row,
+            profileSyncId: await _profileSyncId(row.profileId),
+            clearNulls: !isNew,
+          ),
+          isNew: isNew,
+        );
+      });
+
+  Future<void> _removeEntry(Uint8List? syncId) => _bestEffort(() async {
+    if (syncId == null) return;
+    final crdt = await _crdt();
+    if (crdt == null) return;
+    await crdt.removeEntry(syncId);
+  });
 
   // Profiles
   @override
@@ -86,14 +176,21 @@ class VaultRepository
           .watchSingleOrNull();
 
   @override
-  Future<int> addProfile(ProfileDraft draft) =>
-      _db.profiles.insertOne(_profileCompanion(draft));
+  Future<int> addProfile(ProfileDraft draft) async {
+    final id = await _db.profiles.insertOne(_profileCompanion(draft));
+    await _syncProfile(id, isNew: true);
+    return id;
+  }
 
   @override
-  Future<bool> updateProfile(int id, ProfileDraft draft) =>
-      (_db.profiles.update()..where((tbl) => tbl.id.equals(id)))
-          .write(_profileCompanion(draft, updatedAt: DateTime.now()))
-          .then((rows) => rows > 0);
+  Future<bool> updateProfile(int id, ProfileDraft draft) async {
+    final rows =
+        await (_db.profiles.update()..where((tbl) => tbl.id.equals(id))).write(
+          _profileCompanion(draft, updatedAt: DateTime.now()),
+        );
+    if (rows > 0) await _syncProfile(id, isNew: false);
+    return rows > 0;
+  }
 
   ProfilesCompanion _profileCompanion(
     ProfileDraft draft, {
@@ -123,8 +220,17 @@ class VaultRepository
   /// Supprime un profil. Selon [strategy], les identifiants liés sont soit
   /// dissociés (profileId → null), soit supprimés. Opération atomique.
   @override
-  Future<void> deleteProfile(int id, ProfileDeletionStrategy strategy) {
-    return _db.transaction(() async {
+  Future<void> deleteProfile(int id, ProfileDeletionStrategy strategy) async {
+    // Capturés avant la transaction : les lignes disparaissent ensuite.
+    final profile =
+        await (_db.profiles.select()..where((tbl) => tbl.id.equals(id)))
+            .getSingleOrNull();
+    final affected =
+        await (_db.credentials.select()
+              ..where((tbl) => tbl.profileId.equals(id)))
+            .get();
+
+    await _db.transaction(() async {
       switch (strategy) {
         case ProfileDeletionStrategy.dissociate:
           await (_db.credentials.update()
@@ -137,6 +243,20 @@ class VaultRepository
       }
       await (_db.profiles.delete()..where((tbl) => tbl.id.equals(id))).go();
     });
+
+    // Répercussion sur le doc CRDT (chaque appel est déjà best-effort).
+    switch (strategy) {
+      case ProfileDeletionStrategy.dissociate:
+        // profileId désormais null en base ⇒ effacement de la FK dans le doc.
+        for (final credential in affected) {
+          await _syncCredential(credential.id, isNew: false);
+        }
+      case ProfileDeletionStrategy.cascade:
+        for (final credential in affected) {
+          await _removeEntry(credential.syncId);
+        }
+    }
+    await _removeEntry(profile?.syncId);
   }
 
   @override
@@ -160,14 +280,20 @@ class VaultRepository
           .get();
 
   @override
-  Future<int> addCredential(CredentialDraft draft) =>
-      _db.credentials.insertOne(_credentialCompanion(draft));
+  Future<int> addCredential(CredentialDraft draft) async {
+    final id = await _db.credentials.insertOne(_credentialCompanion(draft));
+    await _syncCredential(id, isNew: true);
+    return id;
+  }
 
   @override
-  Future<bool> updateCredential(int id, CredentialDraft draft) =>
-      (_db.credentials.update()..where((tbl) => tbl.id.equals(id)))
-          .write(_credentialCompanion(draft, updatedAt: DateTime.now()))
-          .then((rows) => rows > 0);
+  Future<bool> updateCredential(int id, CredentialDraft draft) async {
+    final rows =
+        await (_db.credentials.update()..where((tbl) => tbl.id.equals(id)))
+            .write(_credentialCompanion(draft, updatedAt: DateTime.now()));
+    if (rows > 0) await _syncCredential(id, isNew: false);
+    return rows > 0;
+  }
 
   CredentialsCompanion _credentialCompanion(
     CredentialDraft draft, {
@@ -187,8 +313,14 @@ class VaultRepository
   }
 
   @override
-  Future<int> deleteCredential(int id) =>
-      _db.credentials.deleteWhere((tbl) => tbl.id.equals(id));
+  Future<int> deleteCredential(int id) async {
+    final row =
+        await (_db.credentials.select()..where((tbl) => tbl.id.equals(id)))
+            .getSingleOrNull();
+    final count = await _db.credentials.deleteWhere((tbl) => tbl.id.equals(id));
+    await _removeEntry(row?.syncId);
+    return count;
+  }
 
   @override
   Stream<CredentialWithProfile?> watchCredential(int id) {
@@ -258,18 +390,28 @@ class VaultRepository
   }
 
   @override
-  Future<int> addTotp(TotpDraft draft) =>
-      _db.totps.insertOne(_totpCompanion(draft));
+  Future<int> addTotp(TotpDraft draft) async {
+    final id = await _db.totps.insertOne(_totpCompanion(draft));
+    await _syncTotp(id, isNew: true);
+    return id;
+  }
 
   @override
-  Future<bool> updateTotp(int id, TotpDraft draft) =>
-      (_db.totps.update()..where((tbl) => tbl.id.equals(id)))
-          .write(_totpCompanion(draft, updatedAt: DateTime.now()))
-          .then((rows) => rows > 0);
+  Future<bool> updateTotp(int id, TotpDraft draft) async {
+    final rows = await (_db.totps.update()..where((tbl) => tbl.id.equals(id)))
+        .write(_totpCompanion(draft, updatedAt: DateTime.now()));
+    if (rows > 0) await _syncTotp(id, isNew: false);
+    return rows > 0;
+  }
 
   @override
-  Future<int> deleteTotp(int id) =>
-      _db.totps.deleteWhere((tbl) => tbl.id.equals(id));
+  Future<int> deleteTotp(int id) async {
+    final row = await (_db.totps.select()..where((tbl) => tbl.id.equals(id)))
+        .getSingleOrNull();
+    final count = await _db.totps.deleteWhere((tbl) => tbl.id.equals(id));
+    await _removeEntry(row?.syncId);
+    return count;
+  }
 
   @override
   Stream<TotpWithProfile?> watchTotp(int id) {

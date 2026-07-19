@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/crdt.dart';
 import 'api/device_key.dart';
 import 'api/opaque.dart';
 import 'api/pairing.dart';
@@ -26,7 +27,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  CrdtField dco_decode_crdt_field(dynamic raw);
+
+  @protected
+  CrdtMutation dco_decode_crdt_mutation(dynamic raw);
+
+  @protected
   DeviceKeypair dco_decode_device_keypair(dynamic raw);
+
+  @protected
+  HlcTick dco_decode_hlc_tick(dynamic raw);
+
+  @protected
+  List<CrdtField> dco_decode_list_crdt_field(dynamic raw);
+
+  @protected
+  List<Uint8List> dco_decode_list_list_prim_u_8_strict(dynamic raw);
 
   @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
@@ -56,6 +72,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PairingStart dco_decode_pairing_start(dynamic raw);
 
   @protected
+  int dco_decode_u_16(dynamic raw);
+
+  @protected
+  int dco_decode_u_32(dynamic raw);
+
+  @protected
+  BigInt dco_decode_u_64(dynamic raw);
+
+  @protected
   int dco_decode_u_8(dynamic raw);
 
   @protected
@@ -65,7 +90,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  CrdtField sse_decode_crdt_field(SseDeserializer deserializer);
+
+  @protected
+  CrdtMutation sse_decode_crdt_mutation(SseDeserializer deserializer);
+
+  @protected
   DeviceKeypair sse_decode_device_keypair(SseDeserializer deserializer);
+
+  @protected
+  HlcTick sse_decode_hlc_tick(SseDeserializer deserializer);
+
+  @protected
+  List<CrdtField> sse_decode_list_crdt_field(SseDeserializer deserializer);
+
+  @protected
+  List<Uint8List> sse_decode_list_list_prim_u_8_strict(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
@@ -103,6 +145,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PairingStart sse_decode_pairing_start(SseDeserializer deserializer);
 
   @protected
+  int sse_decode_u_16(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer);
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer);
 
   @protected
@@ -118,7 +169,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_crdt_field(CrdtField self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_crdt_mutation(CrdtMutation self, SseSerializer serializer);
+
+  @protected
   void sse_encode_device_keypair(DeviceKeypair self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_hlc_tick(HlcTick self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_crdt_field(
+    List<CrdtField> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_list_prim_u_8_strict(
+    List<Uint8List> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
@@ -164,6 +236,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_pairing_start(PairingStart self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_16(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
