@@ -1,27 +1,106 @@
-# GitHub Actions workflow pour les PR sur develop et main.
-# Version Flutter : 3.35.7.
+# GitHub Actions workflow pour les PR vers develop et main.
+# Version Flutter : 3.44.4.
 name: Flutter CI
 
 on:
   pull_request:
-    branches: [ "develop", "main" ]
+    types: [opened, edited, synchronize, reopened]
+
+# Droits minimaux : lecture du dépôt uniquement (principe du moindre privilège).
+permissions:
+  contents: read
+
+# Annule l'exécution obsolète d'une même PR dès qu'un nouvel événement arrive.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
+  check-branches:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate Branch Workflow
+        # Les valeurs sont passées par l'environnement (jamais interpolées dans le
+        # corps du script) pour éviter toute injection via un nom de branche.
+        env:
+          SOURCE_BRANCH: ${{ github.head_ref }}
+          TARGET_BRANCH: ${{ github.base_ref }}
+        run: |
+          echo "Vérification : $SOURCE_BRANCH -> $TARGET_BRANCH"
+
+          # Condition 1: develop -> staging (coupe d'une beta)
+          if [[ "$SOURCE_BRANCH" == "develop" && "$TARGET_BRANCH" == "staging" ]]; then
+            echo "✅ Validation : coupe de beta autorisée (develop -> staging)."
+            exit 0
+          fi
+
+          # Condition 2: staging -> main (promotion en production)
+          if [[ "$SOURCE_BRANCH" == "staging" && "$TARGET_BRANCH" == "main" ]]; then
+            echo "✅ Validation : promotion en production autorisée (staging -> main)."
+            exit 0
+          fi
+
+          # Condition 3: hotfix/rg-* (uniquement des chiffres à la fin) -> main
+          if [[ "$SOURCE_BRANCH" =~ ^hotfix/rg-[0-9]+$ && "$TARGET_BRANCH" == "main" ]]; then
+            echo "✅ Validation : Hotfix autorisé vers main."
+            exit 0
+          fi
+
+          # Condition 4: feature|fix|chore/rg-* (uniquement des chiffres à la fin) -> develop
+          if [[ "$SOURCE_BRANCH" =~ ^(feature|fix|chore)/rg-[0-9]+$ && "$TARGET_BRANCH" == "develop" ]]; then
+            echo "✅ Validation : Développement autorisé vers develop."
+            exit 0
+          fi
+
+          # Si aucune condition n'est remplie
+          echo "❌ ERREUR : Le nommage de la branche source ou le choix de la branche cible est invalide."
+          echo "Règles autorisées :"
+          echo "- (feature|fix|chore)/rg-[numéro] -> develop"
+          echo "- develop -> staging"
+          echo "- staging -> main"
+          echo "- hotfix/rg-[numéro] -> main"
+          exit 1
+
+  build-and-test:
+    needs: check-branches
+    # Inutile de tout reconstruire sur une simple édition de titre / description.
+    if: github.event.action != 'edited'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.35.7"
+          flutter-version: "3.44.4"
+          cache: true
+
+      - name: Cache pub & Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: deps-${{ runner.os }}-${{ hashFiles('pubspec.lock', 'android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            deps-${{ runner.os }}-
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
 
       - name: Analyze code
         run: flutter analyze
 
       - name: Run tests
         run: flutter test
+
+      # Le build APK n'est pas couvert par analyze/test : il attrape les ruptures
+      # de build natives (Android/Gradle/manifeste, versions de plugins…).
+      - name: Build debug APK
+        run: flutter build apk --debug

@@ -1,0 +1,46 @@
+# Fastlane — canal de distribution B (Play Store, AAB).
+# Deux lanes : `beta` (téléverse sur le test fermé) et `promote` (promeut le
+# build du test fermé vers la production, sans reconstruction). Voir docs/RELEASE.md.
+default_platform(:android)
+
+# Pistes Play (API) : "internal" = test interne, "alpha" = test FERMÉ,
+# "beta" = test ouvert, "production" = production.
+BETA_TRACK = ENV["PLAY_BETA_TRACK"] || "alpha"
+AAB_PATH = "../build/app/outputs/bundle/release/app-release.aab"
+
+platform :android do
+  desc "Téléverse l'AAB signé sur la piste de test fermé (beta)."
+  lane :beta do
+    upload_to_play_store(
+      track: BETA_TRACK,
+      aab: AAB_PATH,
+      release_status: "completed",
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: true,
+    )
+  end
+
+  desc "Promeut le build du test fermé vers la production (aucune reconstruction)."
+  lane :promote do
+    params = {
+      track: BETA_TRACK,
+      track_promote_to: "production",
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: true,
+    }
+    # Déploiement progressif optionnel : PLAY_ROLLOUT=0.2 → 20 % des utilisateurs.
+    rollout = ENV["PLAY_ROLLOUT"].to_s.strip
+    unless rollout.empty?
+      params[:rollout] = rollout
+      params[:release_status] = "inProgress"
+    end
+    upload_to_play_store(**params)
+  end
+end
