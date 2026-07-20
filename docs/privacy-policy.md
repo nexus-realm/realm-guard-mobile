@@ -3,8 +3,6 @@
 **Dernière mise à jour : 5 juillet 2026**
 
 > Version source (versionnée) de la politique de confidentialité de Realm Guard.
-> À publier à une URL publique — par ex. `https://realmguard.nexusrealm.fr/confidentialite` —
-> puis à référencer dans la fiche Google Play. Remplacez l'adresse de contact avant publication.
 
 Realm Guard est un gestionnaire de mots de passe **hors ligne**. Cette politique
 décrit les données que l'application traite — en résumé : elles ne quittent
