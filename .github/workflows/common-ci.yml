@@ -53,12 +53,23 @@ jobs:
             exit 0
           fi
 
+          # Condition 5: main -> develop (back-merge de release). Après une
+          # promotion en production, main porte le commit chore(release) + le
+          # CHANGELOG : on les redescend dans la ligne de développement pour que
+          # les deux branches ne divergent pas. Étape normale du GitFlow, à
+          # rejouer à chaque release.
+          if [[ "$SOURCE_BRANCH" == "main" && "$TARGET_BRANCH" == "develop" ]]; then
+            echo "✅ Validation : back-merge de release autorisé (main -> develop)."
+            exit 0
+          fi
+
           # Si aucune condition n'est remplie
           echo "❌ ERREUR : Le nommage de la branche source ou le choix de la branche cible est invalide."
           echo "Règles autorisées :"
           echo "- (feature|fix|chore)/rg-[numéro] -> develop"
           echo "- develop -> staging"
           echo "- staging -> main"
+          echo "- main -> develop (back-merge de release)"
           echo "- hotfix/rg-[numéro] -> main"
           exit 1
 
