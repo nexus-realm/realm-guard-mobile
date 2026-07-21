@@ -8,7 +8,10 @@ crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 flutter_rust_bridge = "=2.12.0"
-realm-guard-core = { git = "https://github.com/nexus-realm/realm-guard-core", branch = "develop" }
+# Épinglé sur une **release** du cœur (et non plus une branche mouvante) : le
+# build mobile devient reproductible. Bump = changer ce tag + `cargo update -p
+# realm-guard-core` dans `rust/`, puis committer le Cargo.lock.
+realm-guard-core = { git = "https://github.com/nexus-realm/realm-guard-core", tag = "v1.0.0" }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
