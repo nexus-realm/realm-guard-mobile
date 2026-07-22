@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/feature_flags/feature_flags_controller.dart';
 import '../../../core/routes/app_routes.dart';
+import '../../../core/security/biometric_storage_service.dart';
 import '../../../core/security/vault_service.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../auth/data/account_credential_rules.dart';
@@ -23,11 +24,15 @@ class OnboardingPage extends StatefulWidget {
   final FeatureFlagsController featureFlagsController;
   final AuthService authService;
 
+  /// Injectable pour les tests de vue (voir OnboardingViewModel).
+  final BiometricStorageService? biometricStorageService;
+
   const OnboardingPage({
     required this.onboardingStorageService,
     required this.vaultService,
     required this.featureFlagsController,
     required this.authService,
+    this.biometricStorageService,
     super.key,
   });
 
@@ -58,6 +63,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       vaultService: widget.vaultService,
       featureFlagsController: widget.featureFlagsController,
       authService: widget.authService,
+      biometricStorageService: widget.biometricStorageService,
     );
     _viewModel.addListener(_onViewModelUpdated);
     _viewModel.initialize();
