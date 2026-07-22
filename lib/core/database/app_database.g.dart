@@ -21,6 +21,16 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<Uint8List> syncId = GeneratedColumn<Uint8List>(
+    'sync_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+    clientDefault: generateSyncId,
+  );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
@@ -108,6 +118,7 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    syncId,
     name,
     emails,
     usernames,
@@ -131,6 +142,12 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('sync_id')) {
+      context.handle(
+        _syncIdMeta,
+        syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
+      );
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -200,6 +217,10 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      syncId: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}sync_id'],
+      ),
       name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}name'],
@@ -243,6 +264,11 @@ class $ProfilesTable extends Profiles with TableInfo<$ProfilesTable, Profile> {
 
 class Profile extends DataClass implements Insertable<Profile> {
   final int id;
+
+  /// Clé stable de synchronisation (16 o) ⇔ `EntryId` du CRDT. Indexée unique
+  /// (index créé en migration). `clientDefault` garantit un id sur toute
+  /// insertion hors chemin CRDT.
+  final Uint8List? syncId;
   final String name;
 
   /// Listes encodées JSON (tableau de chaînes).
@@ -257,6 +283,7 @@ class Profile extends DataClass implements Insertable<Profile> {
   final DateTime updatedAt;
   const Profile({
     required this.id,
+    this.syncId,
     required this.name,
     required this.emails,
     required this.usernames,
@@ -270,6 +297,9 @@ class Profile extends DataClass implements Insertable<Profile> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<Uint8List>(syncId);
+    }
     map['name'] = Variable<String>(name);
     map['emails'] = Variable<String>(emails);
     map['usernames'] = Variable<String>(usernames);
@@ -288,6 +318,9 @@ class Profile extends DataClass implements Insertable<Profile> {
   ProfilesCompanion toCompanion(bool nullToAbsent) {
     return ProfilesCompanion(
       id: Value(id),
+      syncId: syncId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncId),
       name: Value(name),
       emails: Value(emails),
       usernames: Value(usernames),
@@ -308,6 +341,7 @@ class Profile extends DataClass implements Insertable<Profile> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Profile(
       id: serializer.fromJson<int>(json['id']),
+      syncId: serializer.fromJson<Uint8List?>(json['syncId']),
       name: serializer.fromJson<String>(json['name']),
       emails: serializer.fromJson<String>(json['emails']),
       usernames: serializer.fromJson<String>(json['usernames']),
@@ -323,6 +357,7 @@ class Profile extends DataClass implements Insertable<Profile> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'syncId': serializer.toJson<Uint8List?>(syncId),
       'name': serializer.toJson<String>(name),
       'emails': serializer.toJson<String>(emails),
       'usernames': serializer.toJson<String>(usernames),
@@ -336,6 +371,7 @@ class Profile extends DataClass implements Insertable<Profile> {
 
   Profile copyWith({
     int? id,
+    Value<Uint8List?> syncId = const Value.absent(),
     String? name,
     String? emails,
     String? usernames,
@@ -346,6 +382,7 @@ class Profile extends DataClass implements Insertable<Profile> {
     DateTime? updatedAt,
   }) => Profile(
     id: id ?? this.id,
+    syncId: syncId.present ? syncId.value : this.syncId,
     name: name ?? this.name,
     emails: emails ?? this.emails,
     usernames: usernames ?? this.usernames,
@@ -358,6 +395,7 @@ class Profile extends DataClass implements Insertable<Profile> {
   Profile copyWithCompanion(ProfilesCompanion data) {
     return Profile(
       id: data.id.present ? data.id.value : this.id,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       name: data.name.present ? data.name.value : this.name,
       emails: data.emails.present ? data.emails.value : this.emails,
       usernames: data.usernames.present ? data.usernames.value : this.usernames,
@@ -375,6 +413,7 @@ class Profile extends DataClass implements Insertable<Profile> {
   String toString() {
     return (StringBuffer('Profile(')
           ..write('id: $id, ')
+          ..write('syncId: $syncId, ')
           ..write('name: $name, ')
           ..write('emails: $emails, ')
           ..write('usernames: $usernames, ')
@@ -390,6 +429,7 @@ class Profile extends DataClass implements Insertable<Profile> {
   @override
   int get hashCode => Object.hash(
     id,
+    $driftBlobEquality.hash(syncId),
     name,
     emails,
     usernames,
@@ -404,6 +444,7 @@ class Profile extends DataClass implements Insertable<Profile> {
       identical(this, other) ||
       (other is Profile &&
           other.id == this.id &&
+          $driftBlobEquality.equals(other.syncId, this.syncId) &&
           other.name == this.name &&
           other.emails == this.emails &&
           other.usernames == this.usernames &&
@@ -416,6 +457,7 @@ class Profile extends DataClass implements Insertable<Profile> {
 
 class ProfilesCompanion extends UpdateCompanion<Profile> {
   final Value<int> id;
+  final Value<Uint8List?> syncId;
   final Value<String> name;
   final Value<String> emails;
   final Value<String> usernames;
@@ -426,6 +468,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   final Value<DateTime> updatedAt;
   const ProfilesCompanion({
     this.id = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.name = const Value.absent(),
     this.emails = const Value.absent(),
     this.usernames = const Value.absent(),
@@ -437,6 +480,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   });
   ProfilesCompanion.insert({
     this.id = const Value.absent(),
+    this.syncId = const Value.absent(),
     required String name,
     required String emails,
     this.usernames = const Value.absent(),
@@ -449,6 +493,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
        emails = Value(emails);
   static Insertable<Profile> custom({
     Expression<int>? id,
+    Expression<Uint8List>? syncId,
     Expression<String>? name,
     Expression<String>? emails,
     Expression<String>? usernames,
@@ -460,6 +505,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (syncId != null) 'sync_id': syncId,
       if (name != null) 'name': name,
       if (emails != null) 'emails': emails,
       if (usernames != null) 'usernames': usernames,
@@ -473,6 +519,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
 
   ProfilesCompanion copyWith({
     Value<int>? id,
+    Value<Uint8List?>? syncId,
     Value<String>? name,
     Value<String>? emails,
     Value<String>? usernames,
@@ -484,6 +531,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   }) {
     return ProfilesCompanion(
       id: id ?? this.id,
+      syncId: syncId ?? this.syncId,
       name: name ?? this.name,
       emails: emails ?? this.emails,
       usernames: usernames ?? this.usernames,
@@ -500,6 +548,9 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (syncId.present) {
+      map['sync_id'] = Variable<Uint8List>(syncId.value);
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
@@ -532,6 +583,7 @@ class ProfilesCompanion extends UpdateCompanion<Profile> {
   String toString() {
     return (StringBuffer('ProfilesCompanion(')
           ..write('id: $id, ')
+          ..write('syncId: $syncId, ')
           ..write('name: $name, ')
           ..write('emails: $emails, ')
           ..write('usernames: $usernames, ')
@@ -563,6 +615,16 @@ class $CredentialsTable extends Credentials
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<Uint8List> syncId = GeneratedColumn<Uint8List>(
+    'sync_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+    clientDefault: generateSyncId,
   );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
@@ -681,6 +743,7 @@ class $CredentialsTable extends Credentials
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    syncId,
     title,
     username,
     password,
@@ -706,6 +769,12 @@ class $CredentialsTable extends Credentials
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('sync_id')) {
+      context.handle(
+        _syncIdMeta,
+        syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
+      );
     }
     if (data.containsKey('title')) {
       context.handle(
@@ -785,6 +854,10 @@ class $CredentialsTable extends Credentials
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      syncId: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}sync_id'],
+      ),
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -836,6 +909,11 @@ class $CredentialsTable extends Credentials
 
 class Credential extends DataClass implements Insertable<Credential> {
   final int id;
+
+  /// Clé stable de synchronisation (16 o) ⇔ `EntryId` du CRDT. Indexée unique
+  /// (index créé en migration). `clientDefault` garantit un id sur toute
+  /// insertion hors chemin CRDT.
+  final Uint8List? syncId;
   final String title;
   final String? username;
   final String? password;
@@ -851,6 +929,7 @@ class Credential extends DataClass implements Insertable<Credential> {
   final DateTime updatedAt;
   const Credential({
     required this.id,
+    this.syncId,
     required this.title,
     this.username,
     this.password,
@@ -866,6 +945,9 @@ class Credential extends DataClass implements Insertable<Credential> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<Uint8List>(syncId);
+    }
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || username != null) {
       map['username'] = Variable<String>(username);
@@ -892,6 +974,9 @@ class Credential extends DataClass implements Insertable<Credential> {
   CredentialsCompanion toCompanion(bool nullToAbsent) {
     return CredentialsCompanion(
       id: Value(id),
+      syncId: syncId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncId),
       title: Value(title),
       username: username == null && nullToAbsent
           ? const Value.absent()
@@ -920,6 +1005,7 @@ class Credential extends DataClass implements Insertable<Credential> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Credential(
       id: serializer.fromJson<int>(json['id']),
+      syncId: serializer.fromJson<Uint8List?>(json['syncId']),
       title: serializer.fromJson<String>(json['title']),
       username: serializer.fromJson<String?>(json['username']),
       password: serializer.fromJson<String?>(json['password']),
@@ -937,6 +1023,7 @@ class Credential extends DataClass implements Insertable<Credential> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'syncId': serializer.toJson<Uint8List?>(syncId),
       'title': serializer.toJson<String>(title),
       'username': serializer.toJson<String?>(username),
       'password': serializer.toJson<String?>(password),
@@ -952,6 +1039,7 @@ class Credential extends DataClass implements Insertable<Credential> {
 
   Credential copyWith({
     int? id,
+    Value<Uint8List?> syncId = const Value.absent(),
     String? title,
     Value<String?> username = const Value.absent(),
     Value<String?> password = const Value.absent(),
@@ -964,6 +1052,7 @@ class Credential extends DataClass implements Insertable<Credential> {
     DateTime? updatedAt,
   }) => Credential(
     id: id ?? this.id,
+    syncId: syncId.present ? syncId.value : this.syncId,
     title: title ?? this.title,
     username: username.present ? username.value : this.username,
     password: password.present ? password.value : this.password,
@@ -978,6 +1067,7 @@ class Credential extends DataClass implements Insertable<Credential> {
   Credential copyWithCompanion(CredentialsCompanion data) {
     return Credential(
       id: data.id.present ? data.id.value : this.id,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       title: data.title.present ? data.title.value : this.title,
       username: data.username.present ? data.username.value : this.username,
       password: data.password.present ? data.password.value : this.password,
@@ -997,6 +1087,7 @@ class Credential extends DataClass implements Insertable<Credential> {
   String toString() {
     return (StringBuffer('Credential(')
           ..write('id: $id, ')
+          ..write('syncId: $syncId, ')
           ..write('title: $title, ')
           ..write('username: $username, ')
           ..write('password: $password, ')
@@ -1014,6 +1105,7 @@ class Credential extends DataClass implements Insertable<Credential> {
   @override
   int get hashCode => Object.hash(
     id,
+    $driftBlobEquality.hash(syncId),
     title,
     username,
     password,
@@ -1030,6 +1122,7 @@ class Credential extends DataClass implements Insertable<Credential> {
       identical(this, other) ||
       (other is Credential &&
           other.id == this.id &&
+          $driftBlobEquality.equals(other.syncId, this.syncId) &&
           other.title == this.title &&
           other.username == this.username &&
           other.password == this.password &&
@@ -1044,6 +1137,7 @@ class Credential extends DataClass implements Insertable<Credential> {
 
 class CredentialsCompanion extends UpdateCompanion<Credential> {
   final Value<int> id;
+  final Value<Uint8List?> syncId;
   final Value<String> title;
   final Value<String?> username;
   final Value<String?> password;
@@ -1056,6 +1150,7 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
   final Value<DateTime> updatedAt;
   const CredentialsCompanion({
     this.id = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.title = const Value.absent(),
     this.username = const Value.absent(),
     this.password = const Value.absent(),
@@ -1069,6 +1164,7 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
   });
   CredentialsCompanion.insert({
     this.id = const Value.absent(),
+    this.syncId = const Value.absent(),
     required String title,
     this.username = const Value.absent(),
     this.password = const Value.absent(),
@@ -1082,6 +1178,7 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
   }) : title = Value(title);
   static Insertable<Credential> custom({
     Expression<int>? id,
+    Expression<Uint8List>? syncId,
     Expression<String>? title,
     Expression<String>? username,
     Expression<String>? password,
@@ -1095,6 +1192,7 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (syncId != null) 'sync_id': syncId,
       if (title != null) 'title': title,
       if (username != null) 'username': username,
       if (password != null) 'password': password,
@@ -1110,6 +1208,7 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
 
   CredentialsCompanion copyWith({
     Value<int>? id,
+    Value<Uint8List?>? syncId,
     Value<String>? title,
     Value<String?>? username,
     Value<String?>? password,
@@ -1123,6 +1222,7 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
   }) {
     return CredentialsCompanion(
       id: id ?? this.id,
+      syncId: syncId ?? this.syncId,
       title: title ?? this.title,
       username: username ?? this.username,
       password: password ?? this.password,
@@ -1141,6 +1241,9 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (syncId.present) {
+      map['sync_id'] = Variable<Uint8List>(syncId.value);
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -1179,6 +1282,7 @@ class CredentialsCompanion extends UpdateCompanion<Credential> {
   String toString() {
     return (StringBuffer('CredentialsCompanion(')
           ..write('id: $id, ')
+          ..write('syncId: $syncId, ')
           ..write('title: $title, ')
           ..write('username: $username, ')
           ..write('password: $password, ')
@@ -1211,6 +1315,16 @@ class $TotpsTable extends Totps with TableInfo<$TotpsTable, Totp> {
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<Uint8List> syncId = GeneratedColumn<Uint8List>(
+    'sync_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+    clientDefault: generateSyncId,
   );
   static const VerificationMeta _labelMeta = const VerificationMeta('label');
   @override
@@ -1329,6 +1443,7 @@ class $TotpsTable extends Totps with TableInfo<$TotpsTable, Totp> {
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    syncId,
     label,
     account,
     secret,
@@ -1354,6 +1469,12 @@ class $TotpsTable extends Totps with TableInfo<$TotpsTable, Totp> {
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('sync_id')) {
+      context.handle(
+        _syncIdMeta,
+        syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
+      );
     }
     if (data.containsKey('label')) {
       context.handle(
@@ -1432,6 +1553,10 @@ class $TotpsTable extends Totps with TableInfo<$TotpsTable, Totp> {
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      syncId: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}sync_id'],
+      ),
       label: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}label'],
@@ -1484,6 +1609,11 @@ class $TotpsTable extends Totps with TableInfo<$TotpsTable, Totp> {
 class Totp extends DataClass implements Insertable<Totp> {
   final int id;
 
+  /// Clé stable de synchronisation (16 o) ⇔ `EntryId` du CRDT. Indexée unique
+  /// (index créé en migration). `clientDefault` garantit un id sur toute
+  /// insertion hors chemin CRDT.
+  final Uint8List? syncId;
+
   /// Libellé affiché (ex. « GitHub »).
   final String label;
 
@@ -1505,6 +1635,7 @@ class Totp extends DataClass implements Insertable<Totp> {
   final DateTime updatedAt;
   const Totp({
     required this.id,
+    this.syncId,
     required this.label,
     this.account,
     required this.secret,
@@ -1520,6 +1651,9 @@ class Totp extends DataClass implements Insertable<Totp> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<Uint8List>(syncId);
+    }
     map['label'] = Variable<String>(label);
     if (!nullToAbsent || account != null) {
       map['account'] = Variable<String>(account);
@@ -1540,6 +1674,9 @@ class Totp extends DataClass implements Insertable<Totp> {
   TotpsCompanion toCompanion(bool nullToAbsent) {
     return TotpsCompanion(
       id: Value(id),
+      syncId: syncId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncId),
       label: Value(label),
       account: account == null && nullToAbsent
           ? const Value.absent()
@@ -1564,6 +1701,7 @@ class Totp extends DataClass implements Insertable<Totp> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Totp(
       id: serializer.fromJson<int>(json['id']),
+      syncId: serializer.fromJson<Uint8List?>(json['syncId']),
       label: serializer.fromJson<String>(json['label']),
       account: serializer.fromJson<String?>(json['account']),
       secret: serializer.fromJson<String>(json['secret']),
@@ -1581,6 +1719,7 @@ class Totp extends DataClass implements Insertable<Totp> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'syncId': serializer.toJson<Uint8List?>(syncId),
       'label': serializer.toJson<String>(label),
       'account': serializer.toJson<String?>(account),
       'secret': serializer.toJson<String>(secret),
@@ -1596,6 +1735,7 @@ class Totp extends DataClass implements Insertable<Totp> {
 
   Totp copyWith({
     int? id,
+    Value<Uint8List?> syncId = const Value.absent(),
     String? label,
     Value<String?> account = const Value.absent(),
     String? secret,
@@ -1608,6 +1748,7 @@ class Totp extends DataClass implements Insertable<Totp> {
     DateTime? updatedAt,
   }) => Totp(
     id: id ?? this.id,
+    syncId: syncId.present ? syncId.value : this.syncId,
     label: label ?? this.label,
     account: account.present ? account.value : this.account,
     secret: secret ?? this.secret,
@@ -1622,6 +1763,7 @@ class Totp extends DataClass implements Insertable<Totp> {
   Totp copyWithCompanion(TotpsCompanion data) {
     return Totp(
       id: data.id.present ? data.id.value : this.id,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       label: data.label.present ? data.label.value : this.label,
       account: data.account.present ? data.account.value : this.account,
       secret: data.secret.present ? data.secret.value : this.secret,
@@ -1639,6 +1781,7 @@ class Totp extends DataClass implements Insertable<Totp> {
   String toString() {
     return (StringBuffer('Totp(')
           ..write('id: $id, ')
+          ..write('syncId: $syncId, ')
           ..write('label: $label, ')
           ..write('account: $account, ')
           ..write('secret: $secret, ')
@@ -1656,6 +1799,7 @@ class Totp extends DataClass implements Insertable<Totp> {
   @override
   int get hashCode => Object.hash(
     id,
+    $driftBlobEquality.hash(syncId),
     label,
     account,
     secret,
@@ -1672,6 +1816,7 @@ class Totp extends DataClass implements Insertable<Totp> {
       identical(this, other) ||
       (other is Totp &&
           other.id == this.id &&
+          $driftBlobEquality.equals(other.syncId, this.syncId) &&
           other.label == this.label &&
           other.account == this.account &&
           other.secret == this.secret &&
@@ -1686,6 +1831,7 @@ class Totp extends DataClass implements Insertable<Totp> {
 
 class TotpsCompanion extends UpdateCompanion<Totp> {
   final Value<int> id;
+  final Value<Uint8List?> syncId;
   final Value<String> label;
   final Value<String?> account;
   final Value<String> secret;
@@ -1698,6 +1844,7 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
   final Value<DateTime> updatedAt;
   const TotpsCompanion({
     this.id = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.label = const Value.absent(),
     this.account = const Value.absent(),
     this.secret = const Value.absent(),
@@ -1711,6 +1858,7 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
   });
   TotpsCompanion.insert({
     this.id = const Value.absent(),
+    this.syncId = const Value.absent(),
     required String label,
     this.account = const Value.absent(),
     required String secret,
@@ -1725,6 +1873,7 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
        secret = Value(secret);
   static Insertable<Totp> custom({
     Expression<int>? id,
+    Expression<Uint8List>? syncId,
     Expression<String>? label,
     Expression<String>? account,
     Expression<String>? secret,
@@ -1738,6 +1887,7 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (syncId != null) 'sync_id': syncId,
       if (label != null) 'label': label,
       if (account != null) 'account': account,
       if (secret != null) 'secret': secret,
@@ -1753,6 +1903,7 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
 
   TotpsCompanion copyWith({
     Value<int>? id,
+    Value<Uint8List?>? syncId,
     Value<String>? label,
     Value<String?>? account,
     Value<String>? secret,
@@ -1766,6 +1917,7 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
   }) {
     return TotpsCompanion(
       id: id ?? this.id,
+      syncId: syncId ?? this.syncId,
       label: label ?? this.label,
       account: account ?? this.account,
       secret: secret ?? this.secret,
@@ -1784,6 +1936,9 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (syncId.present) {
+      map['sync_id'] = Variable<Uint8List>(syncId.value);
     }
     if (label.present) {
       map['label'] = Variable<String>(label.value);
@@ -1822,6 +1977,7 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
   String toString() {
     return (StringBuffer('TotpsCompanion(')
           ..write('id: $id, ')
+          ..write('syncId: $syncId, ')
           ..write('label: $label, ')
           ..write('account: $account, ')
           ..write('secret: $secret, ')
@@ -1837,12 +1993,560 @@ class TotpsCompanion extends UpdateCompanion<Totp> {
   }
 }
 
+class $CrdtDocsTable extends CrdtDocs with TableInfo<$CrdtDocsTable, CrdtDoc> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CrdtDocsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _docMeta = const VerificationMeta('doc');
+  @override
+  late final GeneratedColumn<Uint8List> doc = GeneratedColumn<Uint8List>(
+    'doc',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hlcWallMeta = const VerificationMeta(
+    'hlcWall',
+  );
+  @override
+  late final GeneratedColumn<int> hlcWall = GeneratedColumn<int>(
+    'hlc_wall',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _hlcCounterMeta = const VerificationMeta(
+    'hlcCounter',
+  );
+  @override
+  late final GeneratedColumn<int> hlcCounter = GeneratedColumn<int>(
+    'hlc_counter',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _cursorMeta = const VerificationMeta('cursor');
+  @override
+  late final GeneratedColumn<int> cursor = GeneratedColumn<int>(
+    'cursor',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, doc, hlcWall, hlcCounter, cursor];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'crdt_docs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CrdtDoc> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('doc')) {
+      context.handle(
+        _docMeta,
+        doc.isAcceptableOrUnknown(data['doc']!, _docMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_docMeta);
+    }
+    if (data.containsKey('hlc_wall')) {
+      context.handle(
+        _hlcWallMeta,
+        hlcWall.isAcceptableOrUnknown(data['hlc_wall']!, _hlcWallMeta),
+      );
+    }
+    if (data.containsKey('hlc_counter')) {
+      context.handle(
+        _hlcCounterMeta,
+        hlcCounter.isAcceptableOrUnknown(data['hlc_counter']!, _hlcCounterMeta),
+      );
+    }
+    if (data.containsKey('cursor')) {
+      context.handle(
+        _cursorMeta,
+        cursor.isAcceptableOrUnknown(data['cursor']!, _cursorMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CrdtDoc map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CrdtDoc(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      doc: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}doc'],
+      )!,
+      hlcWall: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}hlc_wall'],
+      )!,
+      hlcCounter: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}hlc_counter'],
+      )!,
+      cursor: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cursor'],
+      )!,
+    );
+  }
+
+  @override
+  $CrdtDocsTable createAlias(String alias) {
+    return $CrdtDocsTable(attachedDatabase, alias);
+  }
+}
+
+class CrdtDoc extends DataClass implements Insertable<CrdtDoc> {
+  /// Toujours `0` : la table ne contient qu'une ligne.
+  final int id;
+
+  /// `VaultDoc` encodé (postcard). Absent tant que le coffre CRDT n'est pas semé.
+  final Uint8List doc;
+
+  /// Dernier HLC local émis — mur (ms epoch) + compteur — pour garantir la
+  /// stricte monotonie des écritures à travers les redémarrages.
+  final int hlcWall;
+  final int hlcCounter;
+
+  /// Curseur de synchronisation : plus grand `seq` serveur déjà appliqué au doc.
+  /// Le tirage repart de là. Le re-merge étant idempotent, un curseur en retard
+  /// est sans danger (au pire, quelques deltas retirés à nouveau).
+  final int cursor;
+  const CrdtDoc({
+    required this.id,
+    required this.doc,
+    required this.hlcWall,
+    required this.hlcCounter,
+    required this.cursor,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['doc'] = Variable<Uint8List>(doc);
+    map['hlc_wall'] = Variable<int>(hlcWall);
+    map['hlc_counter'] = Variable<int>(hlcCounter);
+    map['cursor'] = Variable<int>(cursor);
+    return map;
+  }
+
+  CrdtDocsCompanion toCompanion(bool nullToAbsent) {
+    return CrdtDocsCompanion(
+      id: Value(id),
+      doc: Value(doc),
+      hlcWall: Value(hlcWall),
+      hlcCounter: Value(hlcCounter),
+      cursor: Value(cursor),
+    );
+  }
+
+  factory CrdtDoc.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CrdtDoc(
+      id: serializer.fromJson<int>(json['id']),
+      doc: serializer.fromJson<Uint8List>(json['doc']),
+      hlcWall: serializer.fromJson<int>(json['hlcWall']),
+      hlcCounter: serializer.fromJson<int>(json['hlcCounter']),
+      cursor: serializer.fromJson<int>(json['cursor']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'doc': serializer.toJson<Uint8List>(doc),
+      'hlcWall': serializer.toJson<int>(hlcWall),
+      'hlcCounter': serializer.toJson<int>(hlcCounter),
+      'cursor': serializer.toJson<int>(cursor),
+    };
+  }
+
+  CrdtDoc copyWith({
+    int? id,
+    Uint8List? doc,
+    int? hlcWall,
+    int? hlcCounter,
+    int? cursor,
+  }) => CrdtDoc(
+    id: id ?? this.id,
+    doc: doc ?? this.doc,
+    hlcWall: hlcWall ?? this.hlcWall,
+    hlcCounter: hlcCounter ?? this.hlcCounter,
+    cursor: cursor ?? this.cursor,
+  );
+  CrdtDoc copyWithCompanion(CrdtDocsCompanion data) {
+    return CrdtDoc(
+      id: data.id.present ? data.id.value : this.id,
+      doc: data.doc.present ? data.doc.value : this.doc,
+      hlcWall: data.hlcWall.present ? data.hlcWall.value : this.hlcWall,
+      hlcCounter: data.hlcCounter.present
+          ? data.hlcCounter.value
+          : this.hlcCounter,
+      cursor: data.cursor.present ? data.cursor.value : this.cursor,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CrdtDoc(')
+          ..write('id: $id, ')
+          ..write('doc: $doc, ')
+          ..write('hlcWall: $hlcWall, ')
+          ..write('hlcCounter: $hlcCounter, ')
+          ..write('cursor: $cursor')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    $driftBlobEquality.hash(doc),
+    hlcWall,
+    hlcCounter,
+    cursor,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CrdtDoc &&
+          other.id == this.id &&
+          $driftBlobEquality.equals(other.doc, this.doc) &&
+          other.hlcWall == this.hlcWall &&
+          other.hlcCounter == this.hlcCounter &&
+          other.cursor == this.cursor);
+}
+
+class CrdtDocsCompanion extends UpdateCompanion<CrdtDoc> {
+  final Value<int> id;
+  final Value<Uint8List> doc;
+  final Value<int> hlcWall;
+  final Value<int> hlcCounter;
+  final Value<int> cursor;
+  const CrdtDocsCompanion({
+    this.id = const Value.absent(),
+    this.doc = const Value.absent(),
+    this.hlcWall = const Value.absent(),
+    this.hlcCounter = const Value.absent(),
+    this.cursor = const Value.absent(),
+  });
+  CrdtDocsCompanion.insert({
+    this.id = const Value.absent(),
+    required Uint8List doc,
+    this.hlcWall = const Value.absent(),
+    this.hlcCounter = const Value.absent(),
+    this.cursor = const Value.absent(),
+  }) : doc = Value(doc);
+  static Insertable<CrdtDoc> custom({
+    Expression<int>? id,
+    Expression<Uint8List>? doc,
+    Expression<int>? hlcWall,
+    Expression<int>? hlcCounter,
+    Expression<int>? cursor,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (doc != null) 'doc': doc,
+      if (hlcWall != null) 'hlc_wall': hlcWall,
+      if (hlcCounter != null) 'hlc_counter': hlcCounter,
+      if (cursor != null) 'cursor': cursor,
+    });
+  }
+
+  CrdtDocsCompanion copyWith({
+    Value<int>? id,
+    Value<Uint8List>? doc,
+    Value<int>? hlcWall,
+    Value<int>? hlcCounter,
+    Value<int>? cursor,
+  }) {
+    return CrdtDocsCompanion(
+      id: id ?? this.id,
+      doc: doc ?? this.doc,
+      hlcWall: hlcWall ?? this.hlcWall,
+      hlcCounter: hlcCounter ?? this.hlcCounter,
+      cursor: cursor ?? this.cursor,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (doc.present) {
+      map['doc'] = Variable<Uint8List>(doc.value);
+    }
+    if (hlcWall.present) {
+      map['hlc_wall'] = Variable<int>(hlcWall.value);
+    }
+    if (hlcCounter.present) {
+      map['hlc_counter'] = Variable<int>(hlcCounter.value);
+    }
+    if (cursor.present) {
+      map['cursor'] = Variable<int>(cursor.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CrdtDocsCompanion(')
+          ..write('id: $id, ')
+          ..write('doc: $doc, ')
+          ..write('hlcWall: $hlcWall, ')
+          ..write('hlcCounter: $hlcCounter, ')
+          ..write('cursor: $cursor')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PendingDeltasTable extends PendingDeltas
+    with TableInfo<$PendingDeltasTable, PendingDeltaRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PendingDeltasTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _payloadMeta = const VerificationMeta(
+    'payload',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> payload = GeneratedColumn<Uint8List>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, payload];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pending_deltas';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PendingDeltaRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('payload')) {
+      context.handle(
+        _payloadMeta,
+        payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PendingDeltaRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PendingDeltaRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      payload: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}payload'],
+      )!,
+    );
+  }
+
+  @override
+  $PendingDeltasTable createAlias(String alias) {
+    return $PendingDeltasTable(attachedDatabase, alias);
+  }
+}
+
+class PendingDeltaRow extends DataClass implements Insertable<PendingDeltaRow> {
+  final int id;
+
+  /// Delta encodé (opaque), tel que produit par le write-through.
+  final Uint8List payload;
+  const PendingDeltaRow({required this.id, required this.payload});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['payload'] = Variable<Uint8List>(payload);
+    return map;
+  }
+
+  PendingDeltasCompanion toCompanion(bool nullToAbsent) {
+    return PendingDeltasCompanion(id: Value(id), payload: Value(payload));
+  }
+
+  factory PendingDeltaRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PendingDeltaRow(
+      id: serializer.fromJson<int>(json['id']),
+      payload: serializer.fromJson<Uint8List>(json['payload']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'payload': serializer.toJson<Uint8List>(payload),
+    };
+  }
+
+  PendingDeltaRow copyWith({int? id, Uint8List? payload}) =>
+      PendingDeltaRow(id: id ?? this.id, payload: payload ?? this.payload);
+  PendingDeltaRow copyWithCompanion(PendingDeltasCompanion data) {
+    return PendingDeltaRow(
+      id: data.id.present ? data.id.value : this.id,
+      payload: data.payload.present ? data.payload.value : this.payload,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PendingDeltaRow(')
+          ..write('id: $id, ')
+          ..write('payload: $payload')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, $driftBlobEquality.hash(payload));
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PendingDeltaRow &&
+          other.id == this.id &&
+          $driftBlobEquality.equals(other.payload, this.payload));
+}
+
+class PendingDeltasCompanion extends UpdateCompanion<PendingDeltaRow> {
+  final Value<int> id;
+  final Value<Uint8List> payload;
+  const PendingDeltasCompanion({
+    this.id = const Value.absent(),
+    this.payload = const Value.absent(),
+  });
+  PendingDeltasCompanion.insert({
+    this.id = const Value.absent(),
+    required Uint8List payload,
+  }) : payload = Value(payload);
+  static Insertable<PendingDeltaRow> custom({
+    Expression<int>? id,
+    Expression<Uint8List>? payload,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (payload != null) 'payload': payload,
+    });
+  }
+
+  PendingDeltasCompanion copyWith({Value<int>? id, Value<Uint8List>? payload}) {
+    return PendingDeltasCompanion(
+      id: id ?? this.id,
+      payload: payload ?? this.payload,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (payload.present) {
+      map['payload'] = Variable<Uint8List>(payload.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PendingDeltasCompanion(')
+          ..write('id: $id, ')
+          ..write('payload: $payload')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $ProfilesTable profiles = $ProfilesTable(this);
   late final $CredentialsTable credentials = $CredentialsTable(this);
   late final $TotpsTable totps = $TotpsTable(this);
+  late final $CrdtDocsTable crdtDocs = $CrdtDocsTable(this);
+  late final $PendingDeltasTable pendingDeltas = $PendingDeltasTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1851,12 +2555,15 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     profiles,
     credentials,
     totps,
+    crdtDocs,
+    pendingDeltas,
   ];
 }
 
 typedef $$ProfilesTableCreateCompanionBuilder =
     ProfilesCompanion Function({
       Value<int> id,
+      Value<Uint8List?> syncId,
       required String name,
       required String emails,
       Value<String> usernames,
@@ -1869,6 +2576,7 @@ typedef $$ProfilesTableCreateCompanionBuilder =
 typedef $$ProfilesTableUpdateCompanionBuilder =
     ProfilesCompanion Function({
       Value<int> id,
+      Value<Uint8List?> syncId,
       Value<String> name,
       Value<String> emails,
       Value<String> usernames,
@@ -1932,6 +2640,11 @@ class $$ProfilesTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get syncId => $composableBuilder(
+    column: $table.syncId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2040,6 +2753,11 @@ class $$ProfilesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<Uint8List> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get name => $composableBuilder(
     column: $table.name,
     builder: (column) => ColumnOrderings(column),
@@ -2092,6 +2810,9 @@ class $$ProfilesTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
@@ -2199,6 +2920,7 @@ class $$ProfilesTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<Uint8List?> syncId = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> emails = const Value.absent(),
                 Value<String> usernames = const Value.absent(),
@@ -2209,6 +2931,7 @@ class $$ProfilesTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => ProfilesCompanion(
                 id: id,
+                syncId: syncId,
                 name: name,
                 emails: emails,
                 usernames: usernames,
@@ -2221,6 +2944,7 @@ class $$ProfilesTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<Uint8List?> syncId = const Value.absent(),
                 required String name,
                 required String emails,
                 Value<String> usernames = const Value.absent(),
@@ -2231,6 +2955,7 @@ class $$ProfilesTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => ProfilesCompanion.insert(
                 id: id,
+                syncId: syncId,
                 name: name,
                 emails: emails,
                 usernames: usernames,
@@ -2326,6 +3051,7 @@ typedef $$ProfilesTableProcessedTableManager =
 typedef $$CredentialsTableCreateCompanionBuilder =
     CredentialsCompanion Function({
       Value<int> id,
+      Value<Uint8List?> syncId,
       required String title,
       Value<String?> username,
       Value<String?> password,
@@ -2340,6 +3066,7 @@ typedef $$CredentialsTableCreateCompanionBuilder =
 typedef $$CredentialsTableUpdateCompanionBuilder =
     CredentialsCompanion Function({
       Value<int> id,
+      Value<Uint8List?> syncId,
       Value<String> title,
       Value<String?> username,
       Value<String?> password,
@@ -2387,6 +3114,11 @@ class $$CredentialsTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get syncId => $composableBuilder(
+    column: $table.syncId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2473,6 +3205,11 @@ class $$CredentialsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<Uint8List> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get title => $composableBuilder(
     column: $table.title,
     builder: (column) => ColumnOrderings(column),
@@ -2553,6 +3290,9 @@ class $$CredentialsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -2636,6 +3376,7 @@ class $$CredentialsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<Uint8List?> syncId = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> username = const Value.absent(),
                 Value<String?> password = const Value.absent(),
@@ -2648,6 +3389,7 @@ class $$CredentialsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => CredentialsCompanion(
                 id: id,
+                syncId: syncId,
                 title: title,
                 username: username,
                 password: password,
@@ -2662,6 +3404,7 @@ class $$CredentialsTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<Uint8List?> syncId = const Value.absent(),
                 required String title,
                 Value<String?> username = const Value.absent(),
                 Value<String?> password = const Value.absent(),
@@ -2674,6 +3417,7 @@ class $$CredentialsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => CredentialsCompanion.insert(
                 id: id,
+                syncId: syncId,
                 title: title,
                 username: username,
                 password: password,
@@ -2755,6 +3499,7 @@ typedef $$CredentialsTableProcessedTableManager =
 typedef $$TotpsTableCreateCompanionBuilder =
     TotpsCompanion Function({
       Value<int> id,
+      Value<Uint8List?> syncId,
       required String label,
       Value<String?> account,
       required String secret,
@@ -2769,6 +3514,7 @@ typedef $$TotpsTableCreateCompanionBuilder =
 typedef $$TotpsTableUpdateCompanionBuilder =
     TotpsCompanion Function({
       Value<int> id,
+      Value<Uint8List?> syncId,
       Value<String> label,
       Value<String?> account,
       Value<String> secret,
@@ -2813,6 +3559,11 @@ class $$TotpsTableFilterComposer extends Composer<_$AppDatabase, $TotpsTable> {
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get syncId => $composableBuilder(
+    column: $table.syncId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2899,6 +3650,11 @@ class $$TotpsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<Uint8List> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get label => $composableBuilder(
     column: $table.label,
     builder: (column) => ColumnOrderings(column),
@@ -2980,6 +3736,9 @@ class $$TotpsTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<Uint8List> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
+
   GeneratedColumn<String> get label =>
       $composableBuilder(column: $table.label, builder: (column) => column);
 
@@ -3060,6 +3819,7 @@ class $$TotpsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<Uint8List?> syncId = const Value.absent(),
                 Value<String> label = const Value.absent(),
                 Value<String?> account = const Value.absent(),
                 Value<String> secret = const Value.absent(),
@@ -3072,6 +3832,7 @@ class $$TotpsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => TotpsCompanion(
                 id: id,
+                syncId: syncId,
                 label: label,
                 account: account,
                 secret: secret,
@@ -3086,6 +3847,7 @@ class $$TotpsTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<Uint8List?> syncId = const Value.absent(),
                 required String label,
                 Value<String?> account = const Value.absent(),
                 required String secret,
@@ -3098,6 +3860,7 @@ class $$TotpsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => TotpsCompanion.insert(
                 id: id,
+                syncId: syncId,
                 label: label,
                 account: account,
                 secret: secret,
@@ -3174,6 +3937,324 @@ typedef $$TotpsTableProcessedTableManager =
       Totp,
       PrefetchHooks Function({bool profileId})
     >;
+typedef $$CrdtDocsTableCreateCompanionBuilder =
+    CrdtDocsCompanion Function({
+      Value<int> id,
+      required Uint8List doc,
+      Value<int> hlcWall,
+      Value<int> hlcCounter,
+      Value<int> cursor,
+    });
+typedef $$CrdtDocsTableUpdateCompanionBuilder =
+    CrdtDocsCompanion Function({
+      Value<int> id,
+      Value<Uint8List> doc,
+      Value<int> hlcWall,
+      Value<int> hlcCounter,
+      Value<int> cursor,
+    });
+
+class $$CrdtDocsTableFilterComposer
+    extends Composer<_$AppDatabase, $CrdtDocsTable> {
+  $$CrdtDocsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get doc => $composableBuilder(
+    column: $table.doc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get hlcWall => $composableBuilder(
+    column: $table.hlcWall,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get hlcCounter => $composableBuilder(
+    column: $table.hlcCounter,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cursor => $composableBuilder(
+    column: $table.cursor,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CrdtDocsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CrdtDocsTable> {
+  $$CrdtDocsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get doc => $composableBuilder(
+    column: $table.doc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get hlcWall => $composableBuilder(
+    column: $table.hlcWall,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get hlcCounter => $composableBuilder(
+    column: $table.hlcCounter,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cursor => $composableBuilder(
+    column: $table.cursor,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CrdtDocsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CrdtDocsTable> {
+  $$CrdtDocsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get doc =>
+      $composableBuilder(column: $table.doc, builder: (column) => column);
+
+  GeneratedColumn<int> get hlcWall =>
+      $composableBuilder(column: $table.hlcWall, builder: (column) => column);
+
+  GeneratedColumn<int> get hlcCounter => $composableBuilder(
+    column: $table.hlcCounter,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cursor =>
+      $composableBuilder(column: $table.cursor, builder: (column) => column);
+}
+
+class $$CrdtDocsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CrdtDocsTable,
+          CrdtDoc,
+          $$CrdtDocsTableFilterComposer,
+          $$CrdtDocsTableOrderingComposer,
+          $$CrdtDocsTableAnnotationComposer,
+          $$CrdtDocsTableCreateCompanionBuilder,
+          $$CrdtDocsTableUpdateCompanionBuilder,
+          (CrdtDoc, BaseReferences<_$AppDatabase, $CrdtDocsTable, CrdtDoc>),
+          CrdtDoc,
+          PrefetchHooks Function()
+        > {
+  $$CrdtDocsTableTableManager(_$AppDatabase db, $CrdtDocsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CrdtDocsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CrdtDocsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CrdtDocsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<Uint8List> doc = const Value.absent(),
+                Value<int> hlcWall = const Value.absent(),
+                Value<int> hlcCounter = const Value.absent(),
+                Value<int> cursor = const Value.absent(),
+              }) => CrdtDocsCompanion(
+                id: id,
+                doc: doc,
+                hlcWall: hlcWall,
+                hlcCounter: hlcCounter,
+                cursor: cursor,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required Uint8List doc,
+                Value<int> hlcWall = const Value.absent(),
+                Value<int> hlcCounter = const Value.absent(),
+                Value<int> cursor = const Value.absent(),
+              }) => CrdtDocsCompanion.insert(
+                id: id,
+                doc: doc,
+                hlcWall: hlcWall,
+                hlcCounter: hlcCounter,
+                cursor: cursor,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CrdtDocsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CrdtDocsTable,
+      CrdtDoc,
+      $$CrdtDocsTableFilterComposer,
+      $$CrdtDocsTableOrderingComposer,
+      $$CrdtDocsTableAnnotationComposer,
+      $$CrdtDocsTableCreateCompanionBuilder,
+      $$CrdtDocsTableUpdateCompanionBuilder,
+      (CrdtDoc, BaseReferences<_$AppDatabase, $CrdtDocsTable, CrdtDoc>),
+      CrdtDoc,
+      PrefetchHooks Function()
+    >;
+typedef $$PendingDeltasTableCreateCompanionBuilder =
+    PendingDeltasCompanion Function({
+      Value<int> id,
+      required Uint8List payload,
+    });
+typedef $$PendingDeltasTableUpdateCompanionBuilder =
+    PendingDeltasCompanion Function({Value<int> id, Value<Uint8List> payload});
+
+class $$PendingDeltasTableFilterComposer
+    extends Composer<_$AppDatabase, $PendingDeltasTable> {
+  $$PendingDeltasTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PendingDeltasTableOrderingComposer
+    extends Composer<_$AppDatabase, $PendingDeltasTable> {
+  $$PendingDeltasTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PendingDeltasTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PendingDeltasTable> {
+  $$PendingDeltasTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => column);
+}
+
+class $$PendingDeltasTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PendingDeltasTable,
+          PendingDeltaRow,
+          $$PendingDeltasTableFilterComposer,
+          $$PendingDeltasTableOrderingComposer,
+          $$PendingDeltasTableAnnotationComposer,
+          $$PendingDeltasTableCreateCompanionBuilder,
+          $$PendingDeltasTableUpdateCompanionBuilder,
+          (
+            PendingDeltaRow,
+            BaseReferences<_$AppDatabase, $PendingDeltasTable, PendingDeltaRow>,
+          ),
+          PendingDeltaRow,
+          PrefetchHooks Function()
+        > {
+  $$PendingDeltasTableTableManager(_$AppDatabase db, $PendingDeltasTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PendingDeltasTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PendingDeltasTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PendingDeltasTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<Uint8List> payload = const Value.absent(),
+              }) => PendingDeltasCompanion(id: id, payload: payload),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required Uint8List payload,
+              }) => PendingDeltasCompanion.insert(id: id, payload: payload),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PendingDeltasTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PendingDeltasTable,
+      PendingDeltaRow,
+      $$PendingDeltasTableFilterComposer,
+      $$PendingDeltasTableOrderingComposer,
+      $$PendingDeltasTableAnnotationComposer,
+      $$PendingDeltasTableCreateCompanionBuilder,
+      $$PendingDeltasTableUpdateCompanionBuilder,
+      (
+        PendingDeltaRow,
+        BaseReferences<_$AppDatabase, $PendingDeltasTable, PendingDeltaRow>,
+      ),
+      PendingDeltaRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3184,4 +4265,8 @@ class $AppDatabaseManager {
       $$CredentialsTableTableManager(_db, _db.credentials);
   $$TotpsTableTableManager get totps =>
       $$TotpsTableTableManager(_db, _db.totps);
+  $$CrdtDocsTableTableManager get crdtDocs =>
+      $$CrdtDocsTableTableManager(_db, _db.crdtDocs);
+  $$PendingDeltasTableTableManager get pendingDeltas =>
+      $$PendingDeltasTableTableManager(_db, _db.pendingDeltas);
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../../shared/widgets/app_snackbar.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -287,9 +289,7 @@ class _CopyButton extends StatelessWidget {
       onPressed: enabled
           ? () {
               Clipboard.setData(ClipboardData(text: value));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Copié dans le presse-papiers.')),
-              );
+              AppSnackbar.info(context, 'Copié dans le presse-papiers.');
             }
           : null,
     );

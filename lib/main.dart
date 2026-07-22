@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -11,9 +12,19 @@ import 'core/routes/app_router.dart';
 import 'core/routes/app_routes.dart';
 import 'core/theme/app_theme.dart';
 import 'features/autofill/views/autofill_app.dart';
+import 'src/rust/api/simple.dart';
+import 'src/rust/frb_generated.dart';
 
 void main() async {
   final WidgetsBinding binding = WidgetsFlutterBinding.ensureInitialized();
+
+  // FFI : charge le cœur Rust (realm-guard-core) avant tout usage. Spike P0.5 :
+  // on valide l'intégration en lisant la version du cœur via le pont.
+  await RustLib.init();
+  if (kDebugMode) {
+    debugPrint('realm-guard-core (FFI) version : ${coreVersion()}');
+  }
+
   FlutterNativeSplash.preserve(widgetsBinding: binding);
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
@@ -75,14 +86,23 @@ class _RealmGuardState extends State<RealmGuard> {
   @override
   void initState() {
     super.initState();
-    // Auto-lock : verrouille le coffre en arrière-plan / après inactivité et
-    // renvoie vers l'écran de déverrouillage.
-    appLockController.attach(onLock: () => appRouter.go(AppRoutes.unlock));
+    // Synchronisation : observe le cycle de vie et les mutations locales pour
+    // démarrer/rafraîchir la sync une fois le coffre déverrouillé.
+    syncSessionController.attach();
+    // Auto-lock : verrouille le coffre en arrière-plan / après inactivité, coupe
+    // la synchro et renvoie vers l'écran de déverrouillage.
+    appLockController.attach(
+      onLock: () {
+        unawaited(syncSessionController.stop());
+        appRouter.go(AppRoutes.unlock);
+      },
+    );
   }
 
   @override
   void dispose() {
     appLockController.detach();
+    syncSessionController.detach();
     super.dispose();
   }
 

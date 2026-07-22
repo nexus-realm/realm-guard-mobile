@@ -4,4 +4,12 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- DEV UNIQUEMENT. Android bloque le trafic HTTP en clair depuis l'API 28, or le
+         serveur de dev est en http:// (10.0.2.2 vu de l'émulateur, ou l'IP LAN de la
+         machine pour un appareil physique). Sans ceci, tous les appels serveur
+         échouent en « Serveur injoignable » (CLEARTEXT not permitted).
+         Ce manifeste ne s'applique QU'AU build debug : le build release reste
+         HTTPS-only et ne porte même pas la permission INTERNET. -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>

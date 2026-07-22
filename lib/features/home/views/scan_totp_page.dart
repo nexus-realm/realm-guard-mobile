@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../shared/widgets/app_snackbar.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -46,11 +48,7 @@ class _ScanTotpPageState extends State<ScanTotpPage> {
   }
 
   void _showInvalid() {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(content: Text('QR code non reconnu (TOTP attendu).')),
-      );
+    AppSnackbar.error(context, 'QR code non reconnu (TOTP attendu).');
   }
 
   @override
