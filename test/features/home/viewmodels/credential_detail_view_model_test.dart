@@ -1,65 +1,8 @@
-import 'dart:async';
-
 import 'package:flutter_test/flutter_test.dart';
-import 'package:realmguard/core/database/app_database.dart';
-import 'package:realmguard/core/database/vault_repository.dart';
 import 'package:realmguard/features/home/data/credential_draft.dart';
 import 'package:realmguard/features/home/viewmodels/credential_detail_view_model.dart';
 
-class FakeCredentialEditor implements CredentialEditor {
-  final StreamController<CredentialWithProfile?> controller =
-      StreamController<CredentialWithProfile?>.broadcast();
-  List<Profile> profilesToReturn = const [];
-
-  int? updatedId;
-  CredentialDraft? updatedDraft;
-  int? deletedId;
-  bool throwOnUpdate = false;
-
-  @override
-  Stream<CredentialWithProfile?> watchCredential(int id) => controller.stream;
-
-  @override
-  Future<List<Profile>> getAllProfiles() async => profilesToReturn;
-
-  @override
-  Future<bool> updateCredential(int id, CredentialDraft draft) async {
-    if (throwOnUpdate) throw Exception('db');
-    updatedId = id;
-    updatedDraft = draft;
-    return true;
-  }
-
-  @override
-  Future<int> deleteCredential(int id) async {
-    deletedId = id;
-    return 1;
-  }
-}
-
-CredentialWithProfile _cred(
-  int id,
-  String title, {
-  String data = '',
-  String? username,
-  String? password,
-  bool favorite = false,
-  int? profileId,
-}) => CredentialWithProfile(
-  Credential(
-    id: id,
-    title: title,
-    username: username,
-    password: password,
-    notes: data,
-    customFields: '[]',
-    favorite: favorite,
-    profileId: profileId,
-    createdAt: DateTime(2026),
-    updatedAt: DateTime(2026),
-  ),
-  null,
-);
+import '../../../support/home_test_doubles.dart';
 
 Future<void> _settle() => Future<void>.delayed(Duration.zero);
 
@@ -71,7 +14,7 @@ void main() {
       addTearDown(vm.dispose);
 
       await vm.initialize();
-      repo.controller.add(_cred(1, 'GitHub'));
+      repo.controller.add(credentialWithProfile(1, 'GitHub'));
       await _settle();
 
       expect(vm.isLoading, isFalse);
@@ -97,7 +40,9 @@ void main() {
       addTearDown(vm.dispose);
 
       await vm.initialize();
-      repo.controller.add(_cred(1, 'GitHub', data: 'token', profileId: 2));
+      repo.controller.add(
+        credentialWithProfile(1, 'GitHub', notes: 'token', profileId: 2),
+      );
       await _settle();
 
       expect(
@@ -167,7 +112,9 @@ void main() {
       final vm = CredentialDetailViewModel(repository: repo, credentialId: 1);
       addTearDown(vm.dispose);
       await vm.initialize();
-      repo.controller.add(_cred(1, 'GitHub', username: 'me', password: 'pw'));
+      repo.controller.add(
+        credentialWithProfile(1, 'GitHub', username: 'me', password: 'pw'),
+      );
       await _settle();
 
       expect(
@@ -210,7 +157,7 @@ void main() {
       final vm = CredentialDetailViewModel(repository: repo, credentialId: 4);
       addTearDown(vm.dispose);
       await vm.initialize();
-      repo.controller.add(_cred(4, 'GitHub', favorite: false));
+      repo.controller.add(credentialWithProfile(4, 'GitHub', favorite: false));
       await _settle();
 
       await vm.toggleFavorite();
@@ -223,7 +170,7 @@ void main() {
       final vm = CredentialDetailViewModel(repository: repo, credentialId: 4);
       addTearDown(vm.dispose);
       await vm.initialize();
-      repo.controller.add(_cred(4, 'GitHub'));
+      repo.controller.add(credentialWithProfile(4, 'GitHub'));
       await _settle();
 
       final ok = await vm.setProfile(9);
@@ -237,7 +184,7 @@ void main() {
       final vm = CredentialDetailViewModel(repository: repo, credentialId: 4);
       addTearDown(vm.dispose);
       await vm.initialize();
-      repo.controller.add(_cred(4, 'GitHub', profileId: 3));
+      repo.controller.add(credentialWithProfile(4, 'GitHub', profileId: 3));
       await _settle();
 
       final ok = await vm.setProfile(null);
@@ -251,7 +198,7 @@ void main() {
       final vm = CredentialDetailViewModel(repository: repo, credentialId: 4);
       addTearDown(vm.dispose);
       await vm.initialize();
-      repo.controller.add(_cred(4, 'GitHub', profileId: 3));
+      repo.controller.add(credentialWithProfile(4, 'GitHub', profileId: 3));
       await _settle();
 
       final ok = await vm.setProfile(3); // déjà ce profil
