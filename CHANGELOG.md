@@ -1,3 +1,51 @@
+# [1.1.0](https://github.com/nexus-realm/realm-guard-mobile/compare/v1.0.0...v1.1.0) (2026-07-22)
+
+
+### Bug Fixes
+
+* autofill json provider ([2b7db9e](https://github.com/nexus-realm/realm-guard-mobile/commit/2b7db9e8a4de6fb28af733ac3e433163d08fa663))
+* **onboarding:** re-enter via the startup gate after pairing/recovery ([a0e5873](https://github.com/nexus-realm/realm-guard-mobile/commit/a0e587365bcbb6bd986df3c27ba2fc97a4cde8b1))
+* **pairing:** green check on the device-added success screen ([707d841](https://github.com/nexus-realm/realm-guard-mobile/commit/707d8415b3cabd2eddd33e41474b9f376411b3d3))
+* **sync:** serialize doc read-modify-write with a shared mutex ([e65cec0](https://github.com/nexus-realm/realm-guard-mobile/commit/e65cec0f77fdbf3f1997f3dcd91a163afb7486f1))
+
+
+### Features
+
+* **auth:** add OPAQUE auth service (FFI + HTTP + session storage) ([1093810](https://github.com/nexus-realm/realm-guard-mobile/commit/10938103ccdeb7bc7534b6b462ed6a0dd4e4cfb2))
+* **auth:** add sync (register/login) screen under Settings ([776e68a](https://github.com/nexus-realm/realm-guard-mobile/commit/776e68af7bbffec70f23d067600dcedb230e5f26))
+* **auth:** enforce sync account username & password rules ([3049118](https://github.com/nexus-realm/realm-guard-mobile/commit/3049118168a4c79586cd8f2f6ab17053cae567a0))
+* **auth:** expose OPAQUE client functions over the FFI ([cd3425d](https://github.com/nexus-realm/realm-guard-mobile/commit/cd3425d4d7a57adeda2094ebe5426e42fa51052a))
+* **auth:** upload and fetch the wrapped vault key over OPAQUE ([2150260](https://github.com/nexus-realm/realm-guard-mobile/commit/21502605c72aeaca131d6ac28b686396aae262da))
+* **devices:** device management screen with rename and revoke ([10b0159](https://github.com/nexus-realm/realm-guard-mobile/commit/10b0159c6dd8afd10e4631de7600913a696ee722))
+* integrate Rust core via flutter_rust_bridge ([9a05dfa](https://github.com/nexus-realm/realm-guard-mobile/commit/9a05dfa89979fe041ff6828258aa0cf544b8c668))
+* **onboarding:** move sync step before master password, add device-link option ([4f93d4c](https://github.com/nexus-realm/realm-guard-mobile/commit/4f93d4ce14ee28b9f28e6bdfe8febdcf2c4e4506))
+* **pairing:** device identity, registry enrolment and device sessions ([6960c67](https://github.com/nexus-realm/realm-guard-mobile/commit/6960c673f25e38fe7c79a353c75edb52982c9d13))
+* **pairing:** device pairing FFI + service (relay transport) ([05962c5](https://github.com/nexus-realm/realm-guard-mobile/commit/05962c5a801f079e835ef2d5bd00c7f9c451f97f))
+* **pairing:** install a paired VaultKey during onboarding ([d3c55a4](https://github.com/nexus-realm/realm-guard-mobile/commit/d3c55a455a5eadcff31c3fa5a48fd397eaa058c5))
+* **pairing:** pairing UX (QR display/scan, SAS, biometric gate) ([1730c0d](https://github.com/nexus-realm/realm-guard-mobile/commit/1730c0d3f15598981444965f6d39d583460c8a8b))
+* **pairing:** two-round handshake, the SAS now prevents instead of detecting ([1004993](https://github.com/nexus-realm/realm-guard-mobile/commit/1004993035ad31235b3cdc24286c078c8217b3a9))
+* **recovery:** restore the vault from the server backup ([4af8c8a](https://github.com/nexus-realm/realm-guard-mobile/commit/4af8c8a78c3033d5840a12b6d75af6ecec24b2b4))
+* **security:** migrate the vault to the VaultKey model ([f0d10cd](https://github.com/nexus-realm/realm-guard-mobile/commit/f0d10cd7ce4fb83cfcf7db53972fc34f912c82b4))
+* **sync:** atomic delta enqueue + periodic snapshot compaction ([569e364](https://github.com/nexus-realm/realm-guard-mobile/commit/569e364061158ca80e501da9fa1ba4709325116c))
+* **sync:** back up the wrapped vault key on login ([606da4e](https://github.com/nexus-realm/realm-guard-mobile/commit/606da4e46c9d39c7640bc41bf3558504c8773065))
+* **sync:** crdt FFI value primitives — entry id, field crypto, hlc tick ([d30345d](https://github.com/nexus-realm/realm-guard-mobile/commit/d30345d0eb7e78677f9e6f4a2f43f4f51e0333ed))
+* **sync:** crdt vault-doc FFI (structural) ([c267d8f](https://github.com/nexus-realm/realm-guard-mobile/commit/c267d8f1d26323bafc8175857a2863b85bb0f319))
+* **sync:** crdt write-through engine + doc store (schema v5->v6) ([3eb6ab8](https://github.com/nexus-realm/realm-guard-mobile/commit/3eb6ab881f17f3100370c48682eab2f998cbfcdc))
+* **sync:** manual sync via pull-to-refresh ([7d97665](https://github.com/nexus-realm/realm-guard-mobile/commit/7d97665ad75bd671876c285829c443254fdbcda3))
+* **sync:** mobile sync log client (SyncApi) ([a940931](https://github.com/nexus-realm/realm-guard-mobile/commit/a940931dc8374fc48d4f9e03c5afc03e362f47cf))
+* **sync:** onboarding sync step, merged settings, account-password copy ([e741fa0](https://github.com/nexus-realm/realm-guard-mobile/commit/e741fa0cfd2ba4e62d9a795a74dc79b36b59e920))
+* **sync:** passive notification when a pull changes the vault ([e1ae573](https://github.com/nexus-realm/realm-guard-mobile/commit/e1ae573e5368c7078335788aeac4c7d6780fc3c9))
+* **sync:** passive notification when a pull changes the vault ([7bfb43e](https://github.com/nexus-realm/realm-guard-mobile/commit/7bfb43ef5c2a9769eb8e5b7edbc6f787f1f69762))
+* **sync:** pending-delta queue + pull cursor (schema v6->v7) ([04cb696](https://github.com/nexus-realm/realm-guard-mobile/commit/04cb69661256d04751725c193bae743849fa4756))
+* **sync:** realtime wake socket + sync controller ([c2a31f2](https://github.com/nexus-realm/realm-guard-mobile/commit/c2a31f2380d6854b7b0a9bb8b8e2b311bb3bec50))
+* **sync:** reproject the CRDT doc back into drift ([4798e0c](https://github.com/nexus-realm/realm-guard-mobile/commit/4798e0c360d18e496f60e8e5a446ce502163374a))
+* **sync:** sync engine — push, pull, merge, reproject ([48cf234](https://github.com/nexus-realm/realm-guard-mobile/commit/48cf234fd5606fe7174778ede293765d1a5a6f9b))
+* **sync:** vaultDoc↔drift projection + syncId schema (v4→v5) ([dae025c](https://github.com/nexus-realm/realm-guard-mobile/commit/dae025ccb51baf9dfb0898946580e2430ba97587))
+* **sync:** wire CRDT write-through into the live vault ([2e829ab](https://github.com/nexus-realm/realm-guard-mobile/commit/2e829ab6aa08e375047070589faba3627ee2bbbd))
+* **sync:** wire sync into the app lifecycle ([fb55444](https://github.com/nexus-realm/realm-guard-mobile/commit/fb554446487595fbc110ff6aa124d83d93fd5ea0))
+
+
+
 # [1.0.0](https://github.com/nexus-realm/realm-guard-mobile/compare/v0.2.0...v1.0.0) (2026-07-08)
 
 
