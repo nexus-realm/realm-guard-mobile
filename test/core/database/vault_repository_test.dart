@@ -206,4 +206,95 @@ void main() {
       expect(await repository.deleteTotp(id), 1);
     });
   });
+
+  group('Flux joints (entrée + profil)', () {
+    test('watchCredentialsWithProfiles joint le profil rattaché', () async {
+      final profileId = await repository.addProfile(
+        const ProfileDraft(name: 'Perso'),
+      );
+      await repository.addCredential(
+        CredentialDraft(title: 'GitHub', profileId: profileId),
+      );
+      await repository.addCredential(const CredentialDraft(title: 'Orphelin'));
+
+      final rows = await repository.watchCredentialsWithProfiles().first;
+
+      expect(rows, hasLength(2));
+      final joined = rows.firstWhere((r) => r.credential.title == 'GitHub');
+      expect(joined.profile?.name, 'Perso');
+      final alone = rows.firstWhere((r) => r.credential.title == 'Orphelin');
+      expect(alone.profile, isNull);
+    });
+
+    test('watchTotpsWithProfiles joint le profil rattaché', () async {
+      final profileId = await repository.addProfile(
+        const ProfileDraft(name: 'Perso'),
+      );
+      await repository.addTotp(
+        TotpDraft(
+          label: 'GitLab',
+          secret: 'JBSWY3DPEHPK3PXP',
+          profileId: profileId,
+        ),
+      );
+
+      final rows = await repository.watchTotpsWithProfiles().first;
+
+      expect(rows.single.totp.label, 'GitLab');
+      expect(rows.single.profile?.name, 'Perso');
+    });
+
+    test('watchCredential émet null pour un id inconnu', () async {
+      expect(await repository.watchCredential(404).first, isNull);
+    });
+
+    test('watchTotp émet null pour un id inconnu', () async {
+      expect(await repository.watchTotp(404).first, isNull);
+    });
+  });
+
+  group('Flux par profil', () {
+    test('watchCredentialsForProfile ne renvoie que les liés', () async {
+      final profileId = await repository.addProfile(
+        const ProfileDraft(name: 'Perso'),
+      );
+      await repository.addCredential(
+        CredentialDraft(title: 'Lié', profileId: profileId),
+      );
+      await repository.addCredential(const CredentialDraft(title: 'Libre'));
+
+      final rows = await repository.watchCredentialsForProfile(profileId).first;
+
+      expect(rows.single.title, 'Lié');
+    });
+
+    test('watchTotpsForProfile ne renvoie que les liés', () async {
+      final profileId = await repository.addProfile(
+        const ProfileDraft(name: 'Perso'),
+      );
+      await repository.addTotp(
+        TotpDraft(
+          label: 'Lié',
+          secret: 'JBSWY3DPEHPK3PXP',
+          profileId: profileId,
+        ),
+      );
+      await repository.addTotp(
+        const TotpDraft(label: 'Libre', secret: 'JBSWY3DPEHPK3PXP'),
+      );
+
+      final rows = await repository.watchTotpsForProfile(profileId).first;
+
+      expect(rows.single.label, 'Lié');
+    });
+
+    test('watchAllProfiles émet la liste courante', () async {
+      await repository.addProfile(const ProfileDraft(name: 'Perso'));
+      await repository.addProfile(const ProfileDraft(name: 'Pro'));
+
+      final rows = await repository.watchAllProfiles().first;
+
+      expect(rows.map((p) => p.name), containsAll(['Perso', 'Pro']));
+    });
+  });
 }

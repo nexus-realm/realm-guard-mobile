@@ -97,4 +97,53 @@ void main() {
       );
     });
   });
+
+  _equalityContract();
+}
+
+/// Égalité / hachage : le codec sert de clé de comparaison dans la projection
+/// (un `==` faux ferait réécrire des lignes identiques à chaque tirage).
+void _equalityContract() {
+  group('Contrat d\'égalité', () {
+    test('NullValue est égal à lui-même, distinct des autres', () {
+      expect(const NullValue(), const NullValue());
+      expect(const NullValue(), isNot(const TextValue('')));
+      expect(const NullValue().hashCode, FieldValue.tagNull);
+    });
+
+    test('TextValue : égalité et hachage par contenu', () {
+      expect(const TextValue('a'), const TextValue('a'));
+      expect(const TextValue('a'), isNot(const TextValue('b')));
+      expect(const TextValue('a').hashCode, 'a'.hashCode);
+    });
+
+    test('IntValue : égalité et hachage par valeur', () {
+      expect(const IntValue(42), const IntValue(42));
+      expect(const IntValue(42), isNot(const IntValue(43)));
+      expect(const IntValue(42).hashCode, 42.hashCode);
+    });
+
+    test('BoolValue : égalité et hachage par valeur', () {
+      expect(const BoolValue(true), const BoolValue(true));
+      expect(const BoolValue(true), isNot(const BoolValue(false)));
+      expect(const BoolValue(true).hashCode, true.hashCode);
+    });
+
+    test('UuidValue : deux octets identiques ⇒ même hachage', () {
+      final a = UuidValue(Uint8List.fromList(List.filled(16, 5)));
+      final b = UuidValue(Uint8List.fromList(List.filled(16, 5)));
+      expect(a.hashCode, b.hashCode);
+      // Rappel : `Uint8List ==` est référentiel — c'est bien le codec qui
+      // compare les octets, pas la liste.
+      expect(a.value == b.value, isFalse);
+    });
+
+    test('un booléen encodé sur plus d\'un octet est rejeté', () {
+      final malformed = Uint8List.fromList([FieldValue.tagBool, 1, 0]);
+      expect(
+        () => FieldValue.decode(malformed),
+        throwsA(isA<FormatException>()),
+      );
+    });
+  });
 }
