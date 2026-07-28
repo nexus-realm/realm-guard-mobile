@@ -19,6 +19,16 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(List<int> encryptionKeyBytes)
     : super(_openConnection(encryptionKeyBytes));
 
+  /// Base ouverte sur un exécuteur fourni — **réservé aux tests**.
+  ///
+  /// Le VM Dart de `flutter test` n'a ni SQLCipher ni les libs Android : la
+  /// construction normale est donc impossible hors appareil. Ce constructeur
+  /// permet d'ouvrir une base **en mémoire** (`NativeDatabase.memory()`) avec le
+  /// **même schéma et les mêmes migrations**, ce qui rend `VaultRepository` et la
+  /// chaîne de migrations testables côté hôte. Aucun chiffrement ici : les
+  /// données de test sont éphémères et en mémoire.
+  AppDatabase.forTesting(super.executor);
+
   @override
   int get schemaVersion => 7;
 
