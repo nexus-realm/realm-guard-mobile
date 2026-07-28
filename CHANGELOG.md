@@ -1,4 +1,4 @@
-# [1.1.0](https://github.com/nexus-realm/realm-guard-mobile/compare/v1.0.0...v1.1.0) (2026-07-22)
+# [2.0.0](https://github.com/nexus-realm/realm-guard-mobile/compare/v1.0.0...v2.0.0) (2026-07-28)
 
 
 ### Bug Fixes
@@ -34,6 +34,7 @@
 * **sync:** manual sync via pull-to-refresh ([7d97665](https://github.com/nexus-realm/realm-guard-mobile/commit/7d97665ad75bd671876c285829c443254fdbcda3))
 * **sync:** mobile sync log client (SyncApi) ([a940931](https://github.com/nexus-realm/realm-guard-mobile/commit/a940931dc8374fc48d4f9e03c5afc03e362f47cf))
 * **sync:** onboarding sync step, merged settings, account-password copy ([e741fa0](https://github.com/nexus-realm/realm-guard-mobile/commit/e741fa0cfd2ba4e62d9a795a74dc79b36b59e920))
+* **sync:** opt-in end-to-end encrypted multi-device sync ([6010f61](https://github.com/nexus-realm/realm-guard-mobile/commit/6010f61574d38dc4ab8decde24f5228125ad8997))
 * **sync:** passive notification when a pull changes the vault ([e1ae573](https://github.com/nexus-realm/realm-guard-mobile/commit/e1ae573e5368c7078335788aeac4c7d6780fc3c9))
 * **sync:** passive notification when a pull changes the vault ([7bfb43e](https://github.com/nexus-realm/realm-guard-mobile/commit/7bfb43ef5c2a9769eb8e5b7edbc6f787f1f69762))
 * **sync:** pending-delta queue + pull cursor (schema v6->v7) ([04cb696](https://github.com/nexus-realm/realm-guard-mobile/commit/04cb69661256d04751725c193bae743849fa4756))
@@ -43,6 +44,14 @@
 * **sync:** vaultDoc↔drift projection + syncId schema (v4→v5) ([dae025c](https://github.com/nexus-realm/realm-guard-mobile/commit/dae025ccb51baf9dfb0898946580e2430ba97587))
 * **sync:** wire CRDT write-through into the live vault ([2e829ab](https://github.com/nexus-realm/realm-guard-mobile/commit/2e829ab6aa08e375047070589faba3627ee2bbbd))
 * **sync:** wire sync into the app lifecycle ([fb55444](https://github.com/nexus-realm/realm-guard-mobile/commit/fb554446487595fbc110ff6aa124d83d93fd5ea0))
+
+
+### BREAKING CHANGES
+
+* **sync:** the vault key hierarchy changed — the password-derived KEK now
+wraps a random VaultKey instead of keying SQLCipher directly, and the database
+schema moved from v4 to v7. A v1 vault is migrated in place on first unlock and
+can no longer be opened by a v1 build.
 
 
 
