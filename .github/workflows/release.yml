@@ -151,7 +151,7 @@ jobs:
       # (une pré-release publiée devient immédiatement immuable). On crée donc
       # un draft avec l'APK, puis on le publie en pré-release.
       - name: Create draft pre-release with the APK
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
           name: ${{ needs.prepare.outputs.tag }} (beta)
