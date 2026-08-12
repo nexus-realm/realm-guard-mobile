@@ -63,6 +63,15 @@ jobs:
             exit 0
           fi
 
+          # Condition 6: dependabot/* -> develop. Les PR de Dependabot ne peuvent
+          # pas nommer en rg-<N> (pas de ticket) : on les autorise explicitement.
+          # Le reste du gate (format, analyze, test, build) tourne normalement et
+          # valide la mise à jour.
+          if [[ "$SOURCE_BRANCH" == dependabot/* && "$TARGET_BRANCH" == "develop" ]]; then
+            echo "✅ Validation : mise à jour de dépendances autorisée (dependabot/* -> develop)."
+            exit 0
+          fi
+
           # Si aucune condition n'est remplie
           echo "❌ ERREUR : Le nommage de la branche source ou le choix de la branche cible est invalide."
           echo "Règles autorisées :"
@@ -71,6 +80,7 @@ jobs:
           echo "- staging -> main"
           echo "- main -> develop (back-merge de release)"
           echo "- hotfix/rg-[numéro] -> main"
+          echo "- dependabot/* -> develop (mise à jour de dépendances)"
           exit 1
 
   build-and-test:
