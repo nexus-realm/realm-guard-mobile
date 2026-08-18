@@ -147,7 +147,10 @@ class AutofillSaveViewModel extends ChangeNotifier {
     }
     _setStage(AutofillSaveStage.submitting);
     try {
-      await VaultRepository(_vaultService.db).addCredential(draft);
+      await VaultRepository(
+        _vaultService.db,
+        crdtSession: _vaultService.ensureCrdtSession,
+      ).addCredential(draft);
       await _gateway.onSaveComplete();
       _setStage(AutofillSaveStage.saved);
       return true;

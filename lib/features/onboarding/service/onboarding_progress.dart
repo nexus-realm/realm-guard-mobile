@@ -52,6 +52,7 @@ class OnboardingProgress {
   /// (avec leur valeur par défaut) afin de ne pas le renvoyer dans l'onboarding.
   static const List<OnboardingStep> _preferenceSteps = [
     OnboardingStep.totpChoice,
+    OnboardingStep.syncChoice,
   ];
 
   /// Normalise une progression chargée : si le mot de passe maître est déjà

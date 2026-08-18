@@ -5,22 +5,39 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'models/crdt_docs.dart';
 import 'models/credentials.dart';
+import 'models/pending_deltas.dart';
 import 'models/profiles.dart';
+import 'models/sync_id.dart';
 import 'models/totps.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Profiles, Credentials, Totps])
+@DriftDatabase(tables: [Profiles, Credentials, Totps, CrdtDocs, PendingDeltas])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(List<int> encryptionKeyBytes)
     : super(_openConnection(encryptionKeyBytes));
 
+  /// Base ouverte sur un exécuteur fourni — **réservé aux tests**.
+  ///
+  /// Le VM Dart de `flutter test` n'a ni SQLCipher ni les libs Android : la
+  /// construction normale est donc impossible hors appareil. Ce constructeur
+  /// permet d'ouvrir une base **en mémoire** (`NativeDatabase.memory()`) avec le
+  /// **même schéma et les mêmes migrations**, ce qui rend `VaultRepository` et la
+  /// chaîne de migrations testables côté hôte. Aucun chiffrement ici : les
+  /// données de test sont éphémères et en mémoire.
+  AppDatabase.forTesting(super.executor);
+
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (migrator) async {
+      await migrator.createAll();
+      await _createSyncIdIndexes();
+    },
     onUpgrade: (migrator, from, to) async {
       if (from == 1) {
         await migrator.renameTable(credentials, 'vault_entries');
@@ -60,8 +77,54 @@ class AppDatabase extends _$AppDatabase {
         // Nouveau type de secret : TOTP.
         await migrator.createTable(totps);
       }
+      if (from < 5) {
+        // Synchronisation CRDT : clé stable `syncId` (⇔ `EntryId`) par ligne.
+        await migrator.addColumn(profiles, profiles.syncId);
+        await migrator.addColumn(credentials, credentials.syncId);
+        await migrator.addColumn(totps, totps.syncId);
+        // Attribue un id de sync (16 o) à chaque ligne v1 existante.
+        // `randomblob(16)` : généré côté SQLite, sans aller-retour Dart.
+        await customStatement(
+          'UPDATE profiles SET sync_id = randomblob(16) WHERE sync_id IS NULL',
+        );
+        await customStatement(
+          'UPDATE credentials SET sync_id = randomblob(16) WHERE sync_id IS NULL',
+        );
+        await customStatement(
+          'UPDATE totps SET sync_id = randomblob(16) WHERE sync_id IS NULL',
+        );
+        await _createSyncIdIndexes();
+      }
+      if (from < 6) {
+        // Synchronisation CRDT : doc du coffre + état d'horloge HLC (ligne unique).
+        await migrator.createTable(crdtDocs);
+      }
+      if (from < 7) {
+        // File de deltas en attente de push + curseur de tirage.
+        await migrator.createTable(pendingDeltas);
+        await migrator.addColumn(crdtDocs, crdtDocs.cursor);
+      }
     },
   );
+
+  /// Index unique sur `syncId` de chaque table. Créé à la main (et non via une
+  /// contrainte `UNIQUE` de colonne) car SQLite refuse d'ajouter une colonne
+  /// UNIQUE par `ALTER TABLE` ; l'index couvre aussi les recherches par `syncId`
+  /// de la projection.
+  Future<void> _createSyncIdIndexes() async {
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_sync_id '
+      'ON profiles (sync_id)',
+    );
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_credentials_sync_id '
+      'ON credentials (sync_id)',
+    );
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_totps_sync_id '
+      'ON totps (sync_id)',
+    );
+  }
 }
 
 LazyDatabase _openConnection(List<int> encryptionKeyBytes) {

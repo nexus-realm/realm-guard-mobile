@@ -4,6 +4,9 @@ import '../../../core/feature_flags/feature_flag.dart';
 import '../../../core/feature_flags/feature_flags_controller.dart';
 import '../../../core/security/biometric_storage_service.dart';
 import '../../../core/security/vault_service.dart';
+import '../../auth/data/account_credential_rules.dart';
+import '../../auth/data/auth_exception.dart';
+import '../../auth/service/auth_service.dart';
 import 'onboarding_progress.dart';
 import '../data/onboarding_step.dart';
 import 'onboarding_storage_service.dart';
@@ -15,6 +18,9 @@ class OnboardingFlowController extends ChangeNotifier {
   // Le contrôleur partagé (singleton) doit être injecté pour que le choix fait
   // ici se reflète immédiatement sur l'accueil après l'onboarding.
   final FeatureFlagsController _featureFlagsController;
+  // Authentification de synchronisation (OPAQUE) — utilisée par l'étape optionnelle
+  // de création de compte.
+  final AuthService _authService;
 
   OnboardingProgress _progress = OnboardingProgress.initial();
   bool _isLoading = true;
@@ -26,10 +32,12 @@ class OnboardingFlowController extends ChangeNotifier {
     required OnboardingStorageService onboardingStorageService,
     required VaultService vaultService,
     required FeatureFlagsController featureFlagsController,
+    required AuthService authService,
     BiometricStorageService? biometricStorageService,
   }) : _onboardingStorageService = onboardingStorageService,
        _vaultService = vaultService,
        _featureFlagsController = featureFlagsController,
+       _authService = authService,
        _biometricStorageService =
            biometricStorageService ?? BiometricStorageService();
 
@@ -169,6 +177,56 @@ class OnboardingFlowController extends ChangeNotifier {
       _isSubmitting = false;
       notifyListeners();
     }
+  }
+
+  /// Crée un **compte de synchronisation** (OPAQUE) et ouvre la session. Le mot de
+  /// passe du compte est **distinct** du mot de passe maître : le serveur ne le voit
+  /// jamais (zero-knowledge). Renvoie `true` si le compte est créé et la session
+  /// établie. Ne termine **pas** l'étape (l'appelant affiche d'abord la confirmation
+  /// de réussite, puis appelle [completeSyncStep]).
+  Future<bool> registerSyncAccount({
+    required String username,
+    required String password,
+  }) async {
+    final handle = username.trim();
+    final usernameError = AccountCredentialRules.validateUsername(handle);
+    if (usernameError != null) {
+      _errorMessage = usernameError;
+      notifyListeners();
+      return false;
+    }
+    final passwordError = AccountCredentialRules.validatePassword(password);
+    if (passwordError != null) {
+      _errorMessage = passwordError;
+      notifyListeners();
+      return false;
+    }
+
+    _isSubmitting = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _authService.register(handle, password);
+      await _authService.login(handle, password);
+      return true;
+    } on AuthException catch (error) {
+      _errorMessage = error.message;
+      notifyListeners();
+      return false;
+    } catch (_) {
+      _errorMessage = 'Une erreur inattendue est survenue.';
+      notifyListeners();
+      return false;
+    } finally {
+      _isSubmitting = false;
+      notifyListeners();
+    }
+  }
+
+  /// Termine l'étape de synchronisation (choix hors-ligne **ou** compte créé).
+  Future<void> completeSyncStep() async {
+    await _markStepCompleted(OnboardingStep.syncChoice);
   }
 
   Future<void> _markStepCompleted(

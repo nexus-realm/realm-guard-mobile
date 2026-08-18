@@ -5,7 +5,8 @@ default_platform(:android)
 
 # Pistes Play (API) : "internal" = test interne, "alpha" = test FERMÉ,
 # "beta" = test ouvert, "production" = production.
-BETA_TRACK = ENV["PLAY_BETA_TRACK"] || "alpha"
+_beta_track = ENV["PLAY_BETA_TRACK"].to_s.strip
+BETA_TRACK = _beta_track.empty? ? "alpha" : _beta_track
 AAB_PATH = "../build/app/outputs/bundle/release/app-release.aab"
 
 platform :android do

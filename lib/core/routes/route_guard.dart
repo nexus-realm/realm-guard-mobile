@@ -4,6 +4,11 @@ import 'app_routes.dart';
 const Set<String> _authRoutes = <String>{
   AppRoutes.startup,
   AppRoutes.onboarding,
+  // Installation par pairing : fait partie de l'onboarding, donc atteignable
+  // coffre verrouillé (le coffre n'existe pas encore sur cet appareil).
+  AppRoutes.pairedSetup,
+  // Récupération : le coffre n'existe pas encore, donc verrouillé par nature.
+  AppRoutes.vaultRecovery,
   AppRoutes.unlock,
 };
 
