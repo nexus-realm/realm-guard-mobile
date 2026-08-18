@@ -81,7 +81,12 @@ jobs:
           release-count: 0
           skip-commit: false
           skip-tag: false
-          preset: "angular"
+          # conventionalcommits (et non angular) : ce preset honore le raccourci
+          # `type!: …` comme rupture ⇒ bump MAJEUR. Sous angular le `!` est ignoré
+          # et un `feat!` retombe même en patch (seul un footer `BREAKING CHANGE:`
+          # y coupait un majeur). Les bumps courants sont identiques entre les deux
+          # (feat→mineur, fix/chore/docs/perf→patch). Vérifié via les node_modules.
+          preset: "conventionalcommits"
           version-file: "pubspec.yaml"
           version-path: "version"
 
