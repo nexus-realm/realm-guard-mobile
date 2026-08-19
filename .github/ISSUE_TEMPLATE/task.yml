@@ -1,0 +1,120 @@
+name: Task / change (rg-N)
+description: A tracked change tied to a ticket — fix, feature, chore, or an item from the IMPROVEMENTS register (SEC/UX/ARCH/PERF).
+title: ""
+labels: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep it scannable. This mirrors the `docs/IMPROVEMENTS.md` register
+        entries and is closed by the matching PR (put `Closes #<n>` in the PR
+        body). User-facing strings stay French; this template is English, like
+        the rest of the dev-facing docs.
+
+  - type: input
+    id: ticket
+    attributes:
+      label: Ticket
+      description: GitFlow branch suffix / Notion reference.
+      placeholder: rg-54
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      description: Drives the branch prefix (`fix|feature|chore/rg-N`) and the release bump.
+      options:
+        - fix
+        - feature
+        - chore
+    validations:
+      required: true
+
+  - type: input
+    id: register
+    attributes:
+      label: Register ID
+      description: The `docs/IMPROVEMENTS.md` ID, if this comes from the register. Leave blank otherwise.
+      placeholder: SEC-2
+    validations:
+      required: false
+
+  - type: dropdown
+    id: areas
+    attributes:
+      label: Area(s)
+      description: Used to label the issue after creation.
+      multiple: true
+      options:
+        - Security
+        - Sync (CRDT / server)
+        - Autofill
+        - UI / UX
+        - Native / Android
+        - CI / CD
+        - Docs
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why this exists — one or two sentences.
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: The concrete gap or behaviour being addressed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: approach
+    attributes:
+      label: Proposed approach
+      description: How it is fixed, or the intended direction.
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope (deliberate)
+      description: What this explicitly does not do, and where it is tracked instead.
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What "done" means. Edit the checklist to fit.
+      value: |
+        - [ ]
+        - [ ] Green gate: `dart format`, `flutter analyze`, `flutter test`, `flutter build apk --debug`
+        - [ ] On-device smoke test (when native / platform-channel / FFI code is touched)
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: How it was (or will be) checked. Note anything `flutter test` can't reach — SQLCipher, the Rust FFI, platform channels — which is device-only.
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: Files / references
+      description: Key files touched, plus links (register entry, `docs/AGENTS.md` sections, other docs).
+    validations:
+      required: false

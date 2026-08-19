@@ -4,6 +4,7 @@ import '../../../../shared/widgets/app_snackbar.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/security/secure_clipboard.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/credential_draft.dart';
 import '../../data/custom_field.dart';
@@ -169,6 +170,7 @@ class CredentialFormState extends State<CredentialForm> {
                   _CopyButton(
                     value: _password.text,
                     enabled: _password.text.isNotEmpty,
+                    sensitive: true,
                   ),
                 ],
               ),
@@ -276,10 +278,18 @@ class CredentialFormState extends State<CredentialForm> {
 
 /// Bouton de copie d'une valeur vers le presse-papiers.
 class _CopyButton extends StatelessWidget {
-  const _CopyButton({required this.value, required this.enabled});
+  const _CopyButton({
+    required this.value,
+    required this.enabled,
+    this.sensitive = false,
+  });
 
   final String value;
   final bool enabled;
+
+  /// A secret value (e.g. the password): copied via [SecureClipboard] so it is
+  /// marked sensitive and auto-cleared. Plain values use [Clipboard] directly.
+  final bool sensitive;
 
   @override
   Widget build(BuildContext context) {
@@ -288,8 +298,18 @@ class _CopyButton extends StatelessWidget {
       icon: const Icon(Icons.copy, size: 20),
       onPressed: enabled
           ? () {
-              Clipboard.setData(ClipboardData(text: value));
-              AppSnackbar.info(context, 'Copié dans le presse-papiers.');
+              if (sensitive) {
+                const SecureClipboard().copySensitive(value);
+              } else {
+                Clipboard.setData(ClipboardData(text: value));
+              }
+              AppSnackbar.info(
+                context,
+                sensitive
+                    ? 'Copié — presse-papiers vidé dans '
+                          '${SecureClipboard.clearDelay.inSeconds} s.'
+                    : 'Copié dans le presse-papiers.',
+              );
             }
           : null,
     );

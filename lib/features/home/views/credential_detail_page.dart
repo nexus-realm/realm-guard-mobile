@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
+import '../../../core/security/secure_clipboard.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -279,7 +280,7 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
             label: 'Mot de passe',
             value: credential.password!,
             secret: true,
-            onCopy: () => _copy(credential.password!),
+            onCopy: () => _copy(credential.password!, sensitive: true),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -321,16 +322,26 @@ class _CredentialDetailPageState extends State<CredentialDetailPage> {
             label: field.label.isEmpty ? 'Champ' : field.label,
             value: field.value,
             secret: field.secret,
-            onCopy: () => _copy(field.value),
+            onCopy: () => _copy(field.value, sensitive: field.secret),
           ),
       ],
     );
   }
 
-  void _copy(String value) {
-    Clipboard.setData(ClipboardData(text: value));
+  void _copy(String value, {bool sensitive = false}) {
+    if (sensitive) {
+      const SecureClipboard().copySensitive(value);
+    } else {
+      Clipboard.setData(ClipboardData(text: value));
+    }
     if (!mounted) return;
-    AppSnackbar.info(context, 'Copié dans le presse-papiers.');
+    AppSnackbar.info(
+      context,
+      sensitive
+          ? 'Copié — presse-papiers vidé dans '
+                '${SecureClipboard.clearDelay.inSeconds} s.'
+          : 'Copié dans le presse-papiers.',
+    );
   }
 
   /// Action rapide depuis la lecture seule : choisir/changer le profil associé
