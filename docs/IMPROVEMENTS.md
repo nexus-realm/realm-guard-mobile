@@ -44,7 +44,7 @@ The highest-impact items if/when work resumes (rationale in each entry):
 | ID | Axis | Title | Severity | Effort | Status |
 |----|------|-------|----------|--------|--------|
 | SEC-1 | Security | App-level per-entry encryption undecided | Medium | L | Open |
-| SEC-2 | Security | Clipboard: no auto-clear, not marked sensitive | Medium | S–M | Open |
+| SEC-2 | Security | Clipboard: no auto-clear, not marked sensitive | Medium | S–M | 🚧 In progress (fix/rg-54) |
 | SEC-3 | Security | Secret input fields don't disable autocorrect/suggestions | Low–Med | S | Open |
 | SEC-4 | Security | Release signed with debug keys; no R8/obfuscation | High | M | ✅ Resolved (Lot B) |
 | SEC-5 | Security | Biometric auth not bound to Keystore op via CryptoObject | Low | M | Open |
@@ -82,14 +82,22 @@ The highest-impact items if/when work resumes (rationale in each entry):
   SQLCipher-only and document why. Confirm scope before implementing (per `AGENTS.md` §7). Pairs with **UX-4**.
 
 ### SEC-2 — Clipboard: no auto-clear and not marked sensitive
-- **Status:** Open · **Severity:** Medium · **Effort:** S–M
-- **Files:** `lib/features/home/views/credential_detail_page.dart` (`_copy`), `views/widgets/credential_form.dart` (`_CopyButton`), `views/widgets/totp_list_tile.dart` (`_copyCode`)
+- **Status:** 🚧 In progress (`fix/rg-54`) · **Severity:** Medium · **Effort:** S–M
+- **Files:** `lib/core/security/secure_clipboard.dart` + native `android/app/src/main/java/fr/nexusrealm/realmguard/SecureClipboard.java`; call sites `credential_detail_page.dart` (`_copy`), `views/widgets/credential_form.dart` (`_CopyButton`), `views/widgets/totp_list_tile.dart` (`_copyCode`), `views/totp_detail_page.dart` (`_copy`)
 - **Finding:** copying a password / username / TOTP code / secret custom field uses `Clipboard.setData`
   with **no expiry** and **no Android 13+ sensitive flag**. Copied secrets persist in the system clipboard,
   are readable by other apps, and can surface in clipboard history / cross-device clipboard.
 - **Direction:** auto-clear the clipboard after a short delay (e.g. 30–90 s) when the copied value was a
   secret; mark entries sensitive on Android 13+ (`ClipDescription.EXTRA_IS_SENSITIVE`, via a small platform
   call or a maintained package). Surface a countdown in the snackbar so the user knows it will clear.
+- **Implementation:** new `SecureClipboard` (Dart) → native Java channel `…/secure_clipboard`. **Sensitive**
+  copies — password, TOTP code, secret-flagged custom fields — are tagged `IS_SENSITIVE` (Android 13+, and
+  12L OEMs that read the extra) and **auto-cleared after 30 s**. The native `clear` is **compare-then-clear**:
+  it only wipes when the clipboard still holds the exact value we put there (a later copy is never clobbered),
+  and wipes anyway when it can't read (backgrounded on Android 10+) so a stale secret never lingers. A new
+  sensitive copy resets the window. Username / URL / non-secret fields / the pairing payload stay plain. The
+  snackbar states the wipe delay (static message; a live countdown is an easy follow-up). Delay is the fixed
+  constant `SecureClipboard.clearDelay`; making it user-configurable is deferred to **UX-5**.
 
 ### SEC-3 — Secret input fields don't disable autocorrect / suggestions
 - **Status:** Open · **Severity:** Low–Medium · **Effort:** S

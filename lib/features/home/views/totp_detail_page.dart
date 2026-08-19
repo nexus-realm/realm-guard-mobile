@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/app_snackbar.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/vault_repository.dart';
+import '../../../core/security/secure_clipboard.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -349,8 +349,12 @@ class _LiveCodeCardState extends State<_LiveCodeCard> {
 
   void _copy() {
     if (_code.isEmpty || _code == 'Secret invalide') return;
-    Clipboard.setData(ClipboardData(text: _code));
-    AppSnackbar.info(context, 'Code copié dans le presse-papiers.');
+    const SecureClipboard().copySensitive(_code);
+    AppSnackbar.info(
+      context,
+      'Code copié — presse-papiers vidé dans '
+      '${SecureClipboard.clearDelay.inSeconds} s.',
+    );
   }
 
   @override

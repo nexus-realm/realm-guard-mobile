@@ -26,5 +26,6 @@ public class MainActivity extends FlutterFragmentActivity {
     public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
         super.configureFlutterEngine(flutterEngine);
         KeystoreKeyGuard.register(flutterEngine, getApplicationContext());
+        SecureClipboard.register(flutterEngine, getApplicationContext());
     }
 }
