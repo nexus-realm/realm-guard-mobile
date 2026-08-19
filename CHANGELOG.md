@@ -1,13 +1,19 @@
-# [2.0.0](https://github.com/nexus-realm/realm-guard-mobile/compare/v1.0.0...v2.0.0) (2026-07-28)
+## [2.0.1](https://github.com/nexus-realm/realm-guard-mobile/compare/v2.0.0...v2.0.1) (2026-08-19)
 
 
 ### Bug Fixes
 
-* autofill json provider ([2b7db9e](https://github.com/nexus-realm/realm-guard-mobile/commit/2b7db9e8a4de6fb28af733ac3e433163d08fa663))
-* **onboarding:** re-enter via the startup gate after pairing/recovery ([a0e5873](https://github.com/nexus-realm/realm-guard-mobile/commit/a0e587365bcbb6bd986df3c27ba2fc97a4cde8b1))
-* **pairing:** green check on the device-added success screen ([707d841](https://github.com/nexus-realm/realm-guard-mobile/commit/707d8415b3cabd2eddd33e41474b9f376411b3d3))
-* **sync:** serialize doc read-modify-write with a shared mutex ([e65cec0](https://github.com/nexus-realm/realm-guard-mobile/commit/e65cec0f77fdbf3f1997f3dcd91a163afb7486f1))
+* **clipboard:** auto-clear copied secrets and mark them sensitive (SEC-2) ([2dfc11c](https://github.com/nexus-realm/realm-guard-mobile/commit/2dfc11c9a0fd9c95a63c814dec55c8da6f4976e9))
 
+## [2.0.0](https://github.com/nexus-realm/realm-guard-mobile/compare/v1.0.0...v2.0.0) (2026-07-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **sync:** the vault key hierarchy changed — the password-derived KEK now
+wraps a random VaultKey instead of keying SQLCipher directly, and the database
+schema moved from v4 to v7. A v1 vault is migrated in place on first unlock and
+can no longer be opened by a v1 build.
 
 ### Features
 
@@ -46,52 +52,25 @@
 * **sync:** wire sync into the app lifecycle ([fb55444](https://github.com/nexus-realm/realm-guard-mobile/commit/fb554446487595fbc110ff6aa124d83d93fd5ea0))
 
 
-### BREAKING CHANGES
+### Bug Fixes
 
-* **sync:** the vault key hierarchy changed — the password-derived KEK now
-wraps a random VaultKey instead of keying SQLCipher directly, and the database
-schema moved from v4 to v7. A v1 vault is migrated in place on first unlock and
-can no longer be opened by a v1 build.
+* autofill json provider ([2b7db9e](https://github.com/nexus-realm/realm-guard-mobile/commit/2b7db9e8a4de6fb28af733ac3e433163d08fa663))
+* **onboarding:** re-enter via the startup gate after pairing/recovery ([a0e5873](https://github.com/nexus-realm/realm-guard-mobile/commit/a0e587365bcbb6bd986df3c27ba2fc97a4cde8b1))
+* **pairing:** green check on the device-added success screen ([707d841](https://github.com/nexus-realm/realm-guard-mobile/commit/707d8415b3cabd2eddd33e41474b9f376411b3d3))
+* **sync:** serialize doc read-modify-write with a shared mutex ([e65cec0](https://github.com/nexus-realm/realm-guard-mobile/commit/e65cec0f77fdbf3f1997f3dcd91a163afb7486f1))
 
-
-
-# [1.0.0](https://github.com/nexus-realm/realm-guard-mobile/compare/v0.2.0...v1.0.0) (2026-07-08)
+## [1.0.0](https://github.com/nexus-realm/realm-guard-mobile/compare/v0.2.0...v1.0.0) (2026-07-08)
 
 
-* feat!: first stable release ([eeab6e4](https://github.com/nexus-realm/realm-guard-mobile/commit/eeab6e46959dcde66d5379bbc069927c5f5a3a85))
-
-
-### BREAKING CHANGES
+### ⚠ BREAKING CHANGES
 
 * first public stable release (1.0.0).
 
+### Features
 
+* first stable release ([eeab6e4](https://github.com/nexus-realm/realm-guard-mobile/commit/eeab6e46959dcde66d5379bbc069927c5f5a3a85))
 
-# [0.2.0](https://github.com/nexus-realm/realm-guard-mobile/compare/3e8531a849f4154f50ac985a3521680355eb1c1c...v0.2.0) (2026-07-04)
-
-
-### Bug Fixes
-
-* add path provider to dependencies ([089e23a](https://github.com/nexus-realm/realm-guard-mobile/commit/089e23add5f767308911d4c5630b212a5a2d6fb9))
-* correct copilot reviews ([6565ba3](https://github.com/nexus-realm/realm-guard-mobile/commit/6565ba3d2ebaad4cf09ea3d52389a03e2a85b97a))
-* delete unused test ([afa1516](https://github.com/nexus-realm/realm-guard-mobile/commit/afa1516ba84aa1fe7bb77d33f85eb2847b989a0c))
-* fix copilot review ([0c99ac8](https://github.com/nexus-realm/realm-guard-mobile/commit/0c99ac8867e316015ed057b31f045492a84ba9a1))
-* fix copilot reviews ([76f0166](https://github.com/nexus-realm/realm-guard-mobile/commit/76f0166dc7400260a09edd67f8062a34c19f7355))
-* fix test startup gate ([e23a9f9](https://github.com/nexus-realm/realm-guard-mobile/commit/e23a9f9be1d5338d30c83a0f6265a5bd329c57e2))
-* **home:** prevent RangeError when selecting the Partage tab ([ef7c67f](https://github.com/nexus-realm/realm-guard-mobile/commit/ef7c67f281bb4e67fd3900fef92691358af5d1a1))
-* **i18n:** correct French copy (accents, typos, terminology) ([ded6460](https://github.com/nexus-realm/realm-guard-mobile/commit/ded6460a931042c573b4de709703045a53ff0575))
-* linter issues ([906c0d8](https://github.com/nexus-realm/realm-guard-mobile/commit/906c0d88c72546ef007bd3fafeae277620555c58))
-* load cooldown timer on launch, fix biometric attempt on unlock ([c6239bf](https://github.com/nexus-realm/realm-guard-mobile/commit/c6239bfdc42859c6339b76a3bf4bd61e98df1cd6))
-* **onboarding:** remove app bar causing a top offset ([684ed79](https://github.com/nexus-realm/realm-guard-mobile/commit/684ed7957f18b1b8b93fbc8c833b7e158692bf35))
-* remove unsuned dependencies, lower iterations argon, convert classes to utility class ([496ce57](https://github.com/nexus-realm/realm-guard-mobile/commit/496ce57c4e1699c3e7bb2e85a09b50c9dfbe9d71))
-* **security:** guard protected routes behind an unlocked vault ([d118581](https://github.com/nexus-realm/realm-guard-mobile/commit/d11858180a72ba50cdb1114b092969c167bed430))
-* **security:** reset failed-attempt tracking after an inactivity window ([6a46fec](https://github.com/nexus-realm/realm-guard-mobile/commit/6a46fec909743d3bce0cb85ea82e7e5df4969fb5))
-* **security:** set FLAG_SECURE to block screenshots ([ab3583e](https://github.com/nexus-realm/realm-guard-mobile/commit/ab3583e017e9de286d9c52ec42746060e56d911d))
-* **security:** stop biometric failures from triggering the password lockout ([aab8583](https://github.com/nexus-realm/realm-guard-mobile/commit/aab8583e9725e3c311314c6df5080f671299a0c8))
-* **security:** stop leaking error details on unlock failure, unify biometric fallback threshold ([fde72d2](https://github.com/nexus-realm/realm-guard-mobile/commit/fde72d27f88d6f0386db9b29957095d65a49c287))
-* **security:** verify current password by key comparison, not a 2nd DB connection ([587d9fc](https://github.com/nexus-realm/realm-guard-mobile/commit/587d9fcfa5d2ca49c560c8475240c404a3c9aacb))
-* **settings:** make 'delete all data' complete and race-free ([82fa0de](https://github.com/nexus-realm/realm-guard-mobile/commit/82fa0de8881b4cc8e505f17c0863a4737e4a1cfd))
-* **ui:** let PasswordForm not dispose parent-owned controllers ([9dd14f0](https://github.com/nexus-realm/realm-guard-mobile/commit/9dd14f0f310ce0260e6f2d0de2798043b98ead68))
+## [0.2.0](https://github.com/nexus-realm/realm-guard-mobile/compare/3e8531a849f4154f50ac985a3521680355eb1c1c...v0.2.0) (2026-07-04)
 
 
 ### Features
@@ -138,6 +117,30 @@ can no longer be opened by a v1 build.
 * wip add home page, add table and migration for profiles and credentials ([2a8c284](https://github.com/nexus-realm/realm-guard-mobile/commit/2a8c2846f4ba8d30f93098a1da2ed0ef01b5ce53))
 
 
+### Bug Fixes
+
+* add path provider to dependencies ([089e23a](https://github.com/nexus-realm/realm-guard-mobile/commit/089e23add5f767308911d4c5630b212a5a2d6fb9))
+* correct copilot reviews ([6565ba3](https://github.com/nexus-realm/realm-guard-mobile/commit/6565ba3d2ebaad4cf09ea3d52389a03e2a85b97a))
+* delete unused test ([afa1516](https://github.com/nexus-realm/realm-guard-mobile/commit/afa1516ba84aa1fe7bb77d33f85eb2847b989a0c))
+* fix copilot review ([0c99ac8](https://github.com/nexus-realm/realm-guard-mobile/commit/0c99ac8867e316015ed057b31f045492a84ba9a1))
+* fix copilot reviews ([76f0166](https://github.com/nexus-realm/realm-guard-mobile/commit/76f0166dc7400260a09edd67f8062a34c19f7355))
+* fix test startup gate ([e23a9f9](https://github.com/nexus-realm/realm-guard-mobile/commit/e23a9f9be1d5338d30c83a0f6265a5bd329c57e2))
+* **home:** prevent RangeError when selecting the Partage tab ([ef7c67f](https://github.com/nexus-realm/realm-guard-mobile/commit/ef7c67f281bb4e67fd3900fef92691358af5d1a1))
+* **i18n:** correct French copy (accents, typos, terminology) ([ded6460](https://github.com/nexus-realm/realm-guard-mobile/commit/ded6460a931042c573b4de709703045a53ff0575))
+* linter issues ([906c0d8](https://github.com/nexus-realm/realm-guard-mobile/commit/906c0d88c72546ef007bd3fafeae277620555c58))
+* load cooldown timer on launch, fix biometric attempt on unlock ([c6239bf](https://github.com/nexus-realm/realm-guard-mobile/commit/c6239bfdc42859c6339b76a3bf4bd61e98df1cd6))
+* **onboarding:** remove app bar causing a top offset ([684ed79](https://github.com/nexus-realm/realm-guard-mobile/commit/684ed7957f18b1b8b93fbc8c833b7e158692bf35))
+* remove unsuned dependencies, lower iterations argon, convert classes to utility class ([496ce57](https://github.com/nexus-realm/realm-guard-mobile/commit/496ce57c4e1699c3e7bb2e85a09b50c9dfbe9d71))
+* **security:** guard protected routes behind an unlocked vault ([d118581](https://github.com/nexus-realm/realm-guard-mobile/commit/d11858180a72ba50cdb1114b092969c167bed430))
+* **security:** reset failed-attempt tracking after an inactivity window ([6a46fec](https://github.com/nexus-realm/realm-guard-mobile/commit/6a46fec909743d3bce0cb85ea82e7e5df4969fb5))
+* **security:** set FLAG_SECURE to block screenshots ([ab3583e](https://github.com/nexus-realm/realm-guard-mobile/commit/ab3583e017e9de286d9c52ec42746060e56d911d))
+* **security:** stop biometric failures from triggering the password lockout ([aab8583](https://github.com/nexus-realm/realm-guard-mobile/commit/aab8583e9725e3c311314c6df5080f671299a0c8))
+* **security:** stop leaking error details on unlock failure, unify biometric fallback threshold ([fde72d2](https://github.com/nexus-realm/realm-guard-mobile/commit/fde72d27f88d6f0386db9b29957095d65a49c287))
+* **security:** verify current password by key comparison, not a 2nd DB connection ([587d9fc](https://github.com/nexus-realm/realm-guard-mobile/commit/587d9fcfa5d2ca49c560c8475240c404a3c9aacb))
+* **settings:** make 'delete all data' complete and race-free ([82fa0de](https://github.com/nexus-realm/realm-guard-mobile/commit/82fa0de8881b4cc8e505f17c0863a4737e4a1cfd))
+* **ui:** let PasswordForm not dispose parent-owned controllers ([9dd14f0](https://github.com/nexus-realm/realm-guard-mobile/commit/9dd14f0f310ce0260e6f2d0de2798043b98ead68))
+
+
 ### Performance Improvements
 
 * **fonts:** bundle fonts natively and drop google_fonts (offline-first) ([0a55af6](https://github.com/nexus-realm/realm-guard-mobile/commit/0a55af65071250d62303b901253c486d1b8c3484))
@@ -145,6 +148,4 @@ can no longer be opened by a v1 build.
 * **security:** make the unlock cooldown a real throttle ([d70453d](https://github.com/nexus-realm/realm-guard-mobile/commit/d70453d09ea1dd6e449499343ce55c658e5a9f59))
 * **security:** run Argon2id key derivation on a background isolate ([5673c4f](https://github.com/nexus-realm/realm-guard-mobile/commit/5673c4f43aa93f6cb2a544409faf0a77502a2d89))
 * **unlock:** count down lockout in memory instead of polling secure storage ([739ab2f](https://github.com/nexus-realm/realm-guard-mobile/commit/739ab2f57a4abc307ae0c9b1e3aa612087f7b449))
-
-
 
