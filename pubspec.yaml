@@ -11,14 +11,14 @@ dependencies:
     sdk: flutter
   cryptography: ^2.9.0
   go_router: ^16.3.0
-  path_provider: ^2.1.5
-  drift: ^2.31.0
-  sqlcipher_flutter_libs: ^0.6.7
+  path_provider: ^2.1.6
+  drift: ^2.34.3
+  sqlcipher_flutter_libs: ^0.7.0+eol
   path: ^1.9.1
-  sqlite3: ^2.9.4
-  local_auth: ^3.0.1
+  sqlite3: ^3.5.1
+  local_auth: ^3.0.2
   flutter_secure_storage: ^10.0.0
-  package_info_plus: ^10.1.0
+  package_info_plus: ^10.2.1
   url_launcher: ^6.3.2
   mobile_scanner: ^5.2.3
   qr_flutter: ^4.1.0
@@ -37,10 +37,10 @@ dev_dependencies:
 
   flutter_lints: ^6.0.0
   plugin_platform_interface: ^2.1.8
-  path_provider_platform_interface: ^2.1.2
-  flutter_secure_storage_platform_interface: ^2.0.1
-  drift_dev: ^2.31.0
-  build_runner: ^2.11.1
+  path_provider_platform_interface: ^2.1.3
+  flutter_secure_storage_platform_interface: ^2.0.3
+  drift_dev: ^2.34.0
+  build_runner: ^2.15.1
   flutter_launcher_icons: ^0.14.4
   fake_async: ^1.3.3
 
