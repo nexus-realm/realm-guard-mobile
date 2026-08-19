@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../shared/widgets/app_snackbar.dart';
-import 'package:flutter/services.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/security/secure_clipboard.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../data/totp_generator.dart';
@@ -99,8 +99,12 @@ class _TotpListTileState extends State<TotpListTile> {
 
   void _copyCode() {
     if (_code.isEmpty || _code == 'Secret invalide') return;
-    Clipboard.setData(ClipboardData(text: _code));
-    AppSnackbar.info(context, 'Code copié dans le presse-papiers.');
+    const SecureClipboard().copySensitive(_code);
+    AppSnackbar.info(
+      context,
+      'Code copié — presse-papiers vidé dans '
+      '${SecureClipboard.clearDelay.inSeconds} s.',
+    );
   }
 
   @override
