@@ -91,7 +91,7 @@ jobs:
     timeout-minutes: 35
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Rust + accès au dépôt privé realm-guard-core : le build APK compile le
       # crate FFI rust/ (cargokit). cargokit installe les targets NDK.
